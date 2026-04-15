@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Translate Backlog Comment to Redmine",
+  "version": "1.0.1",
+  "description": "Dịch comment từ Backlog sang tiếng Việt bằng Gemini và đẩy sang Redmine.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://shift7.backlog.com/*",
+    "https://redmine.splus-software.com/*",
+    "https://generativelanguage.googleapis.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://shift7.backlog.com/*"],
+      "js": ["constants.js", "content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html",
+  "action": {
+    "default_title": "Translate Backlog Comment"
+  }
+}
