@@ -97,6 +97,17 @@
         color: white;
       }
 
+      .secondary {
+        background: #f8fafc;
+        color: #475569;
+        border: 1px solid var(--border);
+      }
+      
+      .secondary:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+      }
+
       .status {
         color: var(--muted);
         font-size: 14px;
@@ -123,7 +134,10 @@
         <form id="optionsForm" class="grid">
           <div class="field">
             <label for="redmineDomain">Redmine Domain</label>
-            <input id="redmineDomain" type="url" placeholder="https://redmine.example.com" />
+            <input id="redmineDomain" type="url" value="https://redmine.splus-software.com" readonly style="background: #f3f4f6; color: #6b7280; cursor: not-allowed;" />
+            <p style="margin-top: 6px; font-size: 12px; color: var(--muted);">
+              💡 Redmine Domain được cấu hình sẵn, không cần thay đổi.
+            </p>
           </div>
           <div class="field">
             <label for="redmineApiKey">Redmine API Key</label>
@@ -132,6 +146,20 @@
           <div class="field">
             <label for="geminiApiKey">Gemini API Key</label>
             <input id="geminiApiKey" type="password" placeholder="Nhập API key" />
+          </div>
+          <div class="field">
+            <label for="geminiModel">Gemini Model</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <select id="geminiModel" style="flex: 1; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
+                <!-- Options will be populated by JavaScript -->
+              </select>
+              <button type="button" id="fetchModelsBtn" class="secondary" style="padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: #f8fafc; cursor: pointer; font-weight: 600; color: #475569; white-space: nowrap;">
+                🔄 Fetch Models
+              </button>
+            </div>
+            <p style="margin-top: 8px; font-size: 12px; color: var(--muted);">
+              💡 Click "Fetch Models" để lấy danh sách models mới nhất từ Google AI (free tier only)
+            </p>
           </div>
 
           <div class="actions">
@@ -146,6 +174,7 @@
       </div>
     </div>
 
+    <script src="constants.js"></script>
     <script src="options.js"></script>
   </body>
 </html>

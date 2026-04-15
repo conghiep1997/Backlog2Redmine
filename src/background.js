@@ -8,6 +8,11 @@ if (!TB) {
 const DEFAULT_GEMINI_MODEL = TB.GEMINI_MODEL;
 const DEBUG_PREFIX = TB.DEBUG_PREFIX;
 
+// Cache for decrypted settings (5 minutes TTL)
+let cachedSettings = null;
+let cacheExpiry = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 function logDebug(...args) {
   if (TB.LOG_LEVEL === "debug") {
     console.log(DEBUG_PREFIX, ...args);
@@ -51,7 +56,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
  * @param {string} params.issueKey - The Backlog issue key.
  * @param {string} params.issueSummary - The Backlog issue summary.
  * @param {string} params.commentText - The comment text to translate.
- * @returns {Promise<Object>} An object containing redmineIssueId and previewText.
+ * @returns {Promise<Object>} An object containing redmineIssueId, issueTitle, and previewText.
  */
 async function handleLookupAndTranslate({ issueKey, issueSummary, commentText }) {
   const settings = await getSettings();
@@ -62,9 +67,10 @@ async function handleLookupAndTranslate({ issueKey, issueSummary, commentText })
     issueSummary,
     commentLength: commentText?.length ?? 0,
     redmineDomain: settings.redmineDomain,
+    geminiModel: settings.geminiModel,
   });
 
-  const redmineIssueId = await findRedmineIssueId(
+  const redmineIssue = await findRedmineIssue(
     settings.redmineDomain,
     settings.redmineApiKey,
     issueKey,
@@ -73,11 +79,13 @@ async function handleLookupAndTranslate({ issueKey, issueSummary, commentText })
 
   const previewText = await translateWithGemini(
     settings.geminiApiKey,
-    commentText
+    commentText,
+    settings.geminiModel
   );
 
   return {
-    redmineIssueId: redmineIssueId ?? "",
+    redmineIssueId: redmineIssue?.id ?? "",
+    issueTitle: redmineIssue?.title ?? "",
     previewText,
   };
 }
@@ -121,18 +129,26 @@ async function handleSendToRedmine({ redmineIssueId, notes }) {
     );
   }
 
-  return { message: TB.MESSAGES.TOAST.SEND_SUCCESS };
+  // Extract note ID from response or generate link
+  const responseData = await response.json();
+  const journalId = responseData?.journal?.id;
+  
+  return { 
+    message: TB.MESSAGES.TOAST.SEND_SUCCESS,
+    redmineUrl: buildRedmineUrl(settings.redmineDomain, `/issues/${redmineIssueId}${journalId ? `#note-${journalId}` : ''}`),
+  };
 }
 
-function getSettings() {
+async function getSettings() {
   return new Promise((resolve) => {
     chrome.storage.local.get(
-      ["redmineDomain", "redmineApiKey", "geminiApiKey"],
+      ["redmineApiKey", "geminiApiKey", "geminiModel"],
       async (items) => {
         resolve({
-          redmineDomain: items.redmineDomain ?? "",
+          redmineDomain: TB.REDMINE_DOMAIN, // Hardcoded constant
           redmineApiKey: await decryptData(items.redmineApiKey ?? ""),
           geminiApiKey: await decryptData(items.geminiApiKey ?? ""),
+          geminiModel: items.geminiModel ?? DEFAULT_GEMINI_MODEL,
         });
       }
     );
@@ -140,9 +156,7 @@ function getSettings() {
 }
 
 function assertSettings(settings) {
-  if (!settings.redmineDomain) {
-    throw new Error(TB.MESSAGES.SETTINGS.REDMINE_DOMAIN_REQUIRED);
-  }
+  // redmineDomain is hardcoded, no need to check
   if (!settings.redmineApiKey) {
     throw new Error(TB.MESSAGES.SETTINGS.REDMINE_API_KEY_REQUIRED);
   }
@@ -152,15 +166,16 @@ function assertSettings(settings) {
 }
 
 /**
- * Finds the Redmine issue ID by searching Redmine's HTML or API.
+ * Finds the Redmine issue by searching Redmine's HTML or API.
+ * Returns both issue ID and title.
  * First tries HTML search, falls back to API if no match.
  * @param {string} redmineDomain - The Redmine domain.
  * @param {string} apiKey - The Redmine API key.
  * @param {string} issueKey - The issue key to search for.
  * @param {string} issueSummary - The issue summary to search for.
- * @returns {Promise<string|null>} The Redmine issue ID or null if not found.
+ * @returns {Promise<{id: string, title: string} | null>} The Redmine issue object or null if not found.
  */
-async function findRedmineIssueId(redmineDomain, apiKey, issueKey, issueSummary = "") {
+async function findRedmineIssue(redmineDomain, apiKey, issueKey, issueSummary = "") {
   const normalizedIssueKey = normalizeLoose(issueKey);
   const normalizedIssueSummary = normalizeLoose(issueSummary);
   const searchQuery = buildRedmineSearchQuery(issueKey, issueSummary);
@@ -217,14 +232,17 @@ async function findRedmineIssueId(redmineDomain, apiKey, issueKey, issueSummary 
       bestMatchSubject: bestMatch.subject,
       bestMatchHref: bestMatch.href,
     });
-    return String(bestMatch.id);
+    return {
+      id: String(bestMatch.id),
+      title: bestMatch.subject,
+    };
   }
 
   logDebug("REDMINE_SEARCH_FALLBACK", TB.MESSAGES.REDMINE.SEARCH_NO_MATCH);
-  return findRedmineIssueIdViaApi(redmineDomain, apiKey, issueKey, issueSummary);
+  return findRedmineIssueViaApi(redmineDomain, apiKey, issueKey, issueSummary);
 }
 
-async function findRedmineIssueIdViaApi(redmineDomain, apiKey, issueKey, issueSummary = "") {
+async function findRedmineIssueViaApi(redmineDomain, apiKey, issueKey, issueSummary = "") {
   const url = buildRedmineUrl(
     redmineDomain,
     `/issues.json?subject=${encodeURIComponent(issueKey)}&limit=10`
@@ -272,7 +290,11 @@ async function findRedmineIssueIdViaApi(redmineDomain, apiKey, issueKey, issueSu
     normalizeLoose(issueSummary)
   );
 
-  return String((bestMatch ?? issues[0])?.id ?? "");
+  const result = (bestMatch ?? issues[0]);
+  return {
+    id: String(result?.id ?? ""),
+    title: result?.subject ?? "",
+  };
 }
 
 async function fetchRedmineSearchHtml(searchUrl) {
@@ -355,21 +377,25 @@ function pickBestRedmineSearchResult(results, normalizedIssueKey, normalizedIssu
  * Translates the given comment text using Gemini API.
  * @param {string} apiKey - The Gemini API key.
  * @param {string} commentText - The text to translate.
+ * @param {string} model - The Gemini model to use.
  * @returns {Promise<string>} The translated text in the specified format.
  */
-async function translateWithGemini(apiKey, commentText) {
-  const prompt = [
-    "Dich noi dung nay sang tieng Viet, giu nguyen dinh dang Markdown va thuat ngu ky thuat.",
-    "Chi tra ve dung format sau:",
-    "[Noi dung tieng Nhat]",
-    "---",
-    "[Noi dung tieng Viet]",
-    "",
-    "Noi dung can dich:",
-    commentText,
-  ].join("\n");
+async function translateWithGemini(apiKey, commentText, model = DEFAULT_GEMINI_MODEL) {
+  // Simple, direct prompt - no reasoning required
+  const prompt = `Dịch đoạn sau sang tiếng Việt:
+- Giữ nguyên Markdown
+- Giữ nguyên @username và technical terms
+- Chỉ trả về đúng format sau, không thêm bất kỳ lời nào khác:
+  [Nội dung tiếng Nhật]
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  ---
+  
+  [Nội dung tiếng Việt]
+
+Nội dung:
+${commentText}`;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
   const response = await fetch(url, {
     method: "POST",

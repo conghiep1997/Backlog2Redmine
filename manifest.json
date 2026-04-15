@@ -1,8 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "Translate Backlog Comment to Redmine",
-  "version": "1.0.1",
+  "name": "Backlog to Redmine Translator",
+  "version": "1.1.0",
   "description": "Dịch comment từ Backlog sang tiếng Việt bằng Gemini và đẩy sang Redmine.",
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
+  },
   "permissions": ["storage"],
   "host_permissions": [
     "https://shift7.backlog.com/*",
@@ -10,17 +15,17 @@
     "https://generativelanguage.googleapis.com/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background.js"
   },
   "content_scripts": [
     {
       "matches": ["https://shift7.backlog.com/*"],
-      "js": ["constants.js", "content.js"],
-      "css": ["styles.css"],
+      "js": ["src/constants.js", "src/content.js"],
+      "css": ["src/styles.css"],
       "run_at": "document_idle"
     }
   ],
-  "options_page": "options.html",
+  "options_page": "src/options.html",
   "action": {
     "default_title": "Translate Backlog Comment"
   }
