@@ -58,6 +58,7 @@ https://chrome.google.com/webstore/devconsole
 
 - ✅ **Auto-dịch comment** từ Backlog sang tiếng Việt
 - ✅ **Auto-find Redmine issue** (search HTML + API fallback)
+- ✅ **Batch translate** - Dịch từ comment click → cuối (mỗi comment = 1 note)
 - ✅ **Confirm modal** với preview nội dung
 - ✅ **Success notification** với link đến note
 - ✅ **Multiple Gemini models** (Gemma 4, Gemini 3, etc.)
@@ -103,6 +104,8 @@ npm run build  # TODO: Add build script
 
 ## 📝 Usage
 
+### Single Comment
+
 1. **Open Backlog issue:**
    ```
    https://shift7.backlog.com/view/ISSUE-123
@@ -118,6 +121,20 @@ npm run build  # TODO: Add build script
 4. **Edit nếu cần** → Click "Xác nhận & Gửi"
 
 5. **Success modal** → Click "Xem trên Redmine" để mở link
+
+### Batch Translate (Multiple Comments)
+
+1. **Click button ở comment bất kỳ** (ví dụ: comment thứ 3/5)
+
+2. **Tự động dịch tất cả comments từ vị trí click → cuối** (comments 3, 4, 5)
+
+3. **Preview modal** hiển thị:
+   - 📦 Badge: "Gửi X notes liên tiếp"
+   - Nội dung dịch của từng comment (phân cách bằng `--- Comment X ---`)
+
+4. **Click "Gửi X notes"** → Lần lượt gửi từng note lên Redmine
+
+5. **Success modal** hiển thị link đến note cuối cùng
 
 ## 🔐 Security
 
@@ -135,8 +152,7 @@ npm run build  # TODO: Add build script
 - **Free Tier:** ✅ Yes
 
 ### Alternatives:
-- `gemma-3-27b-it` - Stable, fast
-- `gemini-3.1-pro` - Best quality (paid)
+- `gemma-3-27b-it` - Best quality (paid)
 - `gemini-2.5-flash` - Fastest
 
 ## 🐛 Troubleshooting
@@ -166,7 +182,7 @@ Developed for S+ Software Company
 
 ## 🗺️ Roadmap
 
-- [ ] Batch translate (nhiều comments cùng lúc)
+- [x] Batch translate (nhiều comments cùng lúc)
 - [ ] Translation history
 - [ ] Custom prompts
 - [ ] Dark mode

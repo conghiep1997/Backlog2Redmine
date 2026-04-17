@@ -68,6 +68,7 @@ async function handleLookupAndTranslate({ issueKey, issueSummary, commentText })
     commentLength: commentText?.length ?? 0,
     redmineDomain: settings.redmineDomain,
     geminiModel: settings.geminiModel,
+    geminiFallbackModel: settings.geminiFallbackModel,
   });
 
   const redmineIssue = await findRedmineIssue(
@@ -80,7 +81,8 @@ async function handleLookupAndTranslate({ issueKey, issueSummary, commentText })
   const previewText = await translateWithGemini(
     settings.geminiApiKey,
     commentText,
-    settings.geminiModel
+    settings.geminiModel,
+    settings.geminiFallbackModel
   );
 
   return {
@@ -142,13 +144,14 @@ async function handleSendToRedmine({ redmineIssueId, notes }) {
 async function getSettings() {
   return new Promise((resolve) => {
     chrome.storage.local.get(
-      ["redmineApiKey", "geminiApiKey", "geminiModel"],
+      ["redmineApiKey", "geminiApiKey", "geminiModel", "geminiFallbackModel"],
       async (items) => {
         resolve({
           redmineDomain: TB.REDMINE_DOMAIN, // Hardcoded constant
           redmineApiKey: await decryptData(items.redmineApiKey ?? ""),
           geminiApiKey: await decryptData(items.geminiApiKey ?? ""),
-          geminiModel: items.geminiModel ?? DEFAULT_GEMINI_MODEL,
+          geminiModel: items.geminiModel ?? TB.GEMINI_MODEL,
+          geminiFallbackModel: items.geminiFallbackModel ?? TB.GEMINI_FALLBACK_MODEL,
         });
       }
     );
@@ -374,13 +377,15 @@ function pickBestRedmineSearchResult(results, normalizedIssueKey, normalizedIssu
 }
 
 /**
- * Translates the given comment text using Gemini API.
+ * Translates the given comment text using Gemini API with fallback support.
+ * Tries primary model first, falls back to secondary model on rate limit (429).
  * @param {string} apiKey - The Gemini API key.
  * @param {string} commentText - The text to translate.
- * @param {string} model - The Gemini model to use.
+ * @param {string} model - The primary Gemini model to use.
+ * @param {string} fallbackModel - The fallback Gemini model (optional).
  * @returns {Promise<string>} The translated text in the specified format.
  */
-async function translateWithGemini(apiKey, commentText, model = DEFAULT_GEMINI_MODEL) {
+async function translateWithGemini(apiKey, commentText, model = DEFAULT_GEMINI_MODEL, fallbackModel = null) {
   // Simple, direct prompt - no reasoning required
   const prompt = `Dịch đoạn sau sang tiếng Việt:
 - Giữ nguyên Markdown
@@ -395,6 +400,47 @@ async function translateWithGemini(apiKey, commentText, model = DEFAULT_GEMINI_M
 Nội dung:
 ${commentText}`;
 
+  // Try primary model first
+  try {
+    const result = await callGeminiAPI(apiKey, commentText, model, prompt);
+    return result;
+  } catch (error) {
+    // Check if it's a rate limit error (429)
+    if (error.message.includes("429") || error.message.includes("rate limit")) {
+      logDebug("RATE_LIMIT_DETECTED", {
+        primaryModel: model,
+        fallbackModel: fallbackModel,
+        error: error.message,
+      });
+
+      // If fallback model is configured and different from primary, try it
+      if (fallbackModel && fallbackModel !== model) {
+        logDebug("RETRYING_WITH_FALLBACK", { fallbackModel });
+        
+        try {
+          const result = await callGeminiAPI(apiKey, commentText, fallbackModel, prompt);
+          logDebug("FALLBACK_SUCCESS", { fallbackModel });
+          return result;
+        } catch (fallbackError) {
+          logDebug("FALLBACK_FAILED", { fallbackError: fallbackError.message });
+          throw new Error(TB.MESSAGES.TOAST.RATE_LIMIT_FAILED);
+        }
+      }
+    }
+    // Re-throw non-rate-limit errors
+    throw error;
+  }
+}
+
+/**
+ * Internal function to call Gemini API
+ * @param {string} apiKey - The Gemini API key.
+ * @param {string} commentText - The text to translate.
+ * @param {string} model - The Gemini model to use.
+ * @param {string} prompt - The translation prompt.
+ * @returns {Promise<string>} The translated text.
+ */
+async function callGeminiAPI(apiKey, commentText, model, prompt) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
   const response = await fetch(url, {
@@ -418,8 +464,9 @@ ${commentText}`;
   });
 
   if (!response.ok) {
+    const errorMsg = await readErrorMessage(response);
     throw new Error(
-      `Gemini tra ve loi ${response.status}: ${sanitizeErrorMessage(await readErrorMessage(response))}`
+      `Gemini tra ve loi ${response.status}: ${sanitizeErrorMessage(errorMsg)}`
     );
   }
 

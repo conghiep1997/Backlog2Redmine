@@ -17,21 +17,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const redmineApiKeyInput = document.getElementById("redmineApiKey");
   const geminiApiKeyInput = document.getElementById("geminiApiKey");
   const geminiModelSelect = document.getElementById("geminiModel");
-  const fetchModelsBtn = document.getElementById("fetchModelsBtn");
+  const geminiFallbackModelSelect = document.getElementById("geminiFallbackModel");
   const statusEl = document.getElementById("status");
   
-  if (!form || !redmineDomainInput || !redmineApiKeyInput || !geminiApiKeyInput || !geminiModelSelect || !statusEl) {
+  if (!form || !redmineDomainInput || !redmineApiKeyInput || !geminiApiKeyInput || !geminiModelSelect || !geminiFallbackModelSelect || !statusEl) {
     console.error("[OPTIONS] Missing DOM elements");
     return;
   }
   
-  // Populate model dropdown with defaults
-  populateModelDropdown();
-  
-  // Add fetch models button listener
-  if (fetchModelsBtn) {
-    fetchModelsBtn.addEventListener("click", fetchAndPopulateModels);
-  }
+  // Populate model dropdowns with defaults from constants.js
+  populateModelDropdown(geminiModelSelect);
+  populateModelDropdown(geminiFallbackModelSelect, true); // true = include "no fallback" option
   
   // Load existing options
   loadOptions();
@@ -56,18 +52,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     const geminiModel = geminiModelSelect.value;
+    const geminiFallbackModel = geminiFallbackModelSelect.value;
     
     console.log("Saving settings...", {
       redmineDomain,
       redmineApiKey: redmineApiKey ? "***" : "empty",
       geminiApiKey: geminiApiKey ? "***" : "empty",
       geminiModel,
+      geminiFallbackModel,
     });
     
     const payload = {
       redmineApiKey,
       geminiApiKey,
       geminiModel,
+      geminiFallbackModel,
     };
     
     try {
@@ -76,18 +75,20 @@ document.addEventListener("DOMContentLoaded", () => {
         redmineApiKey: await encryptData(payload.redmineApiKey),
         geminiApiKey: await encryptData(payload.geminiApiKey),
         geminiModel: payload.geminiModel,
+        geminiFallbackModel: payload.geminiFallbackModel,
       };
       
       console.log("Encrypted payload:", {
         redmineApiKey: encryptedPayload.redmineApiKey ? "encrypted" : "empty",
         geminiApiKey: encryptedPayload.geminiApiKey ? "encrypted" : "empty",
         geminiModel: encryptedPayload.geminiModel,
+        geminiFallbackModel: encryptedPayload.geminiFallbackModel,
       });
       
       await chrome.storage.local.set(encryptedPayload);
       
       // Verify save
-      const verify = await chrome.storage.local.get(["geminiModel"]);
+      const verify = await chrome.storage.local.get(["geminiModel", "geminiFallbackModel"]);
       console.log("Verified save:", verify);
       
       setStatus("✅ Đã lưu cấu hình thành công!");
@@ -102,7 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log("Loading options...");
     
     chrome.storage.local.get(
-      ["redmineApiKey", "geminiApiKey", "geminiModel"],
+      ["redmineApiKey", "geminiApiKey", "geminiModel", "geminiFallbackModel"],
       async (items) => {
         console.log("Loaded items:", items);
         
@@ -126,29 +127,41 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
         
-        // Load model (use default if not set)
+        // Load primary model (use default if not set)
         const savedModel = items.geminiModel ?? TB.GEMINI_MODEL;
         geminiModelSelect.value = savedModel;
-        console.log("Model loaded:", savedModel);
+        console.log("Primary Model loaded:", savedModel);
+        
+        // Load fallback model (use default if not set)
+        const savedFallbackModel = items.geminiFallbackModel ?? TB.GEMINI_FALLBACK_MODEL;
+        geminiFallbackModelSelect.value = savedFallbackModel;
+        console.log("Fallback Model loaded:", savedFallbackModel);
         
         console.log("Form populated successfully");
       }
     );
   }
   
-  function populateModelDropdown(models = null) {
-    if (!geminiModelSelect) {
-      console.warn("[OPTIONS] geminiModelSelect not found, skipping populate");
+  function populateModelDropdown(selectElement, includeNoFallback = false) {
+    if (!selectElement) {
+      console.warn("[OPTIONS] Model select element not found, skipping populate");
       return;
     }
     
-    console.log("[OPTIONS] Populating model dropdown...");
-    console.log("[OPTIONS] models param:", models);
+    console.log("[OPTIONS] Populating model dropdown...", selectElement.id);
     console.log("[OPTIONS] TB.GEMINI_MODELS:", TB.GEMINI_MODELS);
     
-    geminiModelSelect.innerHTML = '';
+    selectElement.innerHTML = '';
     
-    const modelsToUse = models || TB.GEMINI_MODELS;
+    // Add "No Fallback" option for fallback dropdown
+    if (includeNoFallback) {
+      const noFallbackOption = document.createElement("option");
+      noFallbackOption.value = "";
+      noFallbackOption.textContent = TB.MESSAGES.FALLBACK.NO_FALLBACK;
+      selectElement.appendChild(noFallbackOption);
+    }
+    
+    const modelsToUse = TB.GEMINI_MODELS;
     
     if (!modelsToUse || modelsToUse.length === 0) {
       console.warn("[OPTIONS] No models available, using default");
@@ -156,7 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
       option.value = TB.GEMINI_MODEL;
       option.textContent = "Default: " + TB.GEMINI_MODEL;
       option.selected = true;
-      geminiModelSelect.appendChild(option);
+      selectElement.appendChild(option);
       console.log("[OPTIONS] Populated with default model:", TB.GEMINI_MODEL);
       return;
     }
@@ -169,101 +182,11 @@ document.addEventListener("DOMContentLoaded", () => {
       if (model.default) {
         option.selected = true;
       }
-      geminiModelSelect.appendChild(option);
+      selectElement.appendChild(option);
     });
     
     console.log("[OPTIONS] Populated dropdown with", modelsToUse.length, "models");
-    console.log("[OPTIONS] Select innerHTML:", geminiModelSelect.innerHTML);
-  }
-  
-  async function fetchAndPopulateModels() {
-    const apiKey = geminiApiKeyInput.value.trim();
-    
-    if (!apiKey) {
-      setStatus("⚠️ Vui lòng nhập Gemini API Key trước!");
-      return;
-    }
-    
-    setStatus("🔄 Đang fetch models từ Google AI...");
-    
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
-      );
-      
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      const allModels = data.models || [];
-      
-      // Filter for generateContent support
-      const supportedModels = allModels.filter(model => {
-        const methods = model.supportedGenerationMethods || [];
-        return methods.includes('generateContent');
-      });
-      
-      // Filter for free tier (RPD >= 50, RPM >= 10)
-      const freeTierModels = supportedModels.filter(model => {
-        const limits = model.outputTokenLimits || model.inputTokenLimits || {};
-        // Check if model has reasonable limits (not too restrictive)
-        const rpd = limits.requestsPerDay || 100; // Default if not specified
-        const rpm = limits.requestsPerMinute || 60; // Default if not specified
-        
-        return rpd >= TB.FREE_TIER_LIMITS.minRpd && 
-               rpm >= TB.FREE_TIER_LIMITS.minRpm;
-      });
-      
-      // Format models for dropdown
-      const formattedModels = freeTierModels.map(model => {
-        const modelName = model.name.replace('models/', '');
-        const displayName = formatModelName(modelName);
-        const isGemma4 = modelName.includes('gemma-4');
-        const isDefault = modelName === 'gemma-4-31b-it';
-        
-        return {
-          value: modelName,
-          label: `${displayName}${isGemma4 ? ' ⭐' : ''}`,
-          default: isDefault,
-          rpd: model.outputTokenLimits?.requestsPerDay || 'N/A',
-          rpm: model.outputTokenLimits?.requestsPerMinute || 'N/A',
-        };
-      });
-      
-      // Sort: Gemma 4 first, then others
-      formattedModels.sort((a, b) => {
-        if (a.value.includes('gemma-4') && !b.value.includes('gemma-4')) return -1;
-        if (!a.value.includes('gemma-4') && b.value.includes('gemma-4')) return 1;
-        return a.label.localeCompare(b.label);
-      });
-      
-      if (formattedModels.length === 0) {
-        setStatus("⚠️ Không tìm thấy models phù hợp free tier");
-        return;
-      }
-      
-      populateModelDropdown(formattedModels);
-      setStatus(`✅ Đã fetch ${formattedModels.length} models (free tier)`);
-      
-    } catch (error) {
-      console.error("Failed to fetch models:", error);
-      setStatus(`❌ Lỗi: ${error.message}`);
-    }
-  }
-  
-  function formatModelName(name) {
-    // "models/gemma-4-31b-it" → "Gemma 4 31B IT"
-    return name
-      .replace('models/', '')
-      .split('-')
-      .map((word, index) => {
-        // Keep numbers as-is, capitalize first letter of words
-        if (/^\d+$/.test(word)) return word;
-        if (index === 0) return word.charAt(0).toUpperCase() + word.slice(1);
-        return word.toUpperCase();
-      })
-      .join(' ');
+    console.log("[OPTIONS] Select innerHTML:", selectElement.innerHTML);
   }
   
   function setStatus(message) {

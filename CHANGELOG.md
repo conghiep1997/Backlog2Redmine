@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-04-16
+
+### ✨ Added
+- **Batch translate** - Dịch từ comment click → cuối cùng
+- Mỗi comment trở thành 1 note riêng trên Redmine
+- Preview modal hiển thị tất cả comments với phân cách `--- Comment X ---`
+- Badge "📦 Gửi X notes liên tiếp" trong confirm modal
+- Success modal hiển thị số lượng notes đã gửi
+- Tự động gửi tuần tự từng note (Redmine API limitation)
+
+### 🔧 Changed
+- Button text động: "Gửi X notes" khi batch mode
+- Modal title động: "Dịch X bình luận → Redmine"
+- Success message: "✅ Đã gửi X notes thành công!"
+
+### 📝 Updated
+- README.md: Thêm hướng dẫn Batch Translate
+- Roadmap: Đánh dấu ✅ hoàn thành batch translate
+
 ## [1.1.0] - 2026-04-16
 
 ### ✨ Added
@@ -10,7 +29,7 @@ All notable changes to this project will be documented in this file.
 - Model selector with fetch from Google AI API
 - Free tier filtering (RPD ≥ 50, RPM ≥ 10)
 - Default model: `gemma-4-31b-it` (latest Gemma 4)
-- Button text: "Dịch → Redmine" (clearer action)
+- Button text: "Redmine" (clearer action)
 
 ### 🔧 Fixed
 - Settings not saving issue (added validation + debug logs)
@@ -43,5 +62,6 @@ All notable changes to this project will be documented in this file.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.2.0 | 2026-04-16 | Batch translate (multiple comments) |
 | 1.1.0 | 2026-04-16 | Major UI improvements, model selector, bug fixes |
 | 1.0.1 | 2026-04-15 | Initial release |

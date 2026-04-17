@@ -1,31 +1,32 @@
 globalThis.TB_CONSTANTS = Object.freeze({
   DEBUG_PREFIX: "[TB-Redmine]",
   LOG_LEVEL: "debug", // Change to "error" for production to disable debug logs
-  GEMINI_MODEL: "gemma-2-27b-it",
+  GEMINI_MODEL: "gemini-3.1-flash-lite-preview", // Primary model: Gemini 3.1 Flash Lite
+  GEMINI_FALLBACK_MODEL: "gemma-3-27b-it", // Fallback when primary hits rate limit
   
   // Domains (Hardcoded - no need to configure)
   BACKLOG_DOMAIN: "https://shift7.backlog.com",
   REDMINE_DOMAIN: "https://redmine.splus-software.com",
   
   GEMINI_MODELS: [
-    // Gemma 4 Series (Latest - April 2026) - Default
-    { value: "gemma-4-31b-it", label: "Gemma 4 31B IT ⭐", default: true },
-    { value: "gemma-4-26b-a4b-it", label: "Gemma 4 26B A4B IT" },
-    
-    // Gemma 3 Series (Instruction Tuned)
-    { value: "gemma-3-27b-it", label: "Gemma 3 27B IT" },
-    { value: "gemma-3-12b-it", label: "Gemma 3 12B IT" },
-    { value: "gemma-3-4b-it", label: "Gemma 3 4B IT" },
-    
-    // Gemini 3.1 Series
+    // 🥇 MAIN - Scale + ổn định nhất
+    { value: "gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash Lite ⭐", default: true },
+
+    // 🥈 MAIN (fallback chất lượng tốt)
+    { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash ⭐" },
+
+    // 🥉 Backup cloud
     { value: "gemini-3-flash", label: "Gemini 3 Flash" },
+    { value: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite" },
+
+    // 💻 LOCAL (không phụ thuộc quota)
+    { value: "gemma-4-31b-it", label: "Gemma 4 31B IT" },
+    { value: "gemma-4-26b-a4b-it", label: "Gemma 4 26B A4B IT" },
+
+    // 🧠 Local nhẹ hơn
+    { value: "gemma-3-27b-it", label: "Gemma 3 27B IT ⭐" },
+    { value: "gemma-3-12b-it", label: "Gemma 3 12B IT" }
   ],
-  
-  // Free Tier Limits (for filtering)
-  FREE_TIER_LIMITS: {
-    minRpd: 50,  // Minimum requests per day
-    minRpm: 10,  // Minimum requests per minute
-  },
   
   // Note: Models with "-it" suffix are Instruction Tuned (best for chat/translation)
   // Fetch latest list from: https://ai.google.dev/gemini-api/docs/models
@@ -45,6 +46,8 @@ globalThis.TB_CONSTANTS = Object.freeze({
       EMPTY_COMMENT: "Nội dung bình luận đang trống.",
       MISSING_ISSUE_KEY: "Không đọc được issueKey từ tiêu đề Backlog.",
       SEND_SUCCESS: "Đã gửi bình luận lên Redmine thành công.",
+      RATE_LIMIT_RETRY: "⚠️ Model chính chạm rate limit, đang retry với model phụ...",
+      RATE_LIMIT_FAILED: "❌ Cả 2 models đều chạm rate limit. Vui lòng đợi hoặc kiểm tra API key.",
     },
     MODAL: {
       TITLE: "Gửi bình luận sang Redmine",
@@ -78,6 +81,11 @@ globalThis.TB_CONSTANTS = Object.freeze({
     },
     GEMINI: {
       EMPTY_TRANSLATION: "Gemini không trả về nội dung dịch.",
+      RATE_LIMIT_ERROR: "Model chạm rate limit (429 Too Many Requests)",
+    },
+    FALLBACK: {
+      MODEL_LABEL: "Fallback Model (khi chính chạm rate limit)",
+      NO_FALLBACK: "Không dùng fallback",
     },
   },
 });

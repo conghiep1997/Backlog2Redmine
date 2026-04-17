@@ -141,24 +141,28 @@
           </div>
           <div class="field">
             <label for="redmineApiKey">Redmine API Key</label>
-            <input id="redmineApiKey" type="password" placeholder="Nhập API key" />
+            <input id="redmineApiKey" type="text" placeholder="Nhập API key" />
           </div>
           <div class="field">
             <label for="geminiApiKey">Gemini API Key</label>
-            <input id="geminiApiKey" type="password" placeholder="Nhập API key" />
+            <input id="geminiApiKey" type="text" placeholder="Nhập API key" />
           </div>
           <div class="field">
             <label for="geminiModel">Gemini Model</label>
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <select id="geminiModel" style="flex: 1; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
-                <!-- Options will be populated by JavaScript -->
-              </select>
-              <button type="button" id="fetchModelsBtn" class="secondary" style="padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: #f8fafc; cursor: pointer; font-weight: 600; color: #475569; white-space: nowrap;">
-                🔄 Fetch Models
-              </button>
-            </div>
+            <select id="geminiModel" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
+              <!-- Options will be populated by JavaScript -->
+            </select>
             <p style="margin-top: 8px; font-size: 12px; color: var(--muted);">
-              💡 Click "Fetch Models" để lấy danh sách models mới nhất từ Google AI (free tier only)
+              💡 Model chính dùng để dịch. Nếu chạm rate limit sẽ tự động chuyển sang Fallback Model.
+            </p>
+          </div>
+          <div class="field">
+            <label for="geminiFallbackModel">Fallback Model</label>
+            <select id="geminiFallbackModel" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
+              <!-- Options will be populated by JavaScript -->
+            </select>
+            <p style="margin-top: 8px; font-size: 12px; color: var(--muted);">
+              🛡️ Model sẽ tự động dùng khi model chính chạm rate limit (429). Chọn "Không dùng fallback" để tắt.
             </p>
           </div>
 
