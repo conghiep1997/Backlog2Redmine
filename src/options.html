@@ -126,8 +126,8 @@
   <body>
     <div class="wrap">
       <div class="hero">
-        <h1>Translate Backlog Comment</h1>
-        <p>Lưu cấu hình Redmine và Gemini để extension có thể dịch comment từ Backlog rồi gửi sang Redmine.</p>
+        <h1>Translate Backlog & Redmine</h1>
+        <p>Lưu cấu hình Redmine, Backlog và AI để extension có thể dịch và đồng bộ comment qua lại giữa 2 hệ thống.</p>
       </div>
 
       <div class="card">
@@ -136,34 +136,77 @@
             <label for="redmineDomain">Redmine Domain</label>
             <input id="redmineDomain" type="url" value="https://redmine.splus-software.com" readonly style="background: #f3f4f6; color: #6b7280; cursor: not-allowed;" />
             <p style="margin-top: 6px; font-size: 12px; color: var(--muted);">
-              💡 Redmine Domain được cấu hình sẵn, không cần thay đổi.
+              💡 Redmine Domain được cấu hình sẵn.
             </p>
           </div>
           <div class="field">
             <label for="redmineApiKey">Redmine API Key</label>
             <input id="redmineApiKey" type="text" placeholder="Nhập API key" />
           </div>
-          <div class="field">
-            <label for="geminiApiKey">Gemini API Key</label>
-            <input id="geminiApiKey" type="text" placeholder="Nhập API key" />
+
+          <!-- Nhóm cấu hình Backlog -->
+          <div style="padding: 16px; background: #fffcf0; border: 1px dashed #f59e0b; border-radius: 12px; margin: 8px 0;">
+            <div class="field" style="margin-bottom: 16px;">
+              <label for="backlogDomain">Backlog Domain</label>
+              <input id="backlogDomain" type="url" placeholder="https://shift7.backlog.com" />
+              <p style="margin-top: 6px; font-size: 12px; color: var(--muted);">
+                💡 Mặc định: https://shift7.backlog.com
+              </p>
+            </div>
+            <div class="field">
+              <label for="backlogApiKey">Backlog API Key</label>
+              <input id="backlogApiKey" type="text" placeholder="Nhập Backlog API key" />
+              <p style="margin-top: 6px; font-size: 12px; color: var(--muted);">
+                🔑 Cần thiết để gửi nội dung ngược lại từ Redmine sang Backlog.
+              </p>
+            </div>
           </div>
           <div class="field">
-            <label for="geminiModel">Gemini Model</label>
-            <select id="geminiModel" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
-              <!-- Options will be populated by JavaScript -->
+            <label for="aiProvider">Nhà cung cấp AI (Provider)</label>
+            <select id="aiProvider" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
+              <option value="gemini">Google Gemini AI Studio (Miễn phí)</option>
+              <option value="cerebras">Cerebras Cloud (Hạn mức cực lớn - Free)</option>
             </select>
             <p style="margin-top: 8px; font-size: 12px; color: var(--muted);">
-              💡 Model chính dùng để dịch. Nếu chạm rate limit sẽ tự động chuyển sang Fallback Model.
+              💡 Chọn "Cerebras" nếu bạn cần dịch số lượng lớn comment hàng ngày.
             </p>
           </div>
-          <div class="field">
-            <label for="geminiFallbackModel">Fallback Model</label>
-            <select id="geminiFallbackModel" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
-              <!-- Options will be populated by JavaScript -->
-            </select>
-            <p style="margin-top: 8px; font-size: 12px; color: var(--muted);">
-              🛡️ Model sẽ tự động dùng khi model chính chạm rate limit (429). Chọn "Không dùng fallback" để tắt.
-            </p>
+
+          <!-- Nhóm cấu hình Gemini -->
+          <div id="geminiSection">
+            <div class="field" style="margin-bottom: 16px;">
+              <label for="geminiApiKey">Gemini API Key</label>
+              <input id="geminiApiKey" type="text" placeholder="Nhập Gemini API key" />
+            </div>
+            <div class="field" style="margin-bottom: 16px;">
+              <label for="geminiModel">Gemini Model</label>
+              <select id="geminiModel" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
+                <!-- Options will be populated -->
+              </select>
+            </div>
+            <div class="field">
+              <label for="geminiFallbackModel">Fallback Model</label>
+              <select id="geminiFallbackModel" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
+                <!-- Options will be populated -->
+              </select>
+            </div>
+          </div>
+
+          <!-- Nhóm cấu hình Cerebras -->
+          <div id="cerebrasSection" style="display: none;">
+            <div class="field" style="margin-bottom: 16px;">
+              <label for="cerebrasApiKey">Cerebras API Key</label>
+              <input id="cerebrasApiKey" type="text" placeholder="Nhập Cerebras API key" />
+              <p style="margin-top: 6px; font-size: 12px; color: var(--muted);">
+                🔑 Lấy Key miễn phí tại <a href="https://cloud.cerebras.ai" target="_blank" style="color: var(--primary);">cloud.cerebras.ai</a>
+              </p>
+            </div>
+            <div class="field">
+              <label for="cerebrasModel">Cerebras Model (Llama)</label>
+              <select id="cerebrasModel" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
+                <!-- Options will be populated -->
+              </select>
+            </div>
           </div>
 
           <div class="actions">
@@ -173,7 +216,7 @@
         </form>
 
         <div class="note">
-          Extension sẽ đọc <code>issueKey</code> và <code>issueSummary</code> từ Backlog header, tự tìm Redmine issue bằng subject, dịch bằng Gemini và mở modal xác nhận trước khi gửi.
+          Hỗ trợ đồng bộ 2 chiều: <strong>Backlog → Redmine</strong> (Dịch Nhật/Anh sang Việt) và <strong>Redmine → Backlog</strong> (Lọc lấy nội dung tiếng Nhật).
         </div>
       </div>
     </div>

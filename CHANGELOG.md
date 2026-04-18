@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 2026-04-18
+
+### ✨ Added
+- **AI Agent Skills System** - Thiết lập quy trình làm việc tự động cho AI trong `.skills/agent_workflow.md`.
+- **Refined Versioning** - Quy định rõ cách đánh version (1.2.x cho lỗi/nhỏ, 1.x.0 cho tính năng lớn).
+
+### 🔧 Fixed
+- **Blockquote trailing marker** - Xóa ký tự `> ` thừa ở dòng cuối cùng của blockquote và đảm bảo có dòng trắng phân cách với đoạn văn tiếp theo.
+- **Backlog user mentions** - Xử lý tag tên người dùng gọn gàng hơn, không còn bị hiển thị kèm link `/user/`.
+- **Author Update** - Cập nhật thông tin tác giả thành Hipppo.
+
+## [1.2.1] - 2026-04-17
+
+### 🔧 Fixed
+- **Blockquote duplication** - Sửa lỗi lặp ký tự `> ` khi chuyển đổi comment có blockquote và xuống dòng (br/p/div).
+- **Regex text simplification** - Sửa lỗi regex làm mất ký tự đứng trước khoảng trắng khi rút gọn văn bản.
+
 ## [1.2.0] - 2026-04-16
 
 ### ✨ Added

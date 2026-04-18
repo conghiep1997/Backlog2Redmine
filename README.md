@@ -172,13 +172,25 @@ npm run build  # TODO: Add build script
 - Check model name đúng (có `-it`)
 - Xem log với prefix `[TB-Redmine]`
 
+## ⚙️ Logic Chuyển đổi (Conversion Logic)
+
+Để hỗ trợ các agent hoặc developer sau này, đây là tóm tắt cách extension chuyển đổi HTML từ Backlog sang Markdown cho Redmine:
+
+- **Hàm core:** `extractBacklogContent` trong `src/content.js`.
+- **Cơ chế:** Sử dụng đệ quy (Recursive Walk) qua các node DOM.
+- **Blockquotes:** Thay vì thêm ký tự `> ` thủ công ở từng thẻ con (như `br`, `p`), extension sẽ thu thập toàn bộ nội dung bên trong `<blockquote>`, sau đó dùng `split("\n")` và `map` để chèn `> ` vào đầu mỗi dòng. Điều này giúp xử lý chính xác các blockquote lồng nhau và đa dòng.
+- **Text Simplification:** Các khoảng trắng dư thừa được rút gọn nhưng vẫn giữ nguyên xuống dòng. Lưu ý sử dụng regex có capture group để không nuốt mất ký tự đứng trước khoảng trắng.
+
+> [!TIP]
+> **Dành cho AI Agents:** Vui lòng đọc kĩ quy trình tại [.skills/agent_workflow.md](file:///c:/Projects/Extensions/Backlog2Redmine/.skills/agent_workflow.md) trước khi thực hiện bất kỳ thay đổi nào.
+
 ## 📄 License
 
 MIT License - See LICENSE file
 
 ## 👨‍💻 Author
 
-Developed for S+ Software Company
+Developed by **Hipppo** (Current Version: 1.2.2)
 
 ## 🗺️ Roadmap
 

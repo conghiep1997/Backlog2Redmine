@@ -15,29 +15,55 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("optionsForm");
   const redmineDomainInput = document.getElementById("redmineDomain");
   const redmineApiKeyInput = document.getElementById("redmineApiKey");
+  
+  // Backlog elements
+  const backlogDomainInput = document.getElementById("backlogDomain");
+  const backlogApiKeyInput = document.getElementById("backlogApiKey");
+  
+  // Provider elements
+  const aiProviderSelect = document.getElementById("aiProvider");
+  const geminiSection = document.getElementById("geminiSection");
+  const cerebrasSection = document.getElementById("cerebrasSection");
+  
+  // Gemini elements
   const geminiApiKeyInput = document.getElementById("geminiApiKey");
   const geminiModelSelect = document.getElementById("geminiModel");
   const geminiFallbackModelSelect = document.getElementById("geminiFallbackModel");
+  
+  // Cerebras elements
+  const cerebrasApiKeyInput = document.getElementById("cerebrasApiKey");
+  const cerebrasModelSelect = document.getElementById("cerebrasModel");
+  
   const statusEl = document.getElementById("status");
   
-  if (!form || !redmineDomainInput || !redmineApiKeyInput || !geminiApiKeyInput || !geminiModelSelect || !geminiFallbackModelSelect || !statusEl) {
+  if (!form || !redmineDomainInput || !redmineApiKeyInput || !aiProviderSelect || !geminiSection || !cerebrasSection || !statusEl) {
     console.error("[OPTIONS] Missing DOM elements");
     return;
   }
   
-  // Populate model dropdowns with defaults from constants.js
-  populateModelDropdown(geminiModelSelect);
-  populateModelDropdown(geminiFallbackModelSelect, true); // true = include "no fallback" option
+  // Populate model dropdowns
+  populateModelDropdown(geminiModelSelect, TB.GEMINI_MODELS);
+  populateModelDropdown(geminiFallbackModelSelect, TB.GEMINI_MODELS, true); 
+  populateModelDropdown(cerebrasModelSelect, TB.CEREBRAS_MODELS);
   
   // Load existing options
   loadOptions();
   
+  // Provider change handler
+  aiProviderSelect.addEventListener("change", () => {
+    const provider = aiProviderSelect.value;
+    if (provider === TB.PROVIDERS.CEREBRAS) {
+      geminiSection.style.display = "none";
+      cerebrasSection.style.display = "block";
+    } else {
+      geminiSection.style.display = "block";
+      cerebrasSection.style.display = "none";
+    }
+  });
+  
   // Form submit handler
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    
-    // Redmine domain is hardcoded, use constant
-    const redmineDomain = TB.REDMINE_DOMAIN;
     
     const redmineApiKey = redmineApiKeyInput.value.trim();
     if (!redmineApiKey) {
@@ -45,52 +71,36 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     
-    const geminiApiKey = geminiApiKeyInput.value.trim();
-    if (!geminiApiKey) {
-      setStatus("❌ Gemini API Key không được để trống.");
-      return;
-    }
-    
-    const geminiModel = geminiModelSelect.value;
-    const geminiFallbackModel = geminiFallbackModelSelect.value;
-    
-    console.log("Saving settings...", {
-      redmineDomain,
-      redmineApiKey: redmineApiKey ? "***" : "empty",
-      geminiApiKey: geminiApiKey ? "***" : "empty",
-      geminiModel,
-      geminiFallbackModel,
-    });
-    
-    const payload = {
-      redmineApiKey,
-      geminiApiKey,
-      geminiModel,
-      geminiFallbackModel,
+    const aiProvider = aiProviderSelect.value;
+    const settings = {
+      redmineApiKey: await encryptData(redmineApiKey),
+      backlogDomain: backlogDomainInput.value.trim() || TB.BACKLOG_DOMAIN,
+      backlogApiKey: await encryptData(backlogApiKeyInput.value.trim()),
+      aiProvider,
+      geminiModel: geminiModelSelect.value,
+      geminiFallbackModel: geminiFallbackModelSelect.value,
+      cerebrasModel: cerebrasModelSelect.value,
     };
     
+    // Validate and encrypt specific provider keys
+    if (aiProvider === TB.PROVIDERS.GEMINI) {
+      const geminiApiKey = geminiApiKeyInput.value.trim();
+      if (!geminiApiKey) {
+        setStatus("❌ Gemini API Key không được để trống.");
+        return;
+      }
+      settings.geminiApiKey = await encryptData(geminiApiKey);
+    } else if (aiProvider === TB.PROVIDERS.CEREBRAS) {
+      const cerebrasApiKey = cerebrasApiKeyInput.value.trim();
+      if (!cerebrasApiKey) {
+        setStatus("❌ Cerebras API Key không được để trống.");
+        return;
+      }
+      settings.cerebrasApiKey = await encryptData(cerebrasApiKey);
+    }
+    
     try {
-      // Mã hóa API keys trước khi lưu
-      const encryptedPayload = {
-        redmineApiKey: await encryptData(payload.redmineApiKey),
-        geminiApiKey: await encryptData(payload.geminiApiKey),
-        geminiModel: payload.geminiModel,
-        geminiFallbackModel: payload.geminiFallbackModel,
-      };
-      
-      console.log("Encrypted payload:", {
-        redmineApiKey: encryptedPayload.redmineApiKey ? "encrypted" : "empty",
-        geminiApiKey: encryptedPayload.geminiApiKey ? "encrypted" : "empty",
-        geminiModel: encryptedPayload.geminiModel,
-        geminiFallbackModel: encryptedPayload.geminiFallbackModel,
-      });
-      
-      await chrome.storage.local.set(encryptedPayload);
-      
-      // Verify save
-      const verify = await chrome.storage.local.get(["geminiModel", "geminiFallbackModel"]);
-      console.log("Verified save:", verify);
-      
+      await chrome.storage.local.set(settings);
       setStatus("✅ Đã lưu cấu hình thành công!");
     } catch (error) {
       console.error("Save error:", error);
@@ -100,60 +110,44 @@ document.addEventListener("DOMContentLoaded", () => {
   
   // Functions
   function loadOptions() {
-    console.log("Loading options...");
-    
     chrome.storage.local.get(
-      ["redmineApiKey", "geminiApiKey", "geminiModel", "geminiFallbackModel"],
+      ["redmineApiKey", "backlogDomain", "backlogApiKey", "geminiApiKey", "cerebrasApiKey", "aiProvider", "geminiModel", "geminiFallbackModel", "cerebrasModel"],
       async (items) => {
-        console.log("Loaded items:", items);
-        
-        // Redmine domain is hardcoded, no need to load from storage
         redmineDomainInput.value = TB.REDMINE_DOMAIN;
         
-        // Only decrypt and populate if keys exist
         if (items.redmineApiKey) {
-          const decryptedRedmine = await decryptData(items.redmineApiKey);
-          if (decryptedRedmine) {
-            redmineApiKeyInput.value = decryptedRedmine;
-            console.log("Redmine API Key loaded: ***");
-          }
+          redmineApiKeyInput.value = await decryptData(items.redmineApiKey);
         }
+
+        backlogDomainInput.value = items.backlogDomain || TB.BACKLOG_DOMAIN;
+        if (items.backlogApiKey) {
+          backlogApiKeyInput.value = await decryptData(items.backlogApiKey);
+        }
+        
+        // Load provider preference
+        const provider = items.aiProvider || TB.DEFAULT_PROVIDER;
+        aiProviderSelect.value = provider;
+        aiProviderSelect.dispatchEvent(new Event("change"));
         
         if (items.geminiApiKey) {
-          const decryptedGemini = await decryptData(items.geminiApiKey);
-          if (decryptedGemini) {
-            geminiApiKeyInput.value = decryptedGemini;
-            console.log("Gemini API Key loaded: ***");
-          }
+          geminiApiKeyInput.value = await decryptData(items.geminiApiKey);
         }
         
-        // Load primary model (use default if not set)
-        const savedModel = items.geminiModel ?? TB.GEMINI_MODEL;
-        geminiModelSelect.value = savedModel;
-        console.log("Primary Model loaded:", savedModel);
+        if (items.cerebrasApiKey) {
+          cerebrasApiKeyInput.value = await decryptData(items.cerebrasApiKey);
+        }
         
-        // Load fallback model (use default if not set)
-        const savedFallbackModel = items.geminiFallbackModel ?? TB.GEMINI_FALLBACK_MODEL;
-        geminiFallbackModelSelect.value = savedFallbackModel;
-        console.log("Fallback Model loaded:", savedFallbackModel);
-        
-        console.log("Form populated successfully");
+        geminiModelSelect.value = items.geminiModel || TB.GEMINI_MODEL;
+        geminiFallbackModelSelect.value = items.geminiFallbackModel ?? TB.GEMINI_FALLBACK_MODEL;
+        cerebrasModelSelect.value = items.cerebrasModel || TB.CEREBRAS_MODEL;
       }
     );
   }
   
-  function populateModelDropdown(selectElement, includeNoFallback = false) {
-    if (!selectElement) {
-      console.warn("[OPTIONS] Model select element not found, skipping populate");
-      return;
-    }
-    
-    console.log("[OPTIONS] Populating model dropdown...", selectElement.id);
-    console.log("[OPTIONS] TB.GEMINI_MODELS:", TB.GEMINI_MODELS);
-    
+  function populateModelDropdown(selectElement, models, includeNoFallback = false) {
+    if (!selectElement || !models) return;
     selectElement.innerHTML = '';
     
-    // Add "No Fallback" option for fallback dropdown
     if (includeNoFallback) {
       const noFallbackOption = document.createElement("option");
       noFallbackOption.value = "";
@@ -161,32 +155,13 @@ document.addEventListener("DOMContentLoaded", () => {
       selectElement.appendChild(noFallbackOption);
     }
     
-    const modelsToUse = TB.GEMINI_MODELS;
-    
-    if (!modelsToUse || modelsToUse.length === 0) {
-      console.warn("[OPTIONS] No models available, using default");
-      const option = document.createElement("option");
-      option.value = TB.GEMINI_MODEL;
-      option.textContent = "Default: " + TB.GEMINI_MODEL;
-      option.selected = true;
-      selectElement.appendChild(option);
-      console.log("[OPTIONS] Populated with default model:", TB.GEMINI_MODEL);
-      return;
-    }
-    
-    modelsToUse.forEach((model) => {
-      console.log("[OPTIONS] Adding model:", model.value, model.label);
+    models.forEach((model) => {
       const option = document.createElement("option");
       option.value = model.value;
       option.textContent = model.label;
-      if (model.default) {
-        option.selected = true;
-      }
+      if (model.default) option.selected = true;
       selectElement.appendChild(option);
     });
-    
-    console.log("[OPTIONS] Populated dropdown with", modelsToUse.length, "models");
-    console.log("[OPTIONS] Select innerHTML:", selectElement.innerHTML);
   }
   
   function setStatus(message) {

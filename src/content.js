@@ -4,8 +4,8 @@ if (!TB) {
 }
 
 const BUTTON_CLASS = "tb-redmine-btn";
-const PROCESSING_TEXT = "Đang dịch...";
-const BUTTON_TEXT = "Redmine";
+const PROCESSING_TEXT = TB.MESSAGES.PROCESSING;
+const BUTTON_TEXT = TB.MESSAGES.BUTTON_TEXT;
 
 // Icons8 Translate Icon - Inline SVG for best performance
 const REDMINE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24px" height="24px"><path d="M 4 2 C 2.894531 2 2 2.894531 2 4 L 2 13 C 2 14.105469 2.894531 15 4 15 L 5 15 L 5 17 L 7 19 L 9 19 L 9 20 C 9 21.105469 9.894531 22 11 22 L 20 22 C 21.105469 22 22 21.105469 22 20 L 22 11 C 22 9.894531 21.105469 9 20 9 L 15 9 L 15 4 C 15 2.894531 14.105469 2 13 2 Z M 4 4 L 13 4 L 13 9 L 11 9 C 10.339844 9 9.769531 9.320313 9.40625 9.8125 C 9.246094 9.703125 9.109375 9.574219 8.96875 9.46875 C 9.601563 8.804688 10.234375 8 10.75 7 L 12 7 L 12 6 L 9 6 L 9 5 L 8 5 L 8 6 L 5 6 L 5 7 L 6.125 7 C 6.003906 7.136719 5.96875 7.328125 6.03125 7.5 C 6.03125 7.5 6.199219 8.007813 6.71875 8.6875 C 6.90625 8.933594 7.167969 9.207031 7.46875 9.5 C 6.324219 10.472656 5.34375 10.90625 5.34375 10.90625 C 5.085938 11.011719 4.957031 11.304688 5.0625 11.5625 C 5.167969 11.820313 5.460938 11.949219 5.71875 11.84375 C 5.71875 11.84375 6.914063 11.355469 8.25 10.1875 C 8.484375 10.367188 8.75 10.535156 9.03125 10.71875 C 9.019531 10.8125 9 10.902344 9 11 L 9 13 L 4 13 Z M 6.875 7 L 9.5625 7 C 9.136719 7.722656 8.671875 8.34375 8.1875 8.84375 C 7.902344 8.574219 7.667969 8.3125 7.5 8.09375 C 7.0625 7.523438 7 7.21875 7 7.21875 C 6.976563 7.136719 6.933594 7.0625 6.875 7 Z M 14.84375 12 L 16.15625 12 L 19 20 L 17.84375 20 L 17.09375 17.8125 L 13.84375 17.8125 L 13.125 20 L 12 20 Z M 15.4375 12.90625 C 15.3125 13.382813 14.15625 17 14.15625 17 L 16.8125 17 C 16.8125 17 15.59375 13.371094 15.46875 12.90625 Z M 7 15 L 9 15 L 9 17 L 7 17 Z"/></svg>`;
@@ -68,8 +68,8 @@ function injectButtonIfNeeded(actionsEl) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = BUTTON_CLASS;
-  button.title = "Dịch bình luận sang tiếng Việt và gửi lên Redmine";
-  button.setAttribute("aria-label", "Dịch bình luận sang tiếng Việt và gửi lên Redmine");
+  button.title = TB.MESSAGES.BUTTON_TITLE;
+  button.setAttribute("aria-label", TB.MESSAGES.BUTTON_ARIA);
   button.innerHTML = `
     <span class="tb-redmine-btn__icon" aria-hidden="true">${REDMINE_ICON}</span>
     <span class="tb-redmine-btn__text">${BUTTON_TEXT}</span>
@@ -82,7 +82,14 @@ function injectButtonIfNeeded(actionsEl) {
     await handleTranslateAndOpenModal(actionsEl, button);
   });
 
-  actionsEl.appendChild(button);
+  // Insert before the "Quote" button if possible
+  const quoteBtn = actionsEl.querySelector("a.icon-comment");
+  if (quoteBtn) {
+    quoteBtn.before(button);
+  } else {
+    actionsEl.appendChild(button);
+  }
+
   actionsEl.dataset.tbInjected = "1";
 }
 
@@ -95,7 +102,6 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
     return;
   }
 
-  // Collect all comments from clicked position to end (for batch option)
   const allCommentItems = Array.from(document.querySelectorAll(".comment-item"));
   const clickedIndex = allCommentItems.findIndex(item => item === commentItem);
   
@@ -105,72 +111,44 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
   }
 
   const commentsToProcess = allCommentItems.slice(clickedIndex);
-  const clickedCommentData = [];
-
-  // Get clicked comment data (for single mode default)
   const clickedCommentContentEl = commentItem?.querySelector("div.comment-content");
-  const clickedCommentText = clickedCommentContentEl?.innerText.trim();
+  const clickedCommentText = extractBacklogContent(clickedCommentContentEl);
+  const clickedCommentUrl = getCommentUrl(commentItem);
   
   if (!clickedCommentText) {
     showToast(TB.MESSAGES.TOAST.EMPTY_COMMENT, "error");
     return;
   }
 
-  clickedCommentData.push({
-    originalText: clickedCommentText,
-    commentIndex: 0,
-  });
-
   setButtonLoading(button, true);
 
   try {
-    // Translate clicked comment first (default single mode)
+    // CHỈ dịch comment được click trước để hiện popup ngay lập tức
     const result = await sendRuntimeMessage({
       type: "LOOKUP_AND_TRANSLATE_COMMENT",
       issueKey,
       issueSummary,
       commentText: clickedCommentText,
+      commentUrl: clickedCommentUrl,
     });
 
-    // Prepare batch data if user chooses to translate all
-    let batchData = null;
-    const remainingComments = commentsToProcess.slice(1);
-    
-    if (remainingComments.length > 0) {
-      const batchPromises = remainingComments.map((item, idx) => {
-        const commentContentEl = item.querySelector("div.comment-content");
-        const commentText = commentContentEl?.innerText.trim();
-        
-        if (commentText) {
-          return sendRuntimeMessage({
-            type: "LOOKUP_AND_TRANSLATE_COMMENT",
-            issueKey,
-            issueSummary,
-            commentText,
-          }).then(res => ({
-            ...res,
-            originalText: commentText,
-            commentIndex: idx + 1,
-          }));
-        }
-        return null;
-      });
-
-      batchData = await Promise.all(batchPromises);
-      batchData = batchData.filter(Boolean); // Remove nulls
-    }
+    const remainingComments = commentsToProcess.slice(1).map(item => {
+      const contentEl = item.querySelector("div.comment-content");
+      return {
+        text: extractBacklogContent(contentEl),
+        url: getCommentUrl(item)
+      };
+    }).filter(c => c.text);
 
     openConfirmModal({
       redmineIssueId: result.redmineIssueId,
       issueTitle: result.issueTitle,
       previewText: result.previewText,
-      isBatch: false,
-      commentCount: 1,
-      batchData: batchData,
-      hasBatchOption: batchData && batchData.length > 0,
+      remainingComments: remainingComments,
+      hasBatchOption: remainingComments.length > 0,
       onCancel: () => setButtonLoading(button, false),
       onConfirm: async ({ redmineIssueId, notesList }) => {
-        // Send each note sequentially to Redmine
+        // Gửi từng note lần lượt lên Redmine
         const results = [];
         for (const notes of notesList) {
           const sendResult = await sendRuntimeMessage({
@@ -181,7 +159,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
           results.push(sendResult);
         }
 
-        // Show success modal with link to last note
+        // Hiện modal thành công
         const lastResult = results[results.length - 1];
         openSuccessModal({
           redmineUrl: lastResult.redmineUrl,
@@ -189,11 +167,40 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
           onClose: () => setButtonLoading(button, false),
         });
       },
+      // Helper để dịch các comment còn lại khi người dùng xác nhận
+      translateBatch: async (comments) => {
+        const batchPromises = comments.map(c => 
+          sendRuntimeMessage({
+            type: "LOOKUP_AND_TRANSLATE_COMMENT",
+            issueKey,
+            issueSummary,
+            commentText: c.text,
+            commentUrl: c.url,
+          }).then(res => res.previewText)
+        );
+        return await Promise.all(batchPromises);
+      }
     });
+
+    // Sau khi mở modal thành công, reset trạng thái nút (ngầm định)
+    setButtonLoading(button, false);
   } catch (error) {
     setButtonLoading(button, false);
     showToast(error instanceof Error ? error.message : String(error), "error");
   }
+}
+
+function getCommentUrl(commentItem) {
+  let commentId = commentItem?.getAttribute("id");
+  if (!commentId) return null;
+  
+  // Format lại ID: Backlog dùng comment-item-xxxx cho thẻ div nhưng link là #comment-xxxx
+  if (commentId.startsWith("comment-item-")) {
+    commentId = commentId.replace("comment-item-", "comment-");
+  }
+  
+  if (!commentId.startsWith("comment-")) return null;
+  return `${window.location.origin}${window.location.pathname}#${commentId}`;
 }
 
 function getBacklogHeaderInfo() {
@@ -208,7 +215,7 @@ function getBacklogHeaderInfo() {
   };
 }
 
-function openConfirmModal({ redmineIssueId = "", issueTitle = "", previewText = "", isBatch = false, commentCount = 1, hasBatchOption = false, batchData = null, onCancel, onConfirm }) {
+function openConfirmModal({ redmineIssueId = "", issueTitle = "", previewText = "", remainingComments = [], hasBatchOption = false, onCancel, onConfirm, translateBatch }) {
   ensureModalShell();
 
   const {
@@ -224,35 +231,38 @@ function openConfirmModal({ redmineIssueId = "", issueTitle = "", previewText = 
     batchInfoEl,
     batchOptionEl,
     batchOptionCheckbox,
-    batchOptionLabel,
+    batchOptionText,
   } = modalElements;
 
-  let currentMode = isBatch;
-  let currentPreviewText = previewText;
+  let currentMode = false;
   let currentNotesList = [previewText];
+  let memoizedBatchNotes = null; // Lưu trữ kết quả dịch batch để không cần dịch lại nếu check/uncheck
 
   function updateModalState() {
-    if (currentMode && batchData) {
-      // Batch mode
-      titleEl.textContent = `Dịch ${batchData.length + 1} bình luận → Redmine`;
-      subtitleEl.textContent = `Từ vị trí click đến comment cuối cùng`;
+    if (currentMode && hasBatchOption) {
+      // Chế độ Batch
+      titleEl.textContent = `Dịch ${remainingComments.length + 1} bình luận → Redmine`;
+      subtitleEl.textContent = `Từ vị trí click đến cuối trang`;
       
-      const allComments = [previewText, ...batchData.map(item => item.previewText)];
-      const formattedPreview = allComments
-        .map((text, index) => `--- Comment ${index + 1} ---\n${text}`)
-        .join('\n\n');
-      
-      previewTextarea.value = formattedPreview;
-      currentNotesList = allComments;
+      if (memoizedBatchNotes) {
+        const allComments = [previewText, ...memoizedBatchNotes];
+        previewTextarea.value = allComments
+          .map((text, index) => `--- Note ${index + 1} ---\n${text}`)
+          .join('\n\n');
+        currentNotesList = allComments;
+      } else {
+        // Nếu chuyển sang chế độ batch nhưng chưa dịch batch
+        previewTextarea.value = `${previewText}\n\n[Đang chờ xác nhận để dịch thêm ${remainingComments.length} bình luận...]`;
+      }
       
       if (batchInfoEl) {
         batchInfoEl.hidden = false;
-        batchInfoEl.textContent = `📦 Gửi ${batchData.length + 1} notes liên tiếp`;
+        batchInfoEl.textContent = `📦 Sẽ gửi tổng cộng ${remainingComments.length + 1} notes`;
       }
       
-      confirmButton.textContent = `Gửi ${batchData.length + 1} notes`;
+      confirmButton.textContent = `Dịch & Gửi ${remainingComments.length + 1} notes`;
     } else {
-      // Single mode
+      // Chế độ Single
       titleEl.textContent = TB.MESSAGES.MODAL.TITLE;
       subtitleEl.textContent = TB.MESSAGES.MODAL.SUBTITLE;
       previewTextarea.value = previewText;
@@ -266,16 +276,35 @@ function openConfirmModal({ redmineIssueId = "", issueTitle = "", previewText = 
     }
   }
 
-  // Setup batch option checkbox
-  if (batchOptionEl && batchOptionCheckbox && batchOptionLabel) {
-    if (hasBatchOption && batchData && batchData.length > 0) {
+  // Cấu hình checkbox batch
+  if (batchOptionEl && batchOptionCheckbox && batchOptionText) {
+    if (hasBatchOption) {
       batchOptionEl.hidden = false;
-      batchOptionLabel.textContent = `Dịch đến comment cuối cùng (${batchData.length + 1} comments)`;
-      batchOptionCheckbox.checked = false; // Default: single mode
+      batchOptionText.textContent = `Dịch đến comment cuối trang (${remainingComments.length + 1} bình luận)`;
+      batchOptionCheckbox.checked = false;
       
-      batchOptionCheckbox.onchange = (event) => {
+      batchOptionCheckbox.onchange = async (event) => {
         currentMode = event.target.checked;
-        updateModalState();
+        
+        if (currentMode && !memoizedBatchNotes) {
+          // Bắt đầu dịch ngay khi người dùng tích chọn
+          updateModalState();
+          try {
+            // Disable nút xác nhận tạm thời để tránh bấm gửi khi chưa dịch xong
+            confirmButton.disabled = true;
+            memoizedBatchNotes = await translateBatch(remainingComments);
+            confirmButton.disabled = false;
+            updateModalState();
+          } catch (error) {
+            confirmButton.disabled = false;
+            showToast("Lỗi khi dịch hàng loạt: " + error.message, "error");
+            batchOptionCheckbox.checked = false;
+            currentMode = false;
+            updateModalState();
+          }
+        } else {
+          updateModalState();
+        }
       };
     } else {
       batchOptionEl.hidden = true;
@@ -301,35 +330,34 @@ function openConfirmModal({ redmineIssueId = "", issueTitle = "", previewText = 
 
   confirmButton.onclick = async () => {
     const redmineIssueIdValue = issueIdInput.value.trim();
-    const notesValue = previewTextarea.value.trim();
-
     if (!redmineIssueIdValue) {
       showToast(TB.MESSAGES.MODAL.EMPTY_ISSUE_ID, "error");
       return;
     }
-    if (!notesValue) {
-      showToast(TB.MESSAGES.MODAL.EMPTY_NOTES, "error");
-      return;
-    }
 
     confirmButton.disabled = true;
-    const count = currentMode && batchData ? batchData.length + 1 : 1;
-    confirmButton.textContent = count > 1 ? `Đang gửi ${count} notes...` : TB.MESSAGES.MODAL.SENDING;
-
+    
     try {
+      if (currentMode && hasBatchOption && !memoizedBatchNotes) {
+        // Thực hiện dịch batch "Lazy" ngay lúc bấm xác nhận
+        confirmButton.textContent = `Đang dịch ${remainingComments.length} comments...`;
+        memoizedBatchNotes = await translateBatch(remainingComments);
+        currentNotesList = [previewText, ...memoizedBatchNotes];
+      }
+
+      const count = currentNotesList.length;
+      confirmButton.textContent = count > 1 ? `Đang gửi ${count} notes...` : TB.MESSAGES.MODAL.SENDING;
+      
       await onConfirm({ redmineIssueId: redmineIssueIdValue, notesList: currentNotesList });
       closeConfirmModal();
     } catch (error) {
       confirmButton.disabled = false;
-      const btnCount = currentMode && batchData ? batchData.length + 1 : 1;
-      confirmButton.textContent = btnCount > 1 ? `Gửi ${btnCount} notes` : TB.MESSAGES.MODAL.CONFIRM;
+      updateModalState();
       showToast(error instanceof Error ? error.message : String(error), "error");
     }
   };
 
-  // Initialize modal state
   updateModalState();
-
   overlay.hidden = false;
   document.body.classList.add("tb-modal-open");
 }
@@ -382,6 +410,293 @@ function closeConfirmModal() {
   document.body.classList.remove("tb-modal-open");
 }
 
+/**
+ * Trích xuất nội dung từ HTML của Backlog comment, chuyển đổi HTML tags sang Markdown.
+ * Hỗ trợ: bold, italic, code, lists, tables, links, headings, blockquotes, strike-through.
+ */
+function extractBacklogContent(element) {
+  if (!element) return "";
+  
+  let result = "";
+  let listStack = []; // Stack để track nested lists
+  let tableRows = [];
+  let isInsideTable = false;
+  
+  function walk(node, options = {}) {
+    const {
+      isInsideBlockquote = false,
+      isInsidePre = false,
+      listMarker = null,
+      headingLevel = 0,
+    } = options;
+    
+    if (node.nodeType === Node.TEXT_NODE) {
+      let text = node.textContent;
+      // Nếu đang trong pre/code block, giữ nguyên whitespace
+      if (!isInsidePre) {
+        // Replace multiple spaces with single space (nhưng giữ newlines)
+        text = text.replace(/([^\n])\s+/g, '$1 ').replace(/^\s+/, ' ');
+      }
+      if (isInsideBlockquote && result.endsWith("> ")) {
+        text = text.trimStart();
+      }
+      result += text;
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const tag = node.tagName.toLowerCase();
+      
+      // === INLINE FORMATTING ===
+      
+      // Bold: <strong>, <b>
+      if (tag === "strong" || tag === "b") {
+        result += "**";
+        for (const child of node.childNodes) walk(child, options);
+        result += "**";
+        return;
+      }
+      
+      // Italic: <em>, <i>
+      if (tag === "em" || tag === "i") {
+        result += "*";
+        for (const child of node.childNodes) walk(child, options);
+        result += "*";
+        return;
+      }
+      
+      // Strike-through: <del>, <s>, <strike>
+      if (tag === "del" || tag === "s" || tag === "strike") {
+        result += "~~";
+        for (const child of node.childNodes) walk(child, options);
+        result += "~~";
+        return;
+      }
+      
+      // Inline code: <code> (khi không nằm trong <pre>)
+      if (tag === "code" && !isInsidePre) {
+        result += "`";
+        for (const child of node.childNodes) walk(child, { ...options, isInsidePre: false });
+        result += "`";
+        return;
+      }
+      
+      // Links: <a>
+      if (tag === "a") {
+        const href = node.getAttribute("href") || "";
+        const textBefore = result;
+        for (const child of node.childNodes) walk(child, options);
+        const linkText = result.slice(textBefore.length);
+        // Chỉ tạo link nếu có href và text
+        if (href && linkText.trim()) {
+          // Nếu là link mention người dùng trong Backlog (/user/*), chỉ lấy phần text
+          if (href.startsWith("/user/") || href.startsWith("https://") && href.includes(".backlog.com/user/")) {
+            result = textBefore + linkText.trim();
+          } else {
+            // Xóa text vừa add, thay bằng markdown link
+            result = textBefore + `[${linkText.trim()}](${href})`;
+          }
+        }
+        return;
+      }
+      
+      // === BLOCK ELEMENTS ===
+      
+      // Code blocks: <pre>, <pre><code>
+      if (tag === "pre") {
+        // Tìm code element bên trong
+        const codeEl = node.querySelector("code");
+        let codeContent = "";
+        let language = "";
+        
+        if (codeEl) {
+          // Extract language từ class (e.g., "language-javascript")
+          const langClass = Array.from(codeEl.classList).find(c => c.startsWith("language-"));
+          if (langClass) language = langClass.replace("language-", "");
+          codeContent = codeEl.textContent;
+        } else {
+          codeContent = node.textContent;
+        }
+        
+        // Thêm newline trước code block
+        if (result.length > 0 && !result.endsWith("\n")) result += "\n";
+        result += "```" + language + "\n";
+        result += codeContent.trim();
+        result += "\n```\n";
+        return;
+      }
+      
+      // Headings: <h1> - <h6>
+      if (["h1", "h2", "h3", "h4", "h5", "h6"].includes(tag)) {
+        const level = parseInt(tag[1]);
+        if (result.length > 0 && !result.endsWith("\n")) result += "\n";
+        result += "#".repeat(level) + " ";
+        for (const child of node.childNodes) walk(child, options);
+        result += "\n\n";
+        return;
+      }
+      
+      // Images: <img>
+      if (tag === "img") {
+        // Check nếu là Backlog attachment image
+        const src = node.getAttribute("src") || "";
+        const alt = node.getAttribute("alt") || "";
+        
+        if (node.classList.contains("loom-internal-image") || src.includes("ViewAttachmentImage")) {
+          const match = src.match(/attachmentId=(\d+)/);
+          if (match) {
+            result += ` [[TB_IMG:${match[1]}]] `;
+          }
+        } else {
+          // External image
+          result += `![${alt}](${src}) `;
+        }
+        return;
+      }
+      
+      // Blockquotes: <blockquote>
+      if (tag === "blockquote") {
+        if (result.length > 0 && !result.endsWith("\n")) result += "\n";
+        
+        // Process từng child, thêm "> " vào đầu mỗi line
+        const quoteStart = result.length;
+        for (const child of node.childNodes) {
+          walk(child, { ...options, isInsideBlockquote: true });
+        }
+        // Ensure mỗi line trong blockquote có "> "
+        const quoteText = result.slice(quoteStart);
+        result = result.slice(0, quoteStart) + 
+          quoteText.trimEnd().split("\n").map(line => "> " + line.trimStart()).join("\n");
+        
+        result += "\n\n";
+        return;
+      }
+      
+      // Lists: <ul>, <ol>
+      if (tag === "ul" || tag === "ol") {
+        const newMarker = tag === "ul" ? "*" : "1.";
+        listStack.push({ type: tag, marker: newMarker, counter: 0 });
+        for (const child of node.childNodes) walk(child, options);
+        listStack.pop();
+        if (!result.endsWith("\n")) result += "\n";
+        return;
+      }
+      
+      // List items: <li>
+      if (tag === "li") {
+        // Tính indentation dựa trên depth của list stack
+        const indent = "  ".repeat(Math.max(0, listStack.length - 1));
+        const listInfo = listStack[listStack.length - 1];
+        
+        if (!result.endsWith("\n")) result += "\n";
+        
+        if (listInfo?.type === "ol") {
+          listInfo.counter++;
+          result += `${indent}${listInfo.counter}. `;
+        } else {
+          result += `${indent}* `;
+        }
+        
+        for (const child of node.childNodes) walk(child, options);
+        return;
+      }
+      
+      // Tables: <table>
+      if (tag === "table") {
+        isInsideTable = true;
+        tableRows = [];
+        for (const child of node.childNodes) walk(child, options);
+        isInsideTable = false;
+        
+        // Convert table rows to Markdown
+        if (tableRows.length > 0) {
+          if (result.length > 0 && !result.endsWith("\n")) result += "\n";
+          
+          // Build markdown table
+          const maxCols = Math.max(...tableRows.map(r => r.length));
+          
+          // Header row
+          const headerRow = tableRows[0] || [];
+          while (headerRow.length < maxCols) headerRow.push("");
+          result += "| " + headerRow.join(" | ") + " |\n";
+          
+          // Separator row
+          result += "|" + " --- |".repeat(maxCols) + "\n";
+          
+          // Data rows
+          for (let i = 1; i < tableRows.length; i++) {
+            const row = tableRows[i];
+            while (row.length < maxCols) row.push("");
+            result += "| " + row.join(" | ") + " |\n";
+          }
+          result += "\n";
+        }
+        return;
+      }
+      
+      // Table rows: <tr>
+      if (tag === "tr") {
+        const currentRow = [];
+        for (const child of node.childNodes) {
+          if (child.nodeType === Node.ELEMENT_NODE && 
+              ["td", "th"].includes(child.tagName.toLowerCase())) {
+            const cellText = child.textContent.trim().replace(/\n/g, " ");
+            currentRow.push(cellText);
+          }
+        }
+        if (currentRow.length > 0) {
+          tableRows.push(currentRow);
+        }
+        return;
+      }
+      
+      // Paragraphs và divs: <p>, <div>
+      if (["p", "div"].includes(tag)) {
+        const textBefore = result;
+        for (const child of node.childNodes) walk(child, options);
+        const textAfter = result.slice(textBefore.length);
+        
+        // Chỉ thêm newline nếu có nội dung thực sự
+        if (textAfter.trim() && !result.endsWith("\n")) {
+          result += "\n";
+        }
+        return;
+      }
+      
+      // Line breaks: <br>
+      if (tag === "br") {
+        result += "\n";
+        return;
+      }
+      
+      // Horizontal rules: <hr>
+      if (tag === "hr") {
+        if (!result.endsWith("\n")) result += "\n";
+        result += "---\n\n";
+        return;
+      }
+      
+      // Default: process children
+      for (const child of node.childNodes) walk(child, options);
+    }
+  }
+  
+  walk(element);
+  
+  // Cleanup: Dọn dẹp khoảng trắng và formatting dư thừa
+  let cleaned = result
+    .split("\n")
+    .map(line => line.trimEnd())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")  // Max 2 consecutive newlines
+    .replace(/\*\*\*\*/g, "**")   // Fix nested bold
+    .replace(/\*\*\*/g, "***")    // Fix bold+italic
+    .replace(/``+/g, "`")         // Fix multiple backticks
+    .trim();
+  
+  // Fix blockquote formatting: "> \n" → ">\n"
+  cleaned = cleaned.replace(/> \n/g, ">\n");
+  
+  return cleaned;
+}
+
 function ensureModalShell() {
   if (modalHost && modalShadow && modalElements) {
     return;
@@ -408,7 +723,7 @@ function ensureModalShell() {
         </label>
         <label class="tb-field">
           <span class="tb-field__label">${TB.MESSAGES.MODAL.ISSUE_TITLE_LABEL}</span>
-          <input class="tb-input tb-input--readonly" type="text" readonly />
+          <textarea class="tb-input tb-input--readonly" readonly rows="2"></textarea>
         </label>
         <div class="tb-field">
           <span class="tb-field__label">${TB.MESSAGES.MODAL.PREVIEW_LABEL}</span>
@@ -465,7 +780,7 @@ function ensureModalShell() {
   const batchInfoEl = modalShadow.querySelector(".tb-modal__batch-info");
   const batchOptionEl = modalShadow.querySelector(".tb-modal__batch-option");
   const batchOptionCheckbox = modalShadow.querySelector(".tb-modal__batch-option-checkbox");
-  const batchOptionLabel = modalShadow.querySelector(".tb-modal__batch-option-label");
+  const batchOptionText = modalShadow.querySelector(".tb-modal__batch-option-text");
   
   // Success modal elements
   const successModal = modalShadow.querySelector(".tb-modal-success");
@@ -485,6 +800,10 @@ function ensureModalShell() {
     issueIdInput,
     issueTitleInput,
     previewTextarea,
+    batchInfoEl,
+    batchOptionEl,
+    batchOptionCheckbox,
+    batchOptionText,
     successModal,
     successTitleEl,
     successSubtitleEl,
@@ -619,26 +938,28 @@ function injectStyles() {
 
     .tb-toast {
       position: fixed;
-      right: 20px;
-      bottom: 20px;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-16px);
       z-index: 2147483647;
-      max-width: min(420px, calc(100vw - 40px));
-      padding: 12px 14px;
+      max-width: min(480px, calc(100vw - 40px));
+      padding: 14px 18px;
       border-radius: 12px;
       color: #fff;
-      background: rgba(17, 24, 39, 0.94);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+      background: rgba(17, 24, 39, 0.96);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
       opacity: 0;
-      transform: translateY(12px);
-      transition: opacity 180ms ease, transform 180ms ease;
-      font-size: 13px;
+      transition: opacity 200ms ease, transform 200ms ease;
+      font-size: 14px;
+      font-weight: 500;
+      text-align: center;
     }
 
     .tb-toast[data-type="success"] { background: rgba(16, 185, 129, 0.95); }
     .tb-toast[data-type="error"] { background: rgba(220, 38, 38, 0.95); }
     .tb-toast--visible {
       opacity: 1;
-      transform: translateY(0);
+      transform: translateX(-50%) translateY(0);
     }
   `;
 
@@ -660,6 +981,9 @@ function modalStyles() {
       background: rgba(17, 24, 39, 0.58);
       backdrop-filter: blur(4px);
       padding: 20px;
+    }
+    [hidden] {
+      display: none !important;
     }
     .tb-modal-overlay[hidden] {
       display: none !important;
@@ -779,6 +1103,9 @@ function modalStyles() {
       line-height: 1.5;
       min-height: 48px;
       height: auto;
+      white-space: pre-wrap;
+      overflow-y: auto;
+      resize: none;
     }
     .tb-textarea {
       min-height: 340px;
