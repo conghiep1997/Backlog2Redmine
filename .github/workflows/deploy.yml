@@ -74,14 +74,13 @@ jobs:
 
       - name: Upload to Google Drive
         if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.check_tag.outputs.exists == 'false'
-        uses: williamhqs/google-drive-upload-action@v1
-        with:
-          client_id: ${{ secrets.GDRIVE_CLIENT_ID }}
-          client_secret: ${{ secrets.GDRIVE_CLIENT_SECRET }}
-          refresh_token: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
-          filename: Backlog2Redmine-v${{ steps.get_version.outputs.version }}.zip
-          folderId: ${{ secrets.GDRIVE_FOLDER_ID }}
-          overwrite: true
+        run: node scripts/upload-gdrive.js
+        env:
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+          VERSION: ${{ steps.get_version.outputs.version }}
 
 
 
