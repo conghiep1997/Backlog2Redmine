@@ -1,4 +1,4 @@
-# Backlog to Redmine Translator (v1.4.5)
+# Backlog to Redmine Translator (v1.4.6)
 
 Chrome extension dịch comment từ Backlog sang tiếng Việt và đồng bộ dữ liệu thông minh sang Redmine.
 
@@ -46,7 +46,7 @@ Backlog2Redmine/
 
 ## 🤖 Hệ thống AI hỗ trợ
 
-Phiên bản 1.4.5 tối ưu hóa cho tài khoản Free Tier:
+Phiên bản 1.4.6 tối ưu hóa cho tài khoản Free Tier:
 
 | Provider | Model | Rate Limit | Best For |
 |----------|-------|------------|----------|
@@ -210,4 +210,4 @@ Chi tiết các thay đổi qua từng phiên bản có thể được xem tại
 
 ---
 
-**Developed by Hipppo** 🦛 | Version **1.4.5** (April 2026)
+**Developed by Hipppo** 🦛 | Version **1.4.6** (April 2026)

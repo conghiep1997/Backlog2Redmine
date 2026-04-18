@@ -1,6 +1,6 @@
 {
   "name": "backlog2redmine",
-  "version": "1.4.5",
+  "version": "1.4.6",
   "description": "Chrome extension to translate and sync comments between Backlog and Redmine",
   "scripts": {
     "lint": "eslint src/**/*.js",
