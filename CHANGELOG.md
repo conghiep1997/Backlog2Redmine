@@ -1,5 +1,8 @@
 # Nhật ký thay đổi (Changelog)
 
+## [1.4.4] - 2026-04-18
+- **Sửa lỗi nghiêm trọng**: Điều chỉnh cấu trúc thư mục trong bản build để khớp với Manifest. Đã có thể cài đặt và chạy bình thường.
+
 ## [1.4.3] - 2026-04-18
 - **Cập nhật Model Cerebras**: Thêm Qwen 3 235B (Smartest) và GPT OSS 120B để thay thế Llama 70B bị giới hạn trên Free Tier.
 - **Ổn định hệ thống**: Chuyển Primary Model mặc định về Llama 3.1 8B để tránh lỗi 404.

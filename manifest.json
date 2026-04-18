@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Backlog to Redmine Translator",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "description": "Dịch comment từ Backlog sang tiếng Việt bằng Gemini và đẩy sang Redmine.",
   "icons": {
     "16": "assets/icons/icon-16.png",

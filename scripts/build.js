@@ -31,6 +31,9 @@ fs.copyFileSync(MANIFEST_SRC, MANIFEST_DIST);
 
 // Step 3: Copy source files
 console.log('\n📂 Step 3: Copying source files...');
+const SRC_DIST = path.join(DIST_DIR, 'src');
+fs.mkdirSync(SRC_DIST, { recursive: true });
+
 const copyDir = (src, dest, base = '') => {
   const entries = fs.readdirSync(src, { withFileTypes: true });
   for (const entry of entries) {
@@ -47,7 +50,7 @@ const copyDir = (src, dest, base = '') => {
   }
 };
 
-copyDir(SRC_DIR, DIST_DIR);
+copyDir(SRC_DIR, SRC_DIST);
 
 // Step 4: Copy assets
 console.log('\n🎨 Step 4: Copying assets...');

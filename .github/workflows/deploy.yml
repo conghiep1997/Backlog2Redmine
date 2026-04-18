@@ -39,11 +39,17 @@ jobs:
         run: |
           VERSION=$(node -p "require('./manifest.json').version")
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "TAG=v$VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
         
       - name: Build ZIP
         run: npm run build:zip
         
+      - name: Extract Latest Changes
+        run: |
+          awk '/^## \[/{count++} count==2{exit} count==1{print}' CHANGELOG.md > LATEST_CHANGES.md
+
       - name: Check if Tag exists
         id: check_tag
         run: |
@@ -62,9 +68,21 @@ jobs:
           tag_name: ${{ steps.get_version.outputs.tag }}
           name: Release ${{ steps.get_version.outputs.tag }}
           files: Backlog2Redmine-v*.zip
-          body_path: CHANGELOG.md
+          body_path: LATEST_CHANGES.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to Google Drive
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.check_tag.outputs.exists == 'false'
+        uses: adityak74/google-drive-upload-gitaction@main
+        with:
+          credentials: ${{ secrets.GDRIVE_CREDENTIALS }}
+          filename: Backlog2Redmine-v${{ steps.get_version.outputs.version }}.zip
+          folderId: ${{ secrets.GDRIVE_FOLDER_ID }}
+          overwrite: true
+
+
+
 
 
 
