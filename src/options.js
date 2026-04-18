@@ -1,7 +1,5 @@
 // Wait for DOM and constants.js to be ready
 document.addEventListener("DOMContentLoaded", () => {
-  // Create TB alias for constants
-  const TB = globalThis.TB_CONSTANTS;
   
   console.log("[OPTIONS] DOMContentLoaded fired");
   console.log("[OPTIONS] TB available:", typeof TB !== "undefined");

@@ -2,13 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-04-18
+
+### ✨ Added
+- **Modular architecture (Service-based)**: Tái cấu trúc mã nguồn theo hướng Service-based để dễ bảo trì.
+- **New directory structure**: Tổ chức lại thư mục dưới `src/modules/` (ui, services, utils).
+- **Code Guidelines**: Thiết lập quy định về giới hạn kích thước file (< 500 dòng) và cấu trúc code.
+- **Enhanced Modal system**: Nâng cấp hệ thống Modal hỗ trợ đồng bộ cả Redmine và Backlog.
+
+### 🔧 Fixed
+- **Identifier 'TB' Redeclaration Error**: Sửa lỗi xung đột hằng số TB bằng cách gán vào globalThis và dọn dẹp khai báo cục bộ.
+- **SyntaxError in Styles.js**: Sửa lỗi template literal bị cắt cụt do ký tự escape sai vị trí.
+- **ReferenceError 'injectStyles'**: Khôi phục khả năng nạp stylesheet cho Content Script.
+- **Backlog UI Missing Buttons**: Sửa lỗi logic observer khiến các nút bấm biến mất sau khi refactor.
+
+## [1.3.0] - 2026-04-18
+
+### ✨ Added
+- **Issue Migration (Sync All)**: Tính năng di cư toàn bộ Backlog issue sang Redmine (nút "Redmine" ở Header).
+- **Dynamic Metadata**: Tự động lấy danh sách Project, Tracker, Priority từ Redmine API để hiển thị dropdown trong Modal.
+- **Workflow Automation**: Tự động tạo Ticket (`POST`) và đẩy tuần tự các bình luận (`PUT`) kèm theo.
+- **Improved UI**: Giao diện Modal mới hiện đại, hỗ trợ nhiều trường nhập liệu đồng thời.
+
 ## [1.2.2] - 2026-04-18
 
 ### ✨ Added
 - **AI Agent Skills System** - Thiết lập quy trình làm việc tự động cho AI trong `.skills/agent_workflow.md`.
 - **Refined Versioning** - Quy định rõ cách đánh version (1.2.x cho lỗi/nhỏ, 1.x.0 cho tính năng lớn).
 
-### 🔧 Fixed
+- **Success Modal Visibility** - Sửa lỗi modal thông báo thành công không hiển thị và bị đóng đè bởi modal xác nhận.
 - **Blockquote trailing marker** - Xóa ký tự `> ` thừa ở dòng cuối cùng của blockquote và đảm bảo có dòng trắng phân cách với đoạn văn tiếp theo.
 - **Backlog user mentions** - Xử lý tag tên người dùng gọn gàng hơn, không còn bị hiển thị kèm link `/user/`.
 - **Author Update** - Cập nhật thông tin tác giả thành Hipppo.

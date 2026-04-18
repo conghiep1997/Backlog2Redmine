@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Backlog to Redmine Translator",
-  "version": "1.2.2",
+  "version": "1.4.0",
   "description": "Dịch comment từ Backlog sang tiếng Việt bằng Gemini và đẩy sang Redmine.",
   "icons": {
     "16": "assets/icons/icon-16.png",
@@ -20,13 +20,27 @@
   "content_scripts": [
     {
       "matches": ["https://shift7.backlog.com/*"],
-      "js": ["src/constants.js", "src/content.js"],
-      "css": ["src/styles.css"],
+      "js": [
+        "src/constants.js",
+        "src/modules/utils/helpers.js",
+        "src/modules/utils/markdown.js",
+        "src/modules/ui/styles.js",
+        "src/modules/ui/toast.js",
+        "src/modules/ui/modal.js",
+        "src/content.js"
+      ],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://redmine.splus-software.com/*"],
-      "js": ["src/constants.js", "src/redmine_content.js"],
+      "js": [
+        "src/constants.js",
+        "src/modules/utils/helpers.js",
+        "src/modules/ui/styles.js",
+        "src/modules/ui/toast.js",
+        "src/modules/ui/modal.js",
+        "src/redmine_content.js"
+      ],
       "run_at": "document_idle"
     }
   ],

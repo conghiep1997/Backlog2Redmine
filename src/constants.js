@@ -48,6 +48,7 @@ globalThis.TB_CONSTANTS = Object.freeze({
     BUTTON_TITLE: "Dịch bình luận và gửi sang Redmine",
     BUTTON_ARIA: "Dịch bình luận và gửi sang Redmine",
     BUTTON_TEXT: "Redmine",
+    MIGRATE_BUTTON_TEXT: "Migrate Issue",
     PROCESSING: "Đang xử lý...",
     TOAST: {
       NO_COMMENT_CONTENT: "Không tìm thấy nội dung bình luận.",
@@ -78,6 +79,12 @@ globalThis.TB_CONSTANTS = Object.freeze({
       SUCCESS_CLOSE_BUTTON: "Đóng",
       NOTIFY_USERS_LABEL: "Tag thêm người (Ví dụ: 12345, 67890)",
       BACKLOG_ISSUE_KEY_LABEL: "Backlog Issue Key",
+      MIGRATE_TITLE: "Tạo Issue mới trên Redmine",
+      PROJECT_LABEL: "Dự án Redmine (Target Project)",
+      TRACKER_LABEL: "Loại công việc (Tracker)",
+      PRIORITY_LABEL: "Mức độ ưu tiên (Priority)",
+      SUBJECT_LABEL: "Tiêu đề Issue",
+      LOADING_METADATA: "Đang tải danh sách dự án...",
     },
     SETTINGS: {
       REDMINE_DOMAIN_REQUIRED: "Thiếu tên miền Redmine trong trang Tùy chọn (Options).",
@@ -130,3 +137,5 @@ ${text}
 [TB_END]`
   },
 });
+
+globalThis.TB = globalThis.TB_CONSTANTS;

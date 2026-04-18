@@ -8,18 +8,18 @@ Chrome extension dịch comment từ Backlog sang tiếng Việt bằng Gemini A
 Backlog2Redmine/
 ├── manifest.json          # Extension manifest (v3)
 ├── src/                   # Source code
-│   ├── background.js      # Service worker
-│   ├── content.js         # Content script
+│   ├── modules/           # Modular services & UI [NEW]
+│   │   ├── services/      # AI, Redmine, Backlog APIs
+│   │   ├── ui/            # Modal, Toast, Styles
+│   │   └── utils/         # Helpers, Markdown, Crypto
+│   ├── background.js      # Service worker (Entry)
+│   ├── content.js         # Content script (Entry)
+│   ├── redmine_content.js # Redmine script (Entry)
 │   ├── constants.js       # Configuration & messages
 │   ├── options.html       # Settings page
-│   ├── options.js         # Settings logic
-│   └── styles.css         # Button styles
+│   └── options.js         # Settings logic
 ├── assets/
 │   └── icons/             # Extension icons
-│       ├── icon-16.png
-│       ├── icon-48.png
-│       └── icon-128.png
-├── docs/                  # Documentation
 ├── README.md              # This file
 └── CHANGELOG.md           # Version history
 ```
@@ -176,7 +176,7 @@ npm run build  # TODO: Add build script
 
 Để hỗ trợ các agent hoặc developer sau này, đây là tóm tắt cách extension chuyển đổi HTML từ Backlog sang Markdown cho Redmine:
 
-- **Hàm core:** `extractBacklogContent` trong `src/content.js`.
+- **Hàm core:** `extractBacklogContent` trong `src/modules/utils/markdown.js`.
 - **Cơ chế:** Sử dụng đệ quy (Recursive Walk) qua các node DOM.
 - **Blockquotes:** Thay vì thêm ký tự `> ` thủ công ở từng thẻ con (như `br`, `p`), extension sẽ thu thập toàn bộ nội dung bên trong `<blockquote>`, sau đó dùng `split("\n")` và `map` để chèn `> ` vào đầu mỗi dòng. Điều này giúp xử lý chính xác các blockquote lồng nhau và đa dòng.
 - **Text Simplification:** Các khoảng trắng dư thừa được rút gọn nhưng vẫn giữ nguyên xuống dòng. Lưu ý sử dụng regex có capture group để không nuốt mất ký tự đứng trước khoảng trắng.
@@ -190,7 +190,7 @@ MIT License - See LICENSE file
 
 ## 👨‍💻 Author
 
-Developed by **Hipppo** (Current Version: 1.2.2)
+Developed by **Hipppo** (Current Version: 1.4.0)
 
 ## 🗺️ Roadmap
 
