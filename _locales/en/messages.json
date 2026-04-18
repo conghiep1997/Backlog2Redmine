@@ -1,0 +1,254 @@
+{
+  "extension_name": {
+    "message": "Backlog to Redmine Translator"
+  },
+  "extension_description": {
+    "message": "Translate Backlog comments to Vietnamese and sync to Redmine."
+  },
+  "button_title": {
+    "message": "Translate comment and send to Redmine"
+  },
+  "button_text": {
+    "message": "Redmine"
+  },
+  "button_title_backlog": {
+    "message": "Sync Japanese content to Backlog"
+  },
+  "migrate_button_text": {
+    "message": "Migrate Issue"
+  },
+  "processing": {
+    "message": "Processing..."
+  },
+  "toast_no_comment_content": {
+    "message": "No comment content found."
+  },
+  "toast_empty_comment": {
+    "message": "Comment content is empty."
+  },
+  "toast_missing_issue_key": {
+    "message": "Could not read issueKey from Backlog."
+  },
+  "toast_send_success": {
+    "message": "Comment sent to Redmine successfully."
+  },
+  "toast_send_backlog_success": {
+    "message": "Comment sent to Backlog successfully."
+  },
+  "toast_rate_limit_retry": {
+    "message": "⚠️ Primary model rate limited, retrying with fallback..."
+  },
+  "toast_rate_limit_failed": {
+    "message": "❌ Both models rate limited. Please wait or check API key."
+  },
+  "toast_cross_provider_retry": {
+    "message": "⚠️ $provider$ rate limited, switching to Gemini Flash Lite...",
+    "placeholders": {
+      "provider": {
+        "content": "$1"
+      }
+    }
+  },
+  "modal_title": {
+    "message": "Send Comment to Redmine"
+  },
+  "modal_subtitle": {
+    "message": "Edit content before sending if necessary."
+  },
+  "modal_issue_id_label": {
+    "message": "Redmine Issue ID"
+  },
+  "modal_issue_title_label": {
+    "message": "Redmine Issue Title"
+  },
+  "modal_preview_label": {
+    "message": "Preview Content"
+  },
+  "modal_hint": {
+    "message": "Tip: You can type @username before sending, Redmine will auto-detect if the name is correct."
+  },
+  "modal_confirm": {
+    "message": "Confirm & Send"
+  },
+  "modal_cancel": {
+    "message": "Cancel"
+  },
+  "modal_close_aria": {
+    "message": "Close"
+  },
+  "modal_sending": {
+    "message": "Sending..."
+  },
+  "modal_empty_issue_id": {
+    "message": "Please enter Redmine Issue ID."
+  },
+  "modal_empty_notes": {
+    "message": "Sending content cannot be empty."
+  },
+  "modal_success_title": {
+    "message": "✅ Done!"
+  },
+  "modal_success_subtitle": {
+    "message": "Comment has been sent successfully to Redmine."
+  },
+  "modal_success_view_button": {
+    "message": "View on Redmine"
+  },
+  "modal_success_close_button": {
+    "message": "Close"
+  },
+  "modal_notify_users_label": {
+    "message": "Notify users (Example: 12345, 67890)"
+  },
+  "modal_backlog_issue_key_label": {
+    "message": "Backlog Issue Key"
+  },
+  "modal_migrate_title": {
+    "message": "Create New Issue on Redmine"
+  },
+  "modal_migrate_subtitle": {
+    "message": "Will create 1 ticket and attach $count$ comments.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "modal_migrate_confirm": {
+    "message": "Create & Migrate All"
+  },
+  "modal_project_label": {
+    "message": "Redmine Project (Target Project)"
+  },
+  "modal_tracker_label": {
+    "message": "Tracker Type"
+  },
+  "modal_priority_label": {
+    "message": "Priority Level"
+  },
+  "modal_subject_label": {
+    "message": "Issue Subject"
+  },
+  "modal_loading_metadata": {
+    "message": "Loading metadata..."
+  },
+  "modal_waiting_translation": {
+    "message": "Waiting for translation..."
+  },
+  "modal_loading_title": {
+    "message": "Loading title..."
+  },
+  "modal_error_numeric_id": {
+    "message": "⚠️ ID must be a number!"
+  },
+  "modal_error_not_found": {
+    "message": "⚠️ Issue not found or connection error!"
+  },
+  "modal_error_select_project": {
+    "message": "Please select a Redmine project."
+  },
+  "modal_backlog_title": {
+    "message": "Send comment to Backlog"
+  },
+  "modal_backlog_subtitle": {
+    "message": "Contains only the Japanese portion extracted by AI."
+  },
+  "modal_backlog_placeholder": {
+    "message": "Example: CP-123"
+  },
+  "modal_backlog_empty_key": {
+    "message": "Please enter Backlog Issue Key."
+  },
+  "modal_batch_title_multiple": {
+    "message": "✅ Sent $count$ notes successfully!",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "modal_batch_subtitle_multiple": {
+    "message": "All comments have been translated and sent to Redmine."
+  },
+  "modal_error_metadata": {
+    "message": "Unable to load Redmine metadata."
+  },
+  "modal_batch_text": {
+    "message": "Translate to the last comment on page ($count$ comments)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "modal_batch_confirm": {
+    "message": "Translate & Send $count$ notes",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_redmine_domain_required": {
+    "message": "Missing Redmine domain in Options."
+  },
+  "settings_redmine_api_key_required": {
+    "message": "Missing Redmine API Key in Options."
+  },
+  "settings_backlog_api_key_required": {
+    "message": "Missing Backlog API Key in Options."
+  },
+  "settings_gemini_api_key_required": {
+    "message": "Missing Gemini API Key in Options."
+  },
+  "options_gemini_key_required": {
+    "message": "❌ Please enter Gemini API Key."
+  },
+  "options_cerebras_key_required": {
+    "message": "❌ Please enter Cerebras API Key."
+  },
+  "options_save_success": {
+    "message": "✅ Configuration saved successfully!"
+  },
+  "options_save_error": {
+    "message": "❌ Error saving: $error$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_saved_placeholder": {
+    "message": "********** (Saved)"
+  },
+  "redmine_lookup_failed": {
+    "message": "No corresponding Issue found on Redmine."
+  },
+  "redmine_search_empty_html": {
+    "message": "Redmine search page returned empty data."
+  },
+  "redmine_search_no_match": {
+    "message": "No match found in HTML, switching to API..."
+  },
+  "redmine_search_page_error": {
+    "message": "Redmine search page error."
+  },
+  "redmine_api_request_failed": {
+    "message": "Redmine API request failed."
+  },
+  "gemini_empty_translation": {
+    "message": "AI returned no translation content."
+  },
+  "gemini_rate_limit_error": {
+    "message": "Model hit rate limit (429 Too Many Requests)"
+  },
+  "fallback_no_fallback": {
+    "message": "No fallback used"
+  },
+  "backlog_lookup_failed": {
+    "message": "No corresponding Issue found on Backlog."
+  },
+  "backlog_post_failed": {
+    "message": "Failed to post comment to Backlog."
+  }
+}

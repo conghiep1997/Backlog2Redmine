@@ -227,10 +227,6 @@ function normalizeTranslationOutput(rawText) {
     const noiseMarkers = [
       "COMPLY RULES:",
       "MANDATORY RULES:",
-      "BẢN DỊCH:",
-      "DIỄN GIẢI:",
-      "BẮT ĐẦU NỘI DUNG",
-      "KẾT THÚC NỘI DUNG",
       "TRANSLATION:",
       "TASK:",
       "[TB_START]",
@@ -256,8 +252,6 @@ function normalizeTranslationOutput(rawText) {
   }
 
   cleaned = cleaned
-    .replace(/\[KẾT THÚC NỘI DUNG\]\s*$/g, "")
-    .replace(/\[BẮT ĐẦU NỘI DUNG\]\s*$/g, "")
     .replace(/\[TB_END\]\s*$/g, "")
     .replace(/\[TB_START\]\s*$/g, "")
     .replace(/\[\/?result\]/gi, "")

@@ -76,7 +76,7 @@ async function handleExtractAndOpenModal(actionsEl, button) {
     });
     openBacklogModal({
       backlogIssueKey,
-      previewText: result.data.previewText,
+      previewText: result.previewText,
       onCancel: () => setButtonLoading(button, false),
       onConfirm: async ({ backlogIssueKey: confirmedKey, content, notifiedUserId }) => {
         const sendResult = await sendRuntimeMessage({
@@ -86,7 +86,7 @@ async function handleExtractAndOpenModal(actionsEl, button) {
           notifiedUserId,
         });
         openSuccessModal({
-          redmineUrl: sendResult.data.backlogUrl,
+          redmineUrl: sendResult.backlogUrl,
           onClose: () => setButtonLoading(button, false),
         });
       },

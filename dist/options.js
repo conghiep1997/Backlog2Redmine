@@ -1,5 +1,8 @@
 // Wait for DOM and constants.js to be ready
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("[OPTIONS] DOMContentLoaded fired");
+  console.log("[OPTIONS] TB available:", typeof TB !== "undefined");
+
   if (typeof TB === "undefined") {
     console.error("[OPTIONS] TB is not defined! constants.js may not have loaded.");
     return;

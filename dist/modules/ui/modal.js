@@ -33,7 +33,7 @@ function ensureModalShell() {
             </div>
             <div class="tb-field-group">
               <label for="tb-redmine-issue-title">${TB.MESSAGES.MODAL.ISSUE_TITLE_LABEL}</label>
-              <textarea id="tb-redmine-issue-title" class="tb-multiline-input" readonly rows="2"></textarea>
+              <input type="text" id="tb-redmine-issue-title" readonly>
             </div>
           </div>
           <div id="tb-migration-fields" hidden>
@@ -186,15 +186,15 @@ function openConfirmModal({
     } else {
       titleEl.textContent = TB.MESSAGES.MODAL.TITLE;
       subtitleEl.textContent = currentMode
-        ? TB.MESSAGES.MODAL.BATCH_SUBTITLE_PREPARING(remainingComments.length + 1)
+        ? TB.MESSAGES.MODAL.BATCH_TITLE_MULTIPLE(remainingComments.length + 1)
         : TB.MESSAGES.MODAL.SUBTITLE;
       standardFields.hidden = false;
       migrationFields.hidden = true;
       if (currentMode) {
         previewTextarea.value = memoizedBatchNotes
           ? [previewText, ...memoizedBatchNotes]
-            .map((text, index) => `--- Note ${index + 1} ---\n${text}`)
-            .join("\n\n")
+              .map((text, index) => `--- Note ${index + 1} ---\n${text}`)
+              .join("\n\n")
           : `${previewText}\n\n${TB.MESSAGES.MODAL.WAITING_TRANSLATION}`;
         currentNotesList = memoizedBatchNotes
           ? [previewText, ...memoizedBatchNotes]

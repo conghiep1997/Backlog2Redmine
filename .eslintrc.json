@@ -1,0 +1,78 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "webextensions": true
+  },
+  "globals": {
+    "TB": "readonly",
+    "TB_CONSTANTS": "readonly",
+    "importScripts": "readonly",
+    "chrome": "readonly",
+    "extractBacklogContent": "readonly",
+    "injectStyles": "readonly",
+    "showToast": "readonly",
+    "openConfirmModal": "readonly",
+    "openBacklogModal": "readonly",
+    "openSuccessModal": "readonly",
+    "sendRuntimeMessage": "readonly",
+    "getSettings": "readonly",
+    "assertSettings": "readonly",
+    "decryptData": "readonly",
+    "encryptData": "readonly",
+    "normalizeLoose": "readonly",
+    "decodeHtmlText": "readonly",
+    "stripHtml": "readonly",
+    "buildRedmineUrl": "readonly",
+    "safeReadJson": "readonly",
+    "readErrorMessage": "readonly",
+    "timeoutFetch": "readonly",
+    "findRedmineIssue": "readonly",
+    "findRedmineIssueViaApi": "readonly",
+    "handleSendToRedmine": "readonly",
+    "handleCreateRedmineIssue": "readonly",
+    "processNotesImages": "readonly",
+    "uploadToRedmine": "readonly",
+    "downloadBacklogImage": "readonly",
+    "handleSendToBacklog": "readonly",
+    "translateText": "readonly",
+    "callGeminiAPI": "readonly",
+    "callCerebrasAPI": "readonly",
+    "normalizeTranslationOutput": "readonly",
+    "formatTranslation": "readonly",
+    "sanitizeErrorMessage": "readonly"
+  },
+  "extends": "eslint:recommended",
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-unused-vars": "off",
+    "no-console": "off",
+    "prefer-const": "warn",
+    "no-var": "warn",
+    "eqeqeq": ["warn", "always"],
+    "curly": ["warn", "multi-line"],
+    "indent": ["warn", 2],
+    "quotes": ["warn", "double"],
+    "semi": ["warn", "always"],
+    "no-trailing-spaces": "warn",
+    "eol-last": "warn",
+    "no-multiple-empty-lines": ["warn", { "max": 2 }],
+    "key-spacing": ["warn", { "beforeColon": false, "afterColon": true }],
+    "no-shadow": "warn",
+    "no-use-before-define": ["warn", { "functions": false, "classes": false }],
+    "no-empty": "warn",
+    "spaced-comment": ["warn", "always", { "markers": ["/"] }]
+  },
+  "ignorePatterns": ["node_modules/", "dist/", "*.min.js"],
+  "overrides": [
+    {
+      "files": ["src/modules/**/*.js"],
+      "rules": {
+        "no-unused-vars": "off"
+      }
+    }
+  ]
+}

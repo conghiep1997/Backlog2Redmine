@@ -115,8 +115,7 @@ function injectStyles() {
     .tb-field-group input:focus, .tb-field-group select:focus, .tb-field-group textarea:focus {
       outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
-    .tb-field-group input[readonly], .tb-field-group textarea[readonly] { background: #f1f5f9; color: #64748b; }
-    .tb-multiline-input { resize: none; overflow-y: auto; line-height: 1.4; min-height: 54px; }
+    .tb-field-group input[readonly] { background: #f1f5f9; color: #64748b; }
     #tb-redmine-preview { min-height: 380px; font-family: inherit; line-height: 1.6; }
 
     /* Footer */

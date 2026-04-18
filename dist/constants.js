@@ -16,7 +16,6 @@
     modal_issue_id_label: "Mã Issue Redmine",
     modal_issue_title_label: "Tiêu đề Issue Redmine",
     modal_preview_label: "Xem trước nội dung",
-    modal_hint: "Tip: Bạn có thể gõ @username trước khi gửi, Redmine sẽ tự nhận diện nếu tên đúng.",
     modal_confirm: "Xác nhận & Gửi",
     modal_cancel: "Hủy bỏ",
     modal_success_title: "✅ Hoàn thành!",
@@ -29,8 +28,7 @@
     modal_error_not_found: "⚠️ Không tìm thấy Issue hoặc lỗi kết nối!",
     modal_batch_title_multiple: "✅ Đã gửi thành công $count$ bình luận!",
     modal_batch_subtitle_multiple: "Tất cả bình luận đã được dịch và gửi sang Redmine.",
-    modal_batch_subtitle_preparing: "Sẽ thực hiện dịch và gửi $count$ bình luận liên tiếp.",
-    modal_batch_text: "Dịch toàn bộ bình luận đến cuối cùng ($count$ bình luận)",
+    modal_batch_text: "Dịch đến bình luận cuối trang ($count$ bình luận)",
     modal_batch_confirm: "Dịch & Gửi $count$ bình luận",
     modal_waiting_translation: "[Đang chờ xác nhận để dịch thêm...]",
     modal_migrate_title: "Tạo Issue mới trên Redmine",
@@ -40,22 +38,18 @@
 
   const getMsg = (key, substitution) => {
     try {
-      // Priority 1: Use hardcoded Vietnamese (Temporary hide multi-language)
-      let viMsg = viMessages[key];
-      if (viMsg) {
-        if (substitution) {
-          viMsg = viMsg.replace(/\$count\$/g, substitution);
-        }
-        return viMsg;
-      }
-
-      // Fallback: Try chrome.i18n
+      // Try chrome.i18n first
       const msg = chrome.i18n?.getMessage(key, substitution);
       if (msg && msg !== key) {
         return msg;
       }
 
-      return key;
+      // Fallback to hardcoded Vietnamese
+      let viMsg = viMessages[key];
+      if (viMsg && substitution) {
+        viMsg = viMsg.replace(/\$count\$/g, substitution);
+      }
+      return viMsg || key;
     } catch (e) {
       console.error("[TB] i18n error:", e);
       return viMessages[key] || key;
@@ -146,8 +140,6 @@
         BACKLOG_EMPTY_KEY: getMsg("modal_backlog_empty_key"),
         BATCH_TITLE_MULTIPLE: (count) => getMsg("modal_batch_title_multiple", count.toString()),
         BATCH_SUBTITLE_MULTIPLE: getMsg("modal_batch_subtitle_multiple"),
-        BATCH_SUBTITLE_PREPARING: (count) =>
-          getMsg("modal_batch_subtitle_preparing", count.toString()),
         ERROR_METADATA: getMsg("modal_error_metadata"),
         BATCH_TEXT: (count) => getMsg("modal_batch_text", count.toString()),
         BATCH_CONFIRM: (count) => getMsg("modal_batch_confirm", count.toString()),
