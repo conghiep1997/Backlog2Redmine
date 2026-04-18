@@ -58,6 +58,15 @@ if (fs.existsSync(ASSETS_SRC)) {
   console.log('   ✓ assets/ copied');
 }
 
+// Step 4b: Copy locales
+console.log('\n🌐 Step 4b: Copying locales...');
+const LOCALES_SRC = path.join(__dirname, '..', '_locales');
+const LOCALES_DIST = path.join(DIST_DIR, '_locales');
+if (fs.existsSync(LOCALES_SRC)) {
+  fs.cpSync(LOCALES_SRC, LOCALES_DIST, { recursive: true });
+  console.log('   ✓ _locales/ copied');
+}
+
 // Step 5: Validate manifest
 console.log('\n✅ Step 5: Validating manifest...');
 const requiredKeys = ['manifest_version', 'name', 'version', 'description', 'permissions'];
