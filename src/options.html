@@ -190,7 +190,7 @@
               <label for="backlogApiKey">Backlog API Key</label>
               <input id="backlogApiKey" type="text" placeholder="Nhập Backlog API key" />
               <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
-                🔑 Cần thiết để gửi nội dung ngược lại từ Redmine sang Backlog.
+                🔑 Lấy tại: <strong>Tài khoản > API</strong> trong Backlog của bạn. Cần thiết để gửi nội dung ngược lại từ Redmine sang Backlog.
               </p>
             </div>
           </div>
@@ -349,6 +349,15 @@
                     type="text"
                     placeholder="Nhập Gemini API key"
                   />
+                  <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                    💡 Lấy Key tại
+                    <a
+                      href="https://aistudio.google.com/app/apikey"
+                      target="_blank"
+                      style="color: var(--primary)"
+                      >Google AI Studio</a
+                    >.
+                  </p>
                 </div>
               </div>
               <div id="fallbackCerebrasKeyContainer" style="display: none; margin-top: 12px">
@@ -360,10 +369,20 @@
                     type="text"
                     placeholder="Nhập Cerebras API key"
                   />
+                  <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                    💡 Lấy Key tại
+                    <a
+                      href="https://cloud.cerebras.ai"
+                      target="_blank"
+                      style="color: var(--primary)"
+                      >cloud.cerebras.ai</a
+                    >.
+                  </p>
                 </div>
               </div>
             </div>
           </div>
+
 
           <!-- Dynamic API Credentials Area removed (moved to provider blocks) -->
 

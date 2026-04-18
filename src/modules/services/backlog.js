@@ -45,12 +45,13 @@ async function handleSendToBacklog({ backlogIssueKey, content, notifiedUserId })
   };
 }
 
-async function downloadBacklogImage(domain, attachmentId) {
-  const url = `https://${domain}/ViewAttachmentImage.action?attachmentId=${attachmentId}`;
+async function downloadBacklogFile(domain, attachmentId, filename = "") {
+  // Use DownloadAttachment endpoint for more universal support including videos
+  const url = `https://${domain}/downloadAttachment/${attachmentId}/${encodeURIComponent(filename)}`;
   const response = await fetch(url, { credentials: "include" });
 
   if (!response.ok) {
-    throw new Error(`Backlog image download failed: ${response.status}`);
+    throw new Error(`Backlog file download failed: ${response.status}`);
   }
 
   return await response.blob();

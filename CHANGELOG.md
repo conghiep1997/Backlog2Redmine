@@ -1,5 +1,11 @@
 # Nhật ký thay đổi (Changelog)
 
+## [1.4.5] - 2026-04-18
+- **✨ Tính năng mới**: Hỗ trợ đính kèm Video (.mp4, .mov, .webm) và các loại tệp tin khác (.pdf, .zip). Video sẽ được hiển thị bằng trình phát nội bộ trên Redmine.
+- **🛠️ Tự động hóa**: Nâng cấp hệ thống quét đính kèm tự động từ phần Changelog của Backlog.
+- **🔧 Chuẩn hóa mã nguồn**: Fix toàn bộ lỗi Linting, chuẩn hóa Code Style và bổ sung quy trình `npm run lint` bắt buộc vào Agent Workflow.
+- **🎨 Cải thiện UI**: Khôi phục và bổ sung đầy đủ hướng dẫn lấy API key cho tất cả các nhà cung cấp AI trong trang Options.
+
 ## [1.4.4] - 2026-04-18
 - **Sửa lỗi nghiêm trọng**: Điều chỉnh cấu trúc thư mục trong bản build để khớp với Manifest. Đã có thể cài đặt và chạy bình thường.
 

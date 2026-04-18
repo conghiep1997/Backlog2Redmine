@@ -170,34 +170,13 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
   const idx = allItems.findIndex((item) => item === commentItem);
 
   // Get content from the clicked comment with robust selector fallback
-  const clickedCommentContentEl =
-    commentItem?.querySelector(".markdown-body") ||
-    commentItem?.querySelector(".comment-item__content") ||
-    commentItem?.querySelector(".comment-item__body") ||
-    commentItem?.querySelector(".comment-content") ||
-    commentItem?.querySelector(".item-body");
-
-  // Fallback: if no element found, try to get raw text
-  let clickedCommentText = "";
-  if (clickedCommentContentEl) {
-    clickedCommentText = extractBacklogContent(clickedCommentContentEl);
-  } else {
-    // Last resort: get innerText directly
-    clickedCommentText = commentItem?.innerText || "";
-  }
+  const clickedCommentText = getCommentFullText(commentItem);
 
   const remainingItems = allItems
     .slice(idx + 1)
     .map((i) => {
-      const contentEl =
-        i.querySelector(".markdown-body") ||
-        i.querySelector(".comment-item__content") ||
-        i.querySelector(".comment-item__body") ||
-        i.querySelector(".comment-content") ||
-        i.querySelector(".item-body");
-      const text = contentEl ? extractBacklogContent(contentEl) : i.innerText || "";
       return {
-        text: text,
+        text: getCommentFullText(i),
         url: getCommentUrl(i),
       };
     })
@@ -268,15 +247,8 @@ async function handleIssueMigration(button) {
   // Collect all comments to migrate with the issue
   const comments = Array.from(document.querySelectorAll(".comment-item:not(.-dammy)"))
     .map((i) => {
-      const contentEl =
-        i.querySelector(".markdown-body") ||
-        i.querySelector(".comment-item__content") ||
-        i.querySelector(".comment-item__body") ||
-        i.querySelector(".comment-content") ||
-        i.querySelector(".item-body");
-      const text = contentEl ? extractBacklogContent(contentEl) : i.innerText || "";
       return {
-        text: text,
+        text: getCommentFullText(i),
         url: getCommentUrl(i),
       };
     })
@@ -290,12 +262,25 @@ async function handleIssueMigration(button) {
       document.querySelector(".issue-description .markdown-body") ||
       document.querySelector(".description .markdown-body");
     const descriptionText = descriptionEl ? extractBacklogContent(descriptionEl) : "";
+    // Scrape attachments for description (it has its own attachment list in Modern UI)
+    let fullDescription = descriptionText;
+    const descAttachments = document.querySelectorAll(".issue-attachments .upload-item-list li a[href*=\"attachmentId=\"]");
+    descAttachments.forEach((link) => {
+      const match = link.getAttribute("href").match(/attachmentId=(\d+)/);
+      if (match) {
+        const id = match[1];
+        const filename = link.textContent.trim();
+        if (filename.toLowerCase() !== "download" && !fullDescription.includes(`[[TB_FILE:${id}:`)) {
+          fullDescription += `\n\n**Attachment**: [[TB_FILE:${id}:${filename}]]`;
+        }
+      }
+    });
 
     const res = await sendRuntimeMessage({
       type: "LOOKUP_AND_TRANSLATE_COMMENT",
       issueKey,
       issueSummary,
-      commentText: descriptionText,
+      commentText: fullDescription,
       commentUrl: window.location.href,
     });
 
@@ -326,6 +311,41 @@ async function handleIssueMigration(button) {
 }
 
 // Helpers
+function getCommentFullText(itemEl) {
+  if (!itemEl) return "";
+  const contentEl =
+    itemEl.querySelector(".markdown-body") ||
+    itemEl.querySelector(".comment-item__content") ||
+    itemEl.querySelector(".comment-item__body") ||
+    itemEl.querySelector(".comment-content") ||
+    itemEl.querySelector(".item-body");
+
+  let text = contentEl ? extractBacklogContent(contentEl) : itemEl.innerText || "";
+
+  // Scrape attachments from Changelog
+  const attachmentLinks = itemEl.querySelectorAll(
+    ".comment-changelog__item a[href*=\"attachmentId=\"], .upload-item-list li a[href*=\"attachmentId=\"]"
+  );
+  attachmentLinks.forEach((link) => {
+    const href = link.getAttribute("href");
+    const match = href.match(/attachmentId=(\d+)/);
+    if (match) {
+      const id = match[1];
+      const filename = link.textContent.trim();
+      // Skip download links and duplicate entries
+      if (
+        filename &&
+        filename.toLowerCase() !== "download" &&
+        !text.includes(`[[TB_FILE:${id}:`) &&
+        !text.includes(`[[TB_IMG:${id}]]`)
+      ) {
+        text += `\n\n**Attachment**: [[TB_FILE:${id}:${filename}]]`;
+      }
+    }
+  });
+  return text.trim();
+}
+
 function getBacklogHeaderInfo() {
   // Try data-testid first (Modern UI)
   let issueKey = document.querySelector("[data-testid=\"issueKey\"]")?.textContent?.trim();

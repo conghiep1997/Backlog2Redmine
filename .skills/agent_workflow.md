@@ -52,6 +52,9 @@ TRƯỚC khi báo cáo hoàn thành nhiệm vụ hoặc một phiên bản, Agen
     *   Xóa các file legacy, file backup hoặc resource không còn sử dụng (như `.css` cũ).
 4.  **Manifest Integrity**:
     *   Đảm bảo tất cả các file module mới được liệt kê đúng thứ tự trong `manifest.json`.
+5.  **Linting Check (Kiểm tra lỗi trình bày)**:
+    *   **PHẢI** chạy lệnh `npm run lint` ngay sau khi hoàn thành code.
+    *   **PHẢI** sửa toàn bộ các lỗi (Errors) và cảnh báo (Warnings) trước khi bàn giao nhiệm vụ hoặc báo cáo hoàn thành.
 
 ## ⚙️ Logic Chuyển đổi (Conversion Logic)
 

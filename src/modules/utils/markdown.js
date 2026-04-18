@@ -110,22 +110,32 @@ function extractBacklogContent(element) {
         for (const child of node.childNodes) {
           walk(child, options);
         }
-        const linkText = result.slice(textBefore.length);
+        const linkText = result.slice(textBefore.length).trim();
 
-        if (href && linkText.trim()) {
+        if (href && linkText) {
+          // Check if this is an attachment link (Video or File)
+          if (href.includes("ViewAttachmentVideo.action") || href.includes("downloadAttachment/")) {
+            const match = href.match(/attachmentId=(\d+)/) || href.match(/downloadAttachment\/(\d+)/);
+            if (match) {
+              result = textBefore + ` [[TB_FILE:${match[1]}:${linkText}]] `;
+              return;
+            }
+          }
+
           // User profile links: keep as text, do not create markdown link
           if (
             href.startsWith("/user/") ||
             (href.startsWith("https://") && href.includes(".backlog.com/user/"))
           ) {
-            result = textBefore + linkText.trim();
+            result = textBefore + linkText;
           } else {
             // External/other links: create markdown link
-            result = textBefore + `[${linkText.trim()}](${href})`;
+            result = textBefore + `[${linkText}](${href})`;
           }
         }
         return;
       }
+
 
       // ========================================================================
       // BLOCK ELEMENTS

@@ -1,3 +1,4 @@
+/* global downloadBacklogFile */
 /**
  * Redmine API Service for Backlog2Redmine Extension.
  * Handles operations with Redmine API: finding issues, sending notes, and uploading files.
@@ -84,8 +85,8 @@ async function handleSendToRedmine({ redmineIssueId, notes }, sender) {
   // Send note to Redmine issue, including image processing
   const settings = await getSettings();
   const backlogDomain = sender?.tab?.url ? new URL(sender.tab.url).hostname : null;
-  // Process images: download from Backlog, upload to Redmine
-  const { updatedNotes, uploads } = await processNotesImages(notes, backlogDomain, settings);
+  // Process attachments: download from Backlog, upload to Redmine
+  const { updatedNotes, uploads } = await processNotesAttachments(notes, backlogDomain, settings);
 
   const endpoint = buildRedmineUrl(settings.redmineDomain, `/issues/${redmineIssueId}.json`);
   const response = await fetch(endpoint, {
@@ -124,8 +125,8 @@ async function handleSendToRedmine({ redmineIssueId, notes }, sender) {
 async function handleCreateRedmineIssue({ issueData, comments }) {
   // Create new issue on Redmine with description and comments from Backlog
   const settings = await getSettings();
-  // Process images in description
-  const { updatedNotes: updatedDescription, uploads: descUploads } = await processNotesImages(
+  // Process attachments in description
+  const { updatedNotes: updatedDescription, uploads: descUploads } = await processNotesAttachments(
     issueData.description || "",
     null,
     settings
@@ -150,6 +151,7 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
       },
     }),
   });
+
 
   if (!response.ok) {
     const errorMsg = await readErrorMessage(response);
@@ -238,39 +240,79 @@ function pickBestRedmineSearchResult(results, normalizedIssueKey, normalizedIssu
 }
 
 /**
- * Process images in notes: download from Backlog, upload to Redmine.
+ * Process attachments in notes: download from Backlog, upload to Redmine.
  * Replaces [[TB_IMG:id]] markers with !filename! for Redmine.
- * @param {string} notes - Notes text containing [[TB_IMG:id]] markers
- * @param {string} backlogDomain - Backlog domain for image download
+ * Replaces [[TB_FILE:id:filename]] markers with appropriate tags.
+ * @param {string} notes - Notes text containing attachment markers
+ * @param {string} backlogDomain - Backlog domain for download
  * @param {object} settings - Extension settings
  * @returns {Promise<{updatedNotes: string, uploads: Array}>}
  */
-async function processNotesImages(notes, backlogDomain, settings) {
+async function processNotesAttachments(notes, backlogDomain, settings) {
   let updatedNotes = notes;
   const uploads = [];
+
+  // 1. Process Legacy Image Markers: [[TB_IMG:id]]
   const imageMatches = [...notes.matchAll(/\[\[TB_IMG:(\d+)\]\]/g)];
   for (const match of imageMatches) {
     const attachmentId = match[1];
+    const filename = `image_${attachmentId}.png`;
     try {
-      const imgBlob = await downloadBacklogImage(backlogDomain, attachmentId);
-      const filename = `image_${attachmentId}.png`;
+      const blob = await downloadBacklogFile(backlogDomain, attachmentId, filename);
       const token = await uploadToRedmine(
         settings.redmineDomain,
         settings.redmineApiKey,
-        imgBlob,
+        blob,
         filename
       );
       if (token) {
-        uploads.push({ token, filename, content_type: "image/png" });
+        uploads.push({ token, filename, content_type: blob.type || "image/png" });
         updatedNotes = updatedNotes.replace(match[0], `!${filename}!`);
       }
     } catch (e) {
-      // If image download fails, replace with error placeholder
-      updatedNotes = updatedNotes.replace(match[0], `[Image download error: ${attachmentId}]`);
+      updatedNotes = updatedNotes.replace(match[0], `[Image Error: ${attachmentId}]`);
     }
   }
+
+  // 2. Process General File Markers: [[TB_FILE:id:filename]]
+  const fileMatches = [...notes.matchAll(/\[\[TB_FILE:(\d+):([^\]]+)\]\]/g)];
+  for (const match of fileMatches) {
+    const attachmentId = match[1];
+    const filename = match[2].trim();
+    try {
+      const blob = await downloadBacklogFile(backlogDomain, attachmentId, filename);
+      const token = await uploadToRedmine(
+        settings.redmineDomain,
+        settings.redmineApiKey,
+        blob,
+        filename
+      );
+      if (token) {
+        uploads.push({ token, filename, content_type: blob.type || "application/octet-stream" });
+
+        // Handle formatting based on file type
+        const ext = filename.split(".").pop().toLowerCase();
+        const videoExts = ["mp4", "mov", "webm", "m4v"];
+        const imageExts = ["jpg", "jpeg", "png", "gif", "webp"];
+
+        if (videoExts.includes(ext)) {
+          // Redmine Video Player tag (supported by some plugins) or fallback
+          updatedNotes = updatedNotes.replace(match[0], `{{video(${filename})}}`);
+        } else if (imageExts.includes(ext)) {
+          updatedNotes = updatedNotes.replace(match[0], `!${filename}!`);
+        } else {
+          // General attachment link
+          updatedNotes = updatedNotes.replace(match[0], `attachment:${filename}`);
+        }
+      }
+    } catch (e) {
+      updatedNotes = updatedNotes.replace(match[0], `[File Error: ${filename}]`);
+    }
+  }
+
   return { updatedNotes, uploads };
 }
+
 
 /**
  * Upload file to Redmine and get token.

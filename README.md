@@ -1,4 +1,4 @@
-# Backlog to Redmine Translator (v1.4.4)
+# Backlog to Redmine Translator (v1.4.5)
 
 Chrome extension dịch comment từ Backlog sang tiếng Việt và đồng bộ dữ liệu thông minh sang Redmine.
 
@@ -46,7 +46,7 @@ Backlog2Redmine/
 
 ## 🤖 Hệ thống AI hỗ trợ
 
-Phiên bản 1.4.4 tối ưu hóa cho tài khoản Free Tier:
+Phiên bản 1.4.5 tối ưu hóa cho tài khoản Free Tier:
 
 | Provider | Model | Rate Limit | Best For |
 |----------|-------|------------|----------|
@@ -64,7 +64,7 @@ Phiên bản 1.4.4 tối ưu hóa cho tài khoản Free Tier:
 - ✅ **Sync Redmine → Backlog**: Lọc nội dung tiếng Nhật, gửi ngược lại
 - ✅ **Migrate Issue**: Tạo issue mới trên Redmine từ Backlog (1-click)
 - ✅ **Batch Translate**: Dịch và gửi hàng loạt comments liên tiếp
-- ✅ **Image Handling**: Tự động download/upload attachments
+- ✅ **Image & Video Handling**: Tự động download/upload ảnh và video (.mp4, .mov...). Video có trình phát ngay trên Redmine.
 - ✅ **Markdown Preservation**: Giữ nguyên format (bold, italic, lists, tables, code blocks)
 
 ### UI/UX
@@ -194,32 +194,9 @@ npm run build:zip
 
 ---
 
-## 📝 Changelog
+## 📜 Nhật ký thay đổi 
 
-### v1.4.4 (2026-04-18) - Current Version (Fix Build Structure)
-
-**Critical Fixes:**
-- ✅ Removed duplicate `extractBacklogContent()` function
-- ✅ Fixed global state conflict in `toast.js`
-- ✅ Added `timeoutFetch()` helper (15s timeout)
-- ✅ Improved crypto: per-user salt instead of hardcoded
-
-**Clean Code:**
-- ✅ Full JSDoc documentation (EN/VI comments)
-- ✅ All function names standardized to English
-- ✅ Added ESLint + Prettier config
-- ✅ Created DEVELOPMENT.md guide
-
-**Markdown Improvements:**
-- ✅ Better HTML → Markdown conversion
-- ✅ Support for nested lists, tables, blockquotes
-- ✅ Preserves code blocks with language detection
-
-### v1.4.3 (Previous)
-
-- Cyan-Flow UI design
-- Batch translate support
-- Cerebras AI integration
+Chi tiết các thay đổi qua từng phiên bản có thể được xem tại: **[CHANGELOG.md](./CHANGELOG.md)**
 
 ---
 
@@ -233,4 +210,4 @@ npm run build:zip
 
 ---
 
-**Developed by Hipppo** 🦛 | Version **1.4.4** (April 2026)
+**Developed by Hipppo** 🦛 | Version **1.4.5** (April 2026)
