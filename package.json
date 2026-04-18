@@ -22,6 +22,7 @@
   "author": "Hipppo",
   "license": "MIT",
   "devDependencies": {
+    "archiver": "^7.0.1",
     "eslint": "^8.57.0",
     "prettier": "^3.2.5"
   },
