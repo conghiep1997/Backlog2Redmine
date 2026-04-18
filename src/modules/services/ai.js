@@ -4,39 +4,55 @@
 
 
 async function translateText(commentText, settings, commentUrl = null, promptFn = TB.PROMPTS.USER) {
-  const provider = settings.aiProvider || TB.PROVIDERS.CEREBRAS;
+  const primaryProvider = settings.primaryProvider || TB.DEFAULT_PRIMARY_PROVIDER;
+  const primaryModel = settings.primaryModel || TB.DEFAULT_PRIMARY_MODEL;
+  const fallbackProvider = settings.fallbackProvider || TB.DEFAULT_FALLBACK_PROVIDER;
+  const fallbackModel = settings.fallbackModel || TB.DEFAULT_FALLBACK_MODEL;
 
   try {
-    if (provider === TB.PROVIDERS.CEREBRAS) {
-      return await translateWithCerebras(
-        settings.cerebrasApiKey,
+    // Attempt Primary Translation
+    return await callAIsByProvider(
+        primaryProvider,
+        primaryModel,
+        settings,
         commentText,
-        settings.cerebrasModel,
         commentUrl,
         promptFn
-      );
-    } else {
-      return await translateWithGemini(
-        settings.geminiApiKey,
-        commentText,
-        settings.geminiModel,
-        settings.geminiFallbackModel,
-        commentUrl,
-        promptFn
-      );
-    }
+    );
   } catch (error) {
-    if ((error.message.includes("429") || error.message.includes("rate limit")) && settings.geminiApiKey) {
-      if (settings.geminiModel !== TB.GEMINI_FALLBACK_MODEL || provider === TB.PROVIDERS.CEREBRAS) {
-          try {
-            return await callGeminiAPI(settings.geminiApiKey, commentText, TB.GEMINI_FALLBACK_MODEL, null, promptFn, commentUrl);
-          } catch (failoverError) {
-            throw new Error(TB.MESSAGES.TOAST.RATE_LIMIT_FAILED);
-          }
+    // Check if we should fallback (429 or general failure)
+    const isRateLimit = error.message.includes("429") || error.message.includes("rate limit");
+    const hasFallback = fallbackProvider && fallbackProvider !== TB.PROVIDERS.NONE;
+
+    if (isRateLimit && hasFallback) {
+      console.warn(`[TB-AI] Primary (${primaryProvider}) rate limited. Falling back to ${fallbackProvider}...`);
+      try {
+        return await callAIsByProvider(
+            fallbackProvider,
+            fallbackModel,
+            settings,
+            commentText,
+            commentUrl,
+            promptFn
+        );
+      } catch (fallbackError) {
+        throw new Error(TB.MESSAGES.TOAST.RATE_LIMIT_FAILED);
       }
     }
     throw error;
   }
+}
+
+/**
+ * Helper to route call to the correct provider function.
+ */
+async function callAIsByProvider(provider, model, settings, text, url, promptFn) {
+    if (provider === TB.PROVIDERS.GEMINI) {
+        return await callGeminiAPI(settings.geminiApiKey, text, model, null, promptFn, url);
+    } else if (provider === TB.PROVIDERS.CEREBRAS) {
+        return await callCerebrasAPI(settings.cerebrasApiKey, text, model, promptFn, url);
+    }
+    throw new Error(`Unknown provider: ${provider}`);
 }
 
 async function translateWithGemini(apiKey, commentText, model, fallbackModel = null, commentUrl = null, promptFn = TB.PROMPTS.USER) {

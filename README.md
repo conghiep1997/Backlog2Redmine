@@ -1,202 +1,44 @@
-# Backlog to Redmine Translator 🔁
+# Backlog to Redmine Translator (v1.4.3)
 
-Chrome extension dịch comment từ Backlog sang tiếng Việt bằng Gemini AI và tự động đẩy sang Redmine.
+Chrome extension dich comment tu Backlog sang tieng Viet va dong bo du lieu thong minh sang Redmine.
 
-## 📦 Cấu trúc
+## Cau truc du an
 
 ```
 Backlog2Redmine/
-├── manifest.json          # Extension manifest (v3)
-├── src/                   # Source code
-│   ├── modules/           # Modular services & UI [NEW]
-│   │   ├── services/      # AI, Redmine, Backlog APIs
-│   │   ├── ui/            # Modal, Toast, Styles
-│   │   └── utils/         # Helpers, Markdown, Crypto
-│   ├── background.js      # Service worker (Entry)
-│   ├── content.js         # Content script (Entry)
-│   ├── redmine_content.js # Redmine script (Entry)
-│   ├── constants.js       # Configuration & messages
-│   ├── options.html       # Settings page
-│   └── options.js         # Settings logic
-├── assets/
-│   └── icons/             # Extension icons
-├── README.md              # This file
-└── CHANGELOG.md           # Version history
+├── src/                    # Ma nguon chinh
+│   ├── modules/            # Services (AI, Redmine, Backlog), UI & Utils
+│   ├── background.js       # Service worker
+│   ├── constants.js        # Cau hinh & Ngon ngu
+│   └── options.html/js     # Trang cai dat nang cao
+└── assets/                 # Icons & Hinh anh
 ```
 
-## 🚀 Cài đặt
+## He thong AI ho tro
 
-### Development
+Phien ban 1.4.3 toi uu hoa cho tai khoan Free Tier:
 
-1. **Load extension:**
-   - Mở `chrome://extensions/`
-   - Bật "Developer mode"
-   - Click "Load unpacked"
-   - Chọn folder `Backlog2Redmine`
+1. **Primary (Chinh) - Llama 3.1 8B (Cerebras)**: Toc do cuc nhanh, on dinh va khong bi gioi han nhu ban 70B.
+2. **Options (Nang cao)**: Ho tro Qwen 3 235B va GPT OSS 120B cho nhu cau xu ly phuc tap (co the chon trong trang Options).
+3. **Fallback (Du phong) - Gemma 3 27B IT (Gemini)**: Tu dong kich hoat khi Cerebras gap su co.
 
-2. **Configure:**
-   - Click "Options" trên extension
-   - Nhập thông tin:
-     - Redmine Domain: `https://redmine.splus-software.com`
-     - Redmine API Key
-     - Gemini API Key
-     - Model: `gemma-4-31b-it` (default)
-   - Click "Lưu cấu hình"
+## Tinh nang noi bat
 
-### Production Build
+- **Migrate Issue**: Tao moi Issue tren Redmine tu noi dung Backlog chi voi 1-click.
+- **Cyan-Flow UI**: Giao dien hien dai, pill-shaped.
+- **Code Preservation**: Bao ve tuyet doi cac khoi ma nguon (```) va tag anh ([[TB_IMG:id]]).
+- **Batch Translate**: Dich va gui hang loat binh luan lien tiep.
+- **Security**: Ma hoa API keys bang AES-GCM-256.
 
-```bash
-# 1. Zip extension
-cd C:\Projects\Extensions
-Compress-Archive -Path Backlog2Redmine -DestinationPath Backlog2Redmine.zip
+## Huong dan su dung
 
-# 2. Upload to Chrome Web Store
-https://chrome.google.com/webstore/devconsole
-```
+### 1. Di chuyen Issue (Migrate)
+- Tai trang chi tiet Issue cua Backlog, nhan nut **Migrate Issue** o goc tren ben phai.
+- Extension se dich noi dung va mo Modal tao Issue moi tren Redmine.
 
-## 🎯 Features
+### 2. Dich va Gui Comment
+- Nhan nut **Redmine** tai moi binh luan tren Backlog.
+- Xem truoc ban dich, chinh sua Redmine Issue ID va nhan **Xac nhan & Gui**.
 
-- ✅ **Auto-dịch comment** từ Backlog sang tiếng Việt
-- ✅ **Auto-find Redmine issue** (search HTML + API fallback)
-- ✅ **Batch translate** - Dịch từ comment click → cuối (mỗi comment = 1 note)
-- ✅ **Confirm modal** với preview nội dung
-- ✅ **Success notification** với link đến note
-- ✅ **Multiple Gemini models** (Gemma 4, Gemini 3, etc.)
-- ✅ **Free tier optimization** (RPD ≥ 50, RPM ≥ 10)
-- ✅ **Encrypted API keys** (AES-GCM)
-
-## 🔧 Development
-
-### Requirements
-
-- Node.js 18+ (optional)
-- Chrome 88+
-- Gemini API key
-- Redmine API key
-
-### Scripts
-
-```bash
-# Lint (optional)
-npx eslint src/
-
-# Test
-# Manual testing via chrome://extensions/
-
-# Build
-npm run build  # TODO: Add build script
-```
-
-### Debug
-
-1. **Service Worker:**
-   - `chrome://extensions/` → Details → Service Worker
-   - Open DevTools
-
-2. **Content Script:**
-   - Open Backlog page
-   - F12 → Console
-   - Filter: `[TB-Redmine]`
-
-3. **Options Page:**
-   - Open Options
-   - F12 → Console
-
-## 📝 Usage
-
-### Single Comment
-
-1. **Open Backlog issue:**
-   ```
-   https://shift7.backlog.com/view/ISSUE-123
-   ```
-
-2. **Find comment with "Dịch → Redmine" button**
-
-3. **Click button** → Modal hiện ra với:
-   - Redmine Issue ID
-   - Redmine Issue Title
-   - Preview nội dung dịch
-
-4. **Edit nếu cần** → Click "Xác nhận & Gửi"
-
-5. **Success modal** → Click "Xem trên Redmine" để mở link
-
-### Batch Translate (Multiple Comments)
-
-1. **Click button ở comment bất kỳ** (ví dụ: comment thứ 3/5)
-
-2. **Tự động dịch tất cả comments từ vị trí click → cuối** (comments 3, 4, 5)
-
-3. **Preview modal** hiển thị:
-   - 📦 Badge: "Gửi X notes liên tiếp"
-   - Nội dung dịch của từng comment (phân cách bằng `--- Comment X ---`)
-
-4. **Click "Gửi X notes"** → Lần lượt gửi từng note lên Redmine
-
-5. **Success modal** hiển thị link đến note cuối cùng
-
-## 🔐 Security
-
-- API keys được mã hóa (AES-GCM-256)
-- Salt hardcoded + PBKDF2 (100k iterations)
-- Keys lưu trong `chrome.storage.local`
-- Không gửi keys ra ngoài
-
-## 📊 Models
-
-### Default: Gemma 4 31B IT
-- **Latest:** April 2026
-- **Quality:** Best for translation
-- **Speed:** Moderate
-- **Free Tier:** ✅ Yes
-
-### Alternatives:
-- `gemma-3-27b-it` - Best quality (paid)
-- `gemini-2.5-flash` - Fastest
-
-## 🐛 Troubleshooting
-
-### Settings không lưu?
-- Check Console (F12) → Xem log "Saving settings..."
-- Verify API keys không rỗng
-- Check `chrome.storage.local` quota
-
-### Button không hiện?
-- Reload Backlog page
-- Check Console → "TB_CONSTANTS is not available"
-- Verify `manifest.json` paths correct
-
-### Dịch lỗi?
-- Check Gemini API key valid
-- Check model name đúng (có `-it`)
-- Xem log với prefix `[TB-Redmine]`
-
-## ⚙️ Logic Chuyển đổi (Conversion Logic)
-
-Để hỗ trợ các agent hoặc developer sau này, đây là tóm tắt cách extension chuyển đổi HTML từ Backlog sang Markdown cho Redmine:
-
-- **Hàm core:** `extractBacklogContent` trong `src/modules/utils/markdown.js`.
-- **Cơ chế:** Sử dụng đệ quy (Recursive Walk) qua các node DOM.
-- **Blockquotes:** Thay vì thêm ký tự `> ` thủ công ở từng thẻ con (như `br`, `p`), extension sẽ thu thập toàn bộ nội dung bên trong `<blockquote>`, sau đó dùng `split("\n")` và `map` để chèn `> ` vào đầu mỗi dòng. Điều này giúp xử lý chính xác các blockquote lồng nhau và đa dòng.
-- **Text Simplification:** Các khoảng trắng dư thừa được rút gọn nhưng vẫn giữ nguyên xuống dòng. Lưu ý sử dụng regex có capture group để không nuốt mất ký tự đứng trước khoảng trắng.
-
-> [!TIP]
-> **Dành cho AI Agents:** Vui lòng đọc kĩ quy trình tại [.skills/agent_workflow.md](file:///c:/Projects/Extensions/Backlog2Redmine/.skills/agent_workflow.md) trước khi thực hiện bất kỳ thay đổi nào.
-
-## 📄 License
-
-MIT License - See LICENSE file
-
-## 👨‍💻 Author
-
-Developed by **Hipppo** (Current Version: 1.4.0)
-
-## 🗺️ Roadmap
-
-- [x] Batch translate (nhiều comments cùng lúc)
-- [ ] Translation history
-- [ ] Custom prompts
-- [ ] Dark mode
-- [ ] Keyboard shortcuts
-- [ ] Analytics dashboard
+---
+Developed by **Hipppo** | Version **1.4.3** (April 2026)

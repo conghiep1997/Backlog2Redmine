@@ -18,90 +18,91 @@ document.addEventListener("DOMContentLoaded", () => {
   const backlogDomainInput = document.getElementById("backlogDomain");
   const backlogApiKeyInput = document.getElementById("backlogApiKey");
   
-  // Provider elements
-  const aiProviderSelect = document.getElementById("aiProvider");
-  const geminiSection = document.getElementById("geminiSection");
-  const cerebrasSection = document.getElementById("cerebrasSection");
+  // Primary elements
+  const primaryProviderSelect = document.getElementById("primaryProvider");
+  const primaryModelSelect = document.getElementById("primaryModel");
   
-  // Gemini elements
+  // Fallback elements
+  const fallbackProviderSelect = document.getElementById("fallbackProvider");
+  const fallbackModelSelect = document.getElementById("fallbackModel");
+  const fallbackModelField = document.getElementById("fallbackModelField");
+  
+  // Credentials elements
+  const credentialsSection = document.getElementById("credentialsSection");
+  const geminiKeyContainer = document.getElementById("geminiKeyContainer");
+  const cerebrasKeyContainer = document.getElementById("cerebrasKeyContainer");
   const geminiApiKeyInput = document.getElementById("geminiApiKey");
-  const geminiModelSelect = document.getElementById("geminiModel");
-  const geminiFallbackModelSelect = document.getElementById("geminiFallbackModel");
-  
-  // Cerebras elements
   const cerebrasApiKeyInput = document.getElementById("cerebrasApiKey");
-  const cerebrasModelSelect = document.getElementById("cerebrasModel");
   
   const statusEl = document.getElementById("status");
   
-  if (!form || !redmineDomainInput || !redmineApiKeyInput || !aiProviderSelect || !geminiSection || !cerebrasSection || !statusEl) {
+  if (!form || !primaryProviderSelect || !fallbackProviderSelect || !statusEl) {
     console.error("[OPTIONS] Missing DOM elements");
     return;
   }
   
-  // Populate model dropdowns
-  populateModelDropdown(geminiModelSelect, TB.GEMINI_MODELS);
-  populateModelDropdown(geminiFallbackModelSelect, TB.GEMINI_MODELS, true); 
-  populateModelDropdown(cerebrasModelSelect, TB.CEREBRAS_MODELS);
-  
   // Load existing options
   loadOptions();
   
-  // Provider change handler
-  aiProviderSelect.addEventListener("change", () => {
-    const provider = aiProviderSelect.value;
-    if (provider === TB.PROVIDERS.CEREBRAS) {
-      geminiSection.style.display = "none";
-      cerebrasSection.style.display = "block";
+  // Listeners
+  primaryProviderSelect.addEventListener("change", () => {
+    updateModelDropdown(primaryModelSelect, primaryProviderSelect.value);
+    updateKeyVisibility();
+  });
+  
+  fallbackProviderSelect.addEventListener("change", () => {
+    const provider = fallbackProviderSelect.value;
+    if (provider === TB.PROVIDERS.NONE) {
+      fallbackModelField.style.display = "none";
     } else {
-      geminiSection.style.display = "block";
-      cerebrasSection.style.display = "none";
+      fallbackModelField.style.display = "block";
+      updateModelDropdown(fallbackModelSelect, provider);
     }
+    updateKeyVisibility();
   });
   
   // Form submit handler
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     
-    const redmineApiKey = redmineApiKeyInput.value.trim();
-    if (!redmineApiKey) {
-      setStatus("❌ Redmine API Key không được để trống.");
-      return;
-    }
-    
-    const aiProvider = aiProviderSelect.value;
     const settings = {
-      redmineApiKey: await encryptData(redmineApiKey),
-      backlogDomain: backlogDomainInput.value.trim() || TB.BACKLOG_DOMAIN,
-      backlogApiKey: await encryptData(backlogApiKeyInput.value.trim()),
-      aiProvider,
-      geminiModel: geminiModelSelect.value,
-      geminiFallbackModel: geminiFallbackModelSelect.value,
-      cerebrasModel: cerebrasModelSelect.value,
+        redmineApiKey: await encryptData(redmineApiKeyInput.value.trim()),
+        backlogDomain: backlogDomainInput.value.trim() || TB.BACKLOG_DOMAIN,
+        backlogApiKey: await encryptData(backlogApiKeyInput.value.trim()),
+        primaryProvider: primaryProviderSelect.value,
+        primaryModel: primaryModelSelect.value,
+        fallbackProvider: fallbackProviderSelect.value,
+        fallbackModel: fallbackModelSelect.value,
     };
     
-    // Validate and encrypt specific provider keys
-    if (aiProvider === TB.PROVIDERS.GEMINI) {
-      const geminiApiKey = geminiApiKeyInput.value.trim();
-      if (!geminiApiKey) {
-        setStatus("❌ Gemini API Key không được để trống.");
-        return;
-      }
-      settings.geminiApiKey = await encryptData(geminiApiKey);
-    } else if (aiProvider === TB.PROVIDERS.CEREBRAS) {
-      const cerebrasApiKey = cerebrasApiKeyInput.value.trim();
-      if (!cerebrasApiKey) {
-        setStatus("❌ Cerebras API Key không được để trống.");
-        return;
-      }
-      settings.cerebrasApiKey = await encryptData(cerebrasApiKey);
+    // Validate and encrypt needed keys
+    const needsGemini = settings.primaryProvider === TB.PROVIDERS.GEMINI || settings.fallbackProvider === TB.PROVIDERS.GEMINI;
+    const needsCerebras = settings.primaryProvider === TB.PROVIDERS.CEREBRAS || settings.fallbackProvider === TB.PROVIDERS.CEREBRAS;
+    
+    if (needsGemini) {
+        const key = geminiApiKeyInput.value.trim();
+        if (!key && !geminiApiKeyInput.placeholder.includes("Đã lưu")) {
+            setStatus("❌ Vui lòng nhập Gemini API Key."); return;
+        }
+        if (key) settings.geminiApiKey = await encryptData(key);
+    }
+    
+    if (needsCerebras) {
+        const key = cerebrasApiKeyInput.value.trim();
+        if (!key && !cerebrasApiKeyInput.placeholder.includes("Đã lưu")) {
+            setStatus("❌ Vui lòng nhập Cerebras API Key."); return;
+        }
+        if (key) settings.cerebrasApiKey = await encryptData(key);
     }
     
     try {
       await chrome.storage.local.set(settings);
       setStatus("✅ Đã lưu cấu hình thành công!");
+      // Briefly clear password inputs for security
+      if (settings.geminiApiKey) geminiApiKeyInput.value = "";
+      if (settings.cerebrasApiKey) cerebrasApiKeyInput.value = "";
+      loadOptions(); // Refresh placeholders
     } catch (error) {
-      console.error("Save error:", error);
       setStatus(`❌ Lỗi khi lưu: ${error.message}`);
     }
   });
@@ -109,57 +110,57 @@ document.addEventListener("DOMContentLoaded", () => {
   // Functions
   function loadOptions() {
     chrome.storage.local.get(
-      ["redmineApiKey", "backlogDomain", "backlogApiKey", "geminiApiKey", "cerebrasApiKey", "aiProvider", "geminiModel", "geminiFallbackModel", "cerebrasModel"],
+      ["redmineApiKey", "backlogDomain", "backlogApiKey", "geminiApiKey", "cerebrasApiKey", "primaryProvider", "primaryModel", "fallbackProvider", "fallbackModel"],
       async (items) => {
         redmineDomainInput.value = TB.REDMINE_DOMAIN;
+        if (items.redmineApiKey) redmineApiKeyInput.value = await decryptData(items.redmineApiKey);
         
-        if (items.redmineApiKey) {
-          redmineApiKeyInput.value = await decryptData(items.redmineApiKey);
-        }
-
         backlogDomainInput.value = items.backlogDomain || TB.BACKLOG_DOMAIN;
-        if (items.backlogApiKey) {
-          backlogApiKeyInput.value = await decryptData(items.backlogApiKey);
+        if (items.backlogApiKey) backlogApiKeyInput.value = await decryptData(items.backlogApiKey);
+        
+        primaryProviderSelect.value = items.primaryProvider || TB.DEFAULT_PRIMARY_PROVIDER;
+        updateModelDropdown(primaryModelSelect, primaryProviderSelect.value);
+        primaryModelSelect.value = items.primaryModel || TB.DEFAULT_PRIMARY_MODEL;
+        
+        fallbackProviderSelect.value = items.fallbackProvider || TB.DEFAULT_FALLBACK_PROVIDER;
+        if (fallbackProviderSelect.value !== TB.PROVIDERS.NONE) {
+            fallbackModelField.style.display = "block";
+            updateModelDropdown(fallbackModelSelect, fallbackProviderSelect.value);
+            fallbackModelSelect.value = items.fallbackModel || TB.DEFAULT_FALLBACK_MODEL;
+        } else {
+            fallbackModelField.style.display = "none";
         }
         
-        // Load provider preference
-        const provider = items.aiProvider || TB.DEFAULT_PROVIDER;
-        aiProviderSelect.value = provider;
-        aiProviderSelect.dispatchEvent(new Event("change"));
+        if (items.geminiApiKey) geminiApiKeyInput.placeholder = "********** (Đã lưu)";
+        if (items.cerebrasApiKey) cerebrasApiKeyInput.placeholder = "********** (Đã lưu)";
         
-        if (items.geminiApiKey) {
-          geminiApiKeyInput.value = await decryptData(items.geminiApiKey);
-        }
-        
-        if (items.cerebrasApiKey) {
-          cerebrasApiKeyInput.value = await decryptData(items.cerebrasApiKey);
-        }
-        
-        geminiModelSelect.value = items.geminiModel || TB.GEMINI_MODEL;
-        geminiFallbackModelSelect.value = items.geminiFallbackModel ?? TB.GEMINI_FALLBACK_MODEL;
-        cerebrasModelSelect.value = items.cerebrasModel || TB.CEREBRAS_MODEL;
+        updateKeyVisibility();
       }
     );
   }
   
-  function populateModelDropdown(selectElement, models, includeNoFallback = false) {
-    if (!selectElement || !models) return;
+  function updateModelDropdown(selectElement, provider) {
+    if (!selectElement) return;
+    const models = provider === TB.PROVIDERS.GEMINI ? TB.GEMINI_MODELS : (provider === TB.PROVIDERS.CEREBRAS ? TB.CEREBRAS_MODELS : []);
+    
     selectElement.innerHTML = '';
-    
-    if (includeNoFallback) {
-      const noFallbackOption = document.createElement("option");
-      noFallbackOption.value = "";
-      noFallbackOption.textContent = TB.MESSAGES.FALLBACK.NO_FALLBACK;
-      selectElement.appendChild(noFallbackOption);
-    }
-    
     models.forEach((model) => {
       const option = document.createElement("option");
       option.value = model.value;
       option.textContent = model.label;
-      if (model.default) option.selected = true;
       selectElement.appendChild(option);
     });
+  }
+
+  function updateKeyVisibility() {
+    const p = primaryProviderSelect.value;
+    const f = fallbackProviderSelect.value;
+    const needsGemini = p === TB.PROVIDERS.GEMINI || f === TB.PROVIDERS.GEMINI;
+    const needsCerebras = p === TB.PROVIDERS.CEREBRAS || f === TB.PROVIDERS.CEREBRAS;
+    
+    credentialsSection.style.display = (needsGemini || needsCerebras) ? "block" : "none";
+    geminiKeyContainer.style.display = needsGemini ? "block" : "none";
+    cerebrasKeyContainer.style.display = needsCerebras ? "block" : "none";
   }
   
   function setStatus(message) {

@@ -45,7 +45,7 @@ async function handleSendToBacklog({ backlogIssueKey, content, notifiedUserId })
 
 async function downloadBacklogImage(domain, attachmentId) {
   const url = `https://${domain}/ViewAttachmentImage.action?attachmentId=${attachmentId}`;
-  const response = await fetch(url);
+  const response = await fetch(url, { credentials: "include" });
   
   if (!response.ok) {
     throw new Error(`Backlog image download failed: ${response.status}`);

@@ -161,51 +161,69 @@
               </p>
             </div>
           </div>
-          <div class="field">
-            <label for="aiProvider">Nhà cung cấp AI (Provider)</label>
-            <select id="aiProvider" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
-              <option value="gemini">Google Gemini AI Studio (Miễn phí)</option>
-              <option value="cerebras">Cerebras Cloud (Hạn mức cực lớn - Free)</option>
-            </select>
-            <p style="margin-top: 8px; font-size: 12px; color: var(--muted);">
-              💡 Chọn "Cerebras" nếu bạn cần dịch số lượng lớn comment hàng ngày.
-            </p>
-          </div>
-
-          <!-- Nhóm cấu hình Gemini -->
-          <div id="geminiSection">
-            <div class="field" style="margin-bottom: 16px;">
-              <label for="geminiApiKey">Gemini API Key</label>
-              <input id="geminiApiKey" type="text" placeholder="Nhập Gemini API key" />
-            </div>
-            <div class="field" style="margin-bottom: 16px;">
-              <label for="geminiModel">Gemini Model</label>
-              <select id="geminiModel" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
-                <!-- Options will be populated -->
-              </select>
-            </div>
-            <div class="field">
-              <label for="geminiFallbackModel">Fallback Model</label>
-              <select id="geminiFallbackModel" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
-                <!-- Options will be populated -->
-              </select>
+          <!-- Primary AI Configuration -->
+          <div style="padding: 16px; background: #f0f7ff; border: 1px solid #bfdbfe; border-radius: 12px; margin-bottom: 16px;">
+            <h3 style="margin: 0 0 12px; color: #1e40af; font-size: 16px;">Cấu hình AI chính (Primary)</h3>
+            <div class="grid">
+              <div class="field">
+                <label for="primaryProvider">Nhà cung cấp (Provider)</label>
+                <select id="primaryProvider" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
+                  <option value="cerebras">Cerebras Cloud (Hạn mức cực lớn - Free)</option>
+                  <option value="gemini">Google Gemini AI Studio (Miễn phí)</option>
+                </select>
+              </div>
+              <div id="primaryModelField" class="field">
+                <label for="primaryModel">Model</label>
+                <select id="primaryModel" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
+                  <!-- Options will be populated -->
+                </select>
+              </div>
             </div>
           </div>
 
-          <!-- Nhóm cấu hình Cerebras -->
-          <div id="cerebrasSection" style="display: none;">
-            <div class="field" style="margin-bottom: 16px;">
-              <label for="cerebrasApiKey">Cerebras API Key</label>
-              <input id="cerebrasApiKey" type="text" placeholder="Nhập Cerebras API key" />
-              <p style="margin-top: 6px; font-size: 12px; color: var(--muted);">
-                🔑 Lấy Key miễn phí tại <a href="https://cloud.cerebras.ai" target="_blank" style="color: var(--primary);">cloud.cerebras.ai</a>
-              </p>
+          <!-- Fallback AI Configuration -->
+          <div style="padding: 16px; background: #fff7ed; border: 1px solid #ffedd5; border-radius: 12px; margin-bottom: 24px;">
+            <h3 style="margin: 0 0 12px; color: #9a3412; font-size: 16px;">Cấu hình AI dự phòng (Fallback)</h3>
+            <div class="grid">
+              <div class="field">
+                <label for="fallbackProvider">Nhà cung cấp dự phòng</label>
+                <select id="fallbackProvider" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
+                  <option value="none">Không sử dụng dự phòng</option>
+                  <option value="gemini">Google Gemini AI Studio (Miễn phí)</option>
+                  <option value="cerebras">Cerebras Cloud (Hạn mức cực lớn - Free)</option>
+                </select>
+              </div>
+              <div id="fallbackModelField" class="field" style="display: none;">
+                <label for="fallbackModel">Model dự phòng</label>
+                <select id="fallbackModel" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
+                  <!-- Options will be populated -->
+                </select>
+              </div>
             </div>
-            <div class="field">
-              <label for="cerebrasModel">Cerebras Model (Llama)</label>
-              <select id="cerebrasModel" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
-                <!-- Options will be populated -->
-              </select>
+          </div>
+
+          <!-- Dynamic API Credentials Area -->
+          <div id="credentialsSection" style="display: none; border-top: 1px solid var(--border); pt: 20px; mt: 10px;">
+            <p style="font-weight: 700; margin-bottom: 12px;">🔑 Nhập API Credentials tương ứng:</p>
+            
+            <div id="geminiKeyContainer" style="display: none; margin-bottom: 16px;">
+              <div class="field">
+                <label for="geminiApiKey">Gemini API Key</label>
+                <input id="geminiApiKey" type="text" placeholder="Nhập Gemini API key" />
+                <p style="margin-top: 6px; font-size: 12px; color: var(--muted);">
+                  💡 Lấy Key tại <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--primary);">Google AI Studio</a>.
+                </p>
+              </div>
+            </div>
+
+            <div id="cerebrasKeyContainer" style="display: none; margin-bottom: 16px;">
+              <div class="field">
+                <label for="cerebrasApiKey">Cerebras API Key</label>
+                <input id="cerebrasApiKey" type="text" placeholder="Nhập Cerebras API key" />
+                <p style="margin-top: 6px; font-size: 12px; color: var(--muted);">
+                  💡 Lấy Key tại <a href="https://cloud.cerebras.ai" target="_blank" style="color: var(--primary);">cloud.cerebras.ai</a>.
+                </p>
+              </div>
             </div>
           </div>
 
