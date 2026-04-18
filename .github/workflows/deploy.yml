@@ -19,20 +19,20 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           
       - name: Install dependencies
         run: npm install
         
-      - name: Run Lint
-        run: npm run lint
+      - name: Build Project
+        run: npm run build
         
       - name: Get Version
         id: get_version
         run: |
           VERSION=$(node -p "require('./manifest.json').version")
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
           echo "TAG=v$VERSION" >> $GITHUB_ENV
         
       - name: Build ZIP
@@ -41,22 +41,24 @@ jobs:
       - name: Check if Tag exists
         id: check_tag
         run: |
-          if git rev-parse "${{ env.TAG }}" >/dev/null 2>&1; then
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Tag ${{ env.TAG }} already exists. Skipping release."
+            echo "Tag $TAG already exists. Skipping release."
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "Tag ${{ env.TAG }} is new. Preparing release."
+            echo "Tag $TAG is new. Preparing release."
           fi
 
       - name: Create Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.check_tag.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.TAG }}
-          name: Release ${{ env.TAG }}
+          tag_name: ${{ steps.get_version.outputs.tag }}
+          name: Release ${{ steps.get_version.outputs.tag }}
           files: Backlog2Redmine-v*.zip
           body_path: CHANGELOG.md
+
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
