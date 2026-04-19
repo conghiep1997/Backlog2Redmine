@@ -21,6 +21,13 @@ const DEBUG_PREFIX = "[TB-BG]";
  * Message handler for chrome.runtime.onMessage.
  * Handles messages from content scripts and options page.
  */
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === "install") {
+    console.log(`${DEBUG_PREFIX} Extension installed, opening options page.`);
+    chrome.runtime.openOptionsPage();
+  }
+});
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const handler = {
     /**
