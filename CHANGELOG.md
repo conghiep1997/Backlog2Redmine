@@ -1,5 +1,10 @@
 # Nhật ký thay đổi (Changelog)
 
+## [1.4.7] - 2026-04-19
+- **🎨 Tối ưu giao diện (UI)**: Hợp nhất khối cấu hình Redmine (Domain, API Key, Project, Custom Fields) vào một khung giao diện đồng nhất, trực quan hơn trong trang Options.
+- **🛠️ Nâng cao tính năng**: Tối ưu logic hiển thị nút Migrate Issue và tự động hóa việc xác định ID các trường Custom Fields của Redmine.
+- **⚙️ Cải thiện hệ thống**: Bổ sung cơ chế tự động đồng bộ API Key giữa các provider nếu dùng chung một loại (Gemini/Cerebras).
+
 ## [1.4.6] - 2026-04-18
 - **🚀 Triển khai (CI/CD)**: Chuyển đổi sang cơ chế OAuth2 Refresh Token để khắc phục lỗi dung lượng (Quota) của Service Account trên Google Drive.
 

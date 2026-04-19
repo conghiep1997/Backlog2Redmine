@@ -35,6 +35,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const fallbackGeminiApiKeyInput = document.getElementById("fallbackGeminiApiKey");
   const fallbackCerebrasApiKeyInput = document.getElementById("fallbackCerebrasApiKey");
 
+  const defaultProjectIdSelect = document.getElementById("defaultProjectId");
+  const manualFieldsInput = document.getElementById("manualFields");
   const statusEl = document.getElementById("status");
 
   if (!form || !primaryProviderSelect || !fallbackProviderSelect || !statusEl) {
@@ -60,6 +62,13 @@ document.addEventListener("DOMContentLoaded", () => {
       updateModelDropdown(fallbackModelSelect, provider);
     }
     updateKeyVisibility();
+  });
+
+  // Fetch projects if API key is available
+  redmineApiKeyInput.addEventListener("blur", () => {
+    if (redmineApiKeyInput.value.trim()) {
+      fetchProjects(redmineApiKeyInput.value.trim());
+    }
   });
 
   // Sync key fields with same class
@@ -90,6 +99,8 @@ document.addEventListener("DOMContentLoaded", () => {
       primaryModel: primaryModelSelect.value,
       fallbackProvider: fallbackProviderSelect.value,
       fallbackModel: fallbackModelSelect.value,
+      defaultProjectId: defaultProjectIdSelect.value,
+      manualFields: manualFieldsInput.value.trim(),
     };
 
     // Validate and encrypt needed keys
@@ -167,11 +178,15 @@ document.addEventListener("DOMContentLoaded", () => {
         "primaryModel",
         "fallbackProvider",
         "fallbackModel",
+        "defaultProjectId",
+        "manualFields",
       ],
       async (items) => {
         redmineDomainInput.value = TB.REDMINE_DOMAIN;
         if (items.redmineApiKey) {
-          redmineApiKeyInput.value = await decryptData(items.redmineApiKey);
+          const key = await decryptData(items.redmineApiKey);
+          redmineApiKeyInput.value = key;
+          fetchProjects(key, items.defaultProjectId);
         }
 
         backlogDomainInput.value = items.backlogDomain || TB.BACKLOG_DOMAIN;
@@ -196,14 +211,47 @@ document.addEventListener("DOMContentLoaded", () => {
           primaryGeminiApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
           fallbackGeminiApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
         }
-        if (items.cerebrasApiKey) {
-          primaryCerebrasApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
-          fallbackCerebrasApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
+
+        if (items.manualFields) {
+          manualFieldsInput.value = items.manualFields;
+        } else {
+          manualFieldsInput.value = JSON.stringify(
+            {
+              Severity: 46,
+              "Reproduction Rate": 0,
+              Role: 11,
+              "QC Activity": 8,
+            },
+            null,
+            2
+          );
         }
 
         updateKeyVisibility();
       }
     );
+  }
+
+  async function fetchProjects(apiKey, selectedId = "") {
+    if (!apiKey) return;
+    try {
+      defaultProjectIdSelect.innerHTML = "<option value=\"\">Đang tải project...</option>";
+      const response = await fetch(`${TB.REDMINE_DOMAIN}/projects.json?limit=100`, {
+        headers: { "X-Redmine-API-Key": apiKey, Accept: "application/json" },
+      });
+      if (!response.ok) throw new Error("Failed to fetch");
+      const data = await response.json();
+      defaultProjectIdSelect.innerHTML = "<option value=\"\">-- Chọn project --</option>";
+      data.projects.forEach((p) => {
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = p.name;
+        if (selectedId && String(p.id) === String(selectedId)) opt.selected = true;
+        defaultProjectIdSelect.appendChild(opt);
+      });
+    } catch (e) {
+      defaultProjectIdSelect.innerHTML = "<option value=\"\">Lỗi tải project (Kiểm tra API Key)</option>";
+    }
   }
 
   function updateModelDropdown(selectElement, provider) {

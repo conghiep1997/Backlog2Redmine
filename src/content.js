@@ -18,8 +18,21 @@ try {
   injectStyles();
   scanAndInjectButtons();
   observeCommentActions();
+
+  // Robust handling for SPA navigation
+  let lastPath = window.location.pathname;
+  setInterval(() => {
+    if (window.location.pathname !== lastPath) {
+      lastPath = window.location.pathname;
+      scanAndInjectButtons();
+    }
+  }, 1000);
 } catch (err) {
   console.error("[TB-Content] Initialization failed:", err);
+}
+
+function isIssuePage() {
+  return /\/view\/[A-Z0-9_]+-[0-9]+/.test(window.location.pathname);
 }
 
 function observeCommentActions() {
@@ -122,6 +135,7 @@ function createModernButton(text, onClick, options = {}) {
 }
 
 function injectHeaderButton() {
+  if (!isIssuePage()) return;
   const container = document.querySelector(".title-group__edit-actions");
   if (!container || container.querySelector(".tb-header-migrate-btn")) {
     return;
@@ -138,6 +152,7 @@ function injectHeaderButton() {
 }
 
 function injectButtonIfNeeded(actionsEl) {
+  if (!isIssuePage()) return;
   if (!actionsEl || actionsEl.dataset.tbInjected === "1") {
     return;
   }
@@ -276,32 +291,51 @@ async function handleIssueMigration(button) {
       }
     });
 
-    const res = await sendRuntimeMessage({
-      type: "LOOKUP_AND_TRANSLATE_COMMENT",
-      issueKey,
-      issueSummary,
-      commentText: fullDescription,
-      commentUrl: window.location.href,
-    });
+    const [descRes, subRes] = await Promise.all([
+      sendRuntimeMessage({
+        type: "LOOKUP_AND_TRANSLATE_COMMENT",
+        issueKey,
+        issueSummary,
+        commentText: fullDescription,
+        commentUrl: window.location.href,
+      }),
+      sendRuntimeMessage({
+        type: "TRANSLATE_TEXT_SIMPLE",
+        text: issueSummary,
+      }),
+    ]);
 
     openConfirmModal({
       isMigration: true,
-      issueTitle: [issueKey, issueSummary].filter(Boolean).join(" "),
-      previewText: res.data.previewText,
+      issueTitle: `${issueKey} ${issueSummary} (${subRes.data.translatedText})`,
+      previewText: descRes.data.previewText,
+      remainingComments: comments,
       commentsCount: comments.length,
       onCancel: () => setButtonLoading(button, false),
-      onConfirm: async ({ issueData }) => {
+      onConfirm: async ({ issueData, comments: translatedComments }) => {
         const result = await sendRuntimeMessage({
           type: "CREATE_REDMINE_ISSUE",
           issueData,
-          comments: comments.map((c) => c.text),
+          comments: translatedComments, // Use translated comments from modal if any
         });
         openSuccessModal({
           redmineUrl: result.data.redmineUrl,
-          commentCount: comments.length + 1,
+          commentCount: (translatedComments?.length || 0) + 1,
           onClose: () => setButtonLoading(button, false),
         });
       },
+      translateBatch: (commentsList) =>
+        Promise.all(
+          commentsList.map((c) =>
+            sendRuntimeMessage({
+              type: "LOOKUP_AND_TRANSLATE_COMMENT",
+              issueKey,
+              issueSummary,
+              commentText: c.text,
+              commentUrl: c.url,
+            }).then((r) => r.data.previewText)
+          )
+        ),
     });
     setButtonLoading(button, false);
   } catch (err) {
@@ -365,7 +399,7 @@ function getBacklogHeaderInfo() {
 
   // LAST RESORT: Extract Issue Key from URL
   if (!issueKey) {
-    const urlMatch = window.location.pathname.match(/\/view\/([A-Z0-9]+-[0-9]+)/);
+    const urlMatch = window.location.pathname.match(/\/view\/([A-Z0-9_]+-[0-9]+)/);
     if (urlMatch) {
       issueKey = urlMatch[1];
     }

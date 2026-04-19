@@ -36,6 +36,7 @@
     modal_migrate_title: "Tạo Issue mới trên Redmine",
     modal_migrate_subtitle: "Sẽ tạo 1 ticket và đính kèm $count$ bình luận.",
     modal_migrate_confirm: "Tạo & Di chuyển toàn bộ",
+    modal_migrate_comments_text: "Dịch và di chuyển tất cả $count$ bình luận",
   };
 
   const getMsg = (key, substitution) => {
@@ -130,6 +131,7 @@
         MIGRATE_TITLE: getMsg("modal_migrate_title"),
         MIGRATE_SUBTITLE: (count) => getMsg("modal_migrate_subtitle", count.toString()),
         MIGRATE_CONFIRM: getMsg("modal_migrate_confirm"),
+        MIGRATE_COMMENTS_TEXT: (count) => getMsg("modal_migrate_comments_text", count.toString()),
         PROJECT_LABEL: getMsg("modal_project_label"),
         TRACKER_LABEL: getMsg("modal_tracker_label"),
         PRIORITY_LABEL: getMsg("modal_priority_label"),

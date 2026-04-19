@@ -141,32 +141,104 @@
 
       <div class="card">
         <form id="optionsForm" class="grid">
-          <div class="field">
-            <label for="redmineDomain">Redmine Domain</label>
-            <input
-              id="redmineDomain"
-              type="url"
-              value="https://redmine.splus-software.com"
-              readonly
-              style="background: #f3f4f6; color: #6b7280; cursor: not-allowed"
-            />
-            <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
-              💡 Redmine Domain được cấu hình sẵn.
-            </p>
-          </div>
-          <div class="field">
-            <label for="redmineApiKey">Redmine API Key</label>
-            <input id="redmineApiKey" type="text" placeholder="Nhập API key" />
-            <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
-              🔑 Lấy API Key tại:
-              <a
-                href="https://redmine.splus-software.com/my/account"
-                target="_blank"
-                style="color: var(--primary)"
-                >Tài khoản cá nhân</a
+          <!-- Nhóm cấu hình Redmine -->
+          <div
+            style="
+              padding: 16px;
+              background: #fef2f2;
+              border: 1px solid #fee2e2;
+              border-radius: 12px;
+              margin-bottom: 24px;
+            "
+          >
+            <h3 style="margin: 0 0 12px; color: #b91c1c; font-size: 16px">
+              Cấu hình Redmine
+            </h3>
+            
+            <div class="field" style="margin-bottom: 16px">
+              <label for="redmineDomain">Redmine Domain</label>
+              <input
+                id="redmineDomain"
+                type="url"
+                value="https://redmine.splus-software.com"
+                readonly
+                style="background: #f3f4f6; color: #6b7280; cursor: not-allowed"
+              />
+              <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                💡 Redmine Domain được cấu hình sẵn.
+              </p>
+            </div>
+
+            <div class="field" style="margin-bottom: 16px">
+              <label for="redmineApiKey">Redmine API Key</label>
+              <input id="redmineApiKey" type="text" placeholder="Nhập API key" />
+              <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                🔑 Lấy API Key tại:
+                <a
+                  href="https://redmine.splus-software.com/my/account"
+                  target="_blank"
+                  style="color: var(--primary)"
+                  >Tài khoản cá nhân</a
+                >
+                (Bấm vào "Hiện" tại mục "Mã truy cập API").
+              </p>
+            </div>
+
+            <div class="field" style="margin-bottom: 16px">
+              <label for="defaultProjectId">Project mặc định (Dùng cho Migrate)</label>
+              <select
+                id="defaultProjectId"
+                style="
+                  width: 100%;
+                  box-sizing: border-box;
+                  border: 1px solid var(--border);
+                  border-radius: 12px;
+                  padding: 12px 14px;
+                  font: inherit;
+                  background: white;
+                "
               >
-              (Bấm vào "Hiện" tại mục "Mã truy cập API").
-            </p>
+                <option value="">-- Trước tiên cần lưu API Key --</option>
+              </select>
+            </div>
+
+            <!-- Cấu hình Custom Fields (JSON Mapping) -->
+            <details
+              style="
+                border: 1px solid #fecaca;
+                border-radius: 12px;
+                background: white;
+                padding: 0 14px;
+              "
+            >
+              <summary
+                style="padding: 12px 0; font-weight: 600; cursor: pointer; color: #b91c1c"
+              >
+                Cấu hình Custom Fields (JSON Mapping)
+              </summary>
+              <div class="field" style="padding-bottom: 16px">
+                <textarea
+                  id="manualFields"
+                  placeholder='{ "Severity": 0, "Reproduction Rate": 0, "Role": 0, "QC Activity": 0 }'
+                  style="
+                    width: 100%;
+                    height: 100px;
+                    box-sizing: border-box;
+                    border: 1px solid var(--border);
+                    border-radius: 12px;
+                    padding: 12px 14px;
+                    font-family: monospace;
+                    font-size: 13px;
+                    background: white;
+                    resize: none;
+                  "
+                ></textarea>
+                <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                  💡 Nhập mã ID của các trường bắt buộc. Ví dụ:
+                  <code>{ "Severity": 46, "Role": 11, "QC Activity": 8 }</code>
+                </p>
+              </div>
+            </details>
           </div>
 
           <!-- Nhóm cấu hình Backlog -->

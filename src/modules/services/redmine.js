@@ -148,6 +148,7 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
         subject: issueData.subject,
         description: updatedDescription,
         uploads: descUploads.length > 0 ? descUploads : undefined,
+        custom_fields: issueData.custom_fields || [],
       },
     }),
   });

@@ -86,7 +86,7 @@ function injectStyles() {
 
     /* Modal Header */
     .tb-modal-header {
-      padding: 16px 32px;
+      padding: 10px 24px;
       border-bottom: 1px solid #f1f5f9;
       display: flex;
       align-items: center;
@@ -102,25 +102,26 @@ function injectStyles() {
     .tb-modal-close:hover { color: #475569; }
 
     /* Modal Body */
-    .tb-modal-body { padding: 16px 24px ; max-height: 85vh; overflow-y: auto; }
-    .tb-modal-subtitle { font-size: 13px; color: #64748b; margin-top: -4px; margin-bottom: 16px; }
+    .tb-modal-body { padding: 10px 20px ; max-height: 82vh; overflow-y: auto; }
+    .tb-modal-subtitle { font-size: 12px; color: #64748b; margin-top: -6px; margin-bottom: 12px; }
 
     /* Fields */
-    .tb-field-group { margin-bottom: 12px; }
-    .tb-field-row { display: flex; gap: 16px; margin-bottom: 12px; }
-    .tb-field-group label { display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.02em; }
+    .tb-field-group { margin-bottom: 6px; }
+    .tb-field-row { display: flex; gap: 12px; margin-bottom: 6px; }
+    .tb-field-group label { display: block; font-size: 10px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 2px; letter-spacing: 0.02em; }
     .tb-field-group input, .tb-field-group select, .tb-field-group textarea {
-      width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 14px; color: #1e293b; transition: all 0.2s;
+      width: 100%; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 13px; color: #1e293b; transition: all 0.2s;
     }
     .tb-field-group input:focus, .tb-field-group select:focus, .tb-field-group textarea:focus {
       outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
     .tb-field-group input[readonly], .tb-field-group textarea[readonly] { background: #f1f5f9; color: #64748b; }
-    .tb-multiline-input { resize: none; overflow-y: auto; line-height: 1.4; min-height: 54px; }
-    #tb-redmine-preview { min-height: 380px; font-family: inherit; line-height: 1.6; }
+    .tb-multiline-input { resize: none; overflow-y: auto; line-height: 1.4; min-height: 48px; }
+    #tb-redmine-preview { min-height: 180px; font-family: inherit; line-height: 1.5; font-size: 13px; }
+    #tb-redmine-comments-preview { min-height: 180px; font-family: inherit; line-height: 1.5; font-size: 13px; background: #f8fafc; border-left: 3px solid #3b82f6; }
 
     /* Footer */
-    .tb-modal-footer { padding: 16px 32px; background: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 12px; }
+    .tb-modal-footer { padding: 10px 24px; background: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 10px; }
 
     /* Buttons */
     .tb-btn { padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; }
@@ -143,6 +144,17 @@ function injectStyles() {
 
     .tb-batch-pill { display: none; padding: 4px 12px; background: #eff6ff; color: #2563eb; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
     .tb-modal-hint { font-size: 13px; color: #475569; font-style: italic; margin-top: 12px; display: block; opacity: 0.9; }
+
+    /* Custom Fields Grid */
+    .tb-field-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 12px 0; }
+    .tb-field-grid .tb-field-group { margin-bottom: 0; }
+    .tb-field-grid input[type="checkbox"] { width: auto; height: auto; margin: 4px 8px 0 0; float: left; }
+    .tb-field-grid select.tb-cf-input, .tb-field-grid input.tb-cf-input { margin-top: 2px; }
+
+    .tb-batch-option { margin-top: 8px; margin-bottom: 4px; padding: 8px 12px; background: #f0f7ff; border: 1px dashed #bfdbfe; border-radius: 10px; }
+    .tb-batch-option label { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #1e40af; cursor: pointer; font-weight: 600; }
+    .tb-batch-option input { margin: 0; }
+    .tb-required { color: #ef4444; margin-left: 2px; font-weight: bold; }
   `;
   document.head.appendChild(style);
 }

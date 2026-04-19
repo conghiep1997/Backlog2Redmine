@@ -4,6 +4,8 @@
 
 const TB = globalThis.TB_CONSTANTS;
 let modalElements = null;
+let customFieldsMetadata = [];
+let redmineSettings = null;
 
 function ensureModalShell() {
   let overlay = document.getElementById("tb-redmine-overlay");
@@ -38,29 +40,39 @@ function ensureModalShell() {
           </div>
           <div id="tb-migration-fields" hidden>
             <div class="tb-field-group">
-              <label for="tb-migrate-project">${TB.MESSAGES.MODAL.PROJECT_LABEL}</label>
+              <label for="tb-migrate-project">${TB.MESSAGES.MODAL.PROJECT_LABEL}<span class="tb-required">*</span></label>
               <select id="tb-migrate-project">
                 <option value="">${TB.MESSAGES.MODAL.LOADING_METADATA}</option>
               </select>
             </div>
+            <div class="tb-field-group">
+              <label for="tb-migrate-subject">${TB.MESSAGES.MODAL.SUBJECT_LABEL}<span class="tb-required">*</span></label>
+              <input type="text" id="tb-migrate-subject">
+            </div>
             <div class="tb-field-row">
-              <div class="tb-field-group">
-                <label for="tb-migrate-tracker">${TB.MESSAGES.MODAL.TRACKER_LABEL}</label>
+              <div class="tb-field-group" style="flex: 1.2;">
+                <label for="tb-migrate-tracker">${TB.MESSAGES.MODAL.TRACKER_LABEL}<span class="tb-required">*</span></label>
                 <select id="tb-migrate-tracker"><option value="">-- Loader --</option></select>
               </div>
               <div class="tb-field-group" style="flex: 1; margin-left: 10px;">
-                <label for="tb-migrate-priority">${TB.MESSAGES.MODAL.PRIORITY_LABEL}</label>
+                <label for="tb-migrate-priority">${TB.MESSAGES.MODAL.PRIORITY_LABEL}<span class="tb-required">*</span></label>
                 <select id="tb-migrate-priority"><option value="">-- Loader --</option></select>
               </div>
+              <div class="tb-field-group" style="flex: 1; margin-left: 10px;">
+                <label for="tb-migrate-due-date">Due Date<span class="tb-required">*</span></label>
+                <input type="date" id="tb-migrate-due-date">
+              </div>
             </div>
-            <div class="tb-field-group">
-              <label for="tb-migrate-subject">${TB.MESSAGES.MODAL.SUBJECT_LABEL}</label>
-              <input type="text" id="tb-migrate-subject">
-            </div>
+            <!-- Dynamic Custom Fields Container -->
+            <div id="tb-dynamic-fields" class="tb-field-grid"></div>
           </div>
           <div class="tb-field-group">
-            <label for="tb-redmine-preview">${TB.MESSAGES.MODAL.PREVIEW_LABEL}</label>
+            <label id="tb-preview-label" for="tb-redmine-preview">${TB.MESSAGES.MODAL.PREVIEW_LABEL}</label>
             <textarea id="tb-redmine-preview" rows="10"></textarea>
+          </div>
+          <div id="tb-comments-preview-group" class="tb-field-group" hidden>
+            <label for="tb-redmine-comments-preview">Xem trước bình luận</label>
+            <textarea id="tb-redmine-comments-preview" rows="8"></textarea>
           </div>
           <div id="tb-batch-info" class="tb-batch-pill" hidden></div>
           <p class="tb-modal-hint">${TB.MESSAGES.MODAL.HINT}</p>
@@ -126,7 +138,14 @@ function ensureModalShell() {
     trackerSelect: overlay.querySelector("#tb-migrate-tracker"),
     prioritySelect: overlay.querySelector("#tb-migrate-priority"),
     migrateSubjectInput: overlay.querySelector("#tb-migrate-subject"),
+    migrateDueDateInput: overlay.querySelector("#tb-migrate-due-date"),
 
+    // Migration Specific
+    commentsPreviewGroup: overlay.querySelector("#tb-comments-preview-group"),
+    commentsPreviewTextarea: overlay.querySelector("#tb-redmine-comments-preview"),
+    previewLabel: overlay.querySelector("#tb-preview-label"),
+
+    dynamicFieldsContainer: overlay.querySelector("#tb-dynamic-fields"),
     // Backlog Specific UI elements
     backlogNotifyInput: overlay.querySelector("#tb-backlog-notify"),
     issueIdLabel: overlay.querySelector("label[for='tb-redmine-issue-id']"),
@@ -156,7 +175,6 @@ function openConfirmModal({
     closeButton,
     cancelButton,
     confirmButton,
-    batchInfoEl,
     batchOptionEl,
     batchOptionCheckbox,
     batchOptionText,
@@ -166,11 +184,43 @@ function openConfirmModal({
     trackerSelect,
     prioritySelect,
     migrateSubjectInput,
+    migrateDueDateInput,
+    commentsPreviewGroup,
+    commentsPreviewTextarea,
+    previewLabel,
   } = modalElements;
 
   let currentMode = false;
   let currentNotesList = [previewText];
   let memoizedBatchNotes = null;
+
+  const validateMigrationForm = () => {
+    if (!isMigration) return;
+    const isProjectLoaded = projectSelect.options.length > 0 && projectSelect.value;
+    const isSubjectValid = migrateSubjectInput.value.trim().length > 0;
+    const isTranslationDone = !batchOptionCheckbox.checked || !!memoizedBatchNotes;
+
+    const selectedTracker = trackerSelect.options[trackerSelect.selectedIndex]?.text;
+    const isDueDateRequired = ["Bug", "Task", "Issue", "CR"].includes(selectedTracker); // Based on user latest, but let's stick to what they said: Bug (mandatory), Task (mandatory)
+    const isDueDateFilled = !isDueDateRequired || migrateDueDateInput.value;
+
+    // Validate dynamic mandatory fields
+    const dynamicFields = modalElements.dynamicFieldsContainer.querySelectorAll(".tb-cf-input");
+    let allRequiredFilled = true;
+    dynamicFields.forEach((input) => {
+      if (!input.value.trim()) {
+        allRequiredFilled = false;
+      }
+    });
+
+    confirmButton.disabled = !(
+      isProjectLoaded &&
+      isSubjectValid &&
+      isTranslationDone &&
+      allRequiredFilled &&
+      isDueDateFilled
+    );
+  };
 
   // Internal state management for the modal
   function updateModalState() {
@@ -179,10 +229,24 @@ function openConfirmModal({
       subtitleEl.textContent = TB.MESSAGES.MODAL.MIGRATE_SUBTITLE(commentsCount);
       standardFields.hidden = true;
       migrationFields.hidden = false;
-      batchOptionEl.hidden = true;
-      migrateSubjectInput.value = issueTitle;
+      previewLabel.textContent = "Xem trước mô tả";
+
+      batchOptionEl.hidden = commentsCount === 0;
+      batchOptionText.textContent = TB.MESSAGES.MODAL.MIGRATE_COMMENTS_TEXT(commentsCount);
+
+      migrateSubjectInput.value = migrateSubjectInput.value || issueTitle;
       previewTextarea.value = previewText;
       confirmButton.textContent = TB.MESSAGES.MODAL.MIGRATE_CONFIRM;
+
+      if (batchOptionCheckbox.checked) {
+        commentsPreviewGroup.hidden = false;
+        commentsPreviewTextarea.value = memoizedBatchNotes
+          ? memoizedBatchNotes.map((text, i) => `--- Note ${i + 1} ---\n${text}`).join("\n\n")
+          : TB.MESSAGES.MODAL.WAITING_TRANSLATION;
+      } else {
+        commentsPreviewGroup.hidden = true;
+      }
+      validateMigrationForm();
     } else {
       titleEl.textContent = TB.MESSAGES.MODAL.TITLE;
       subtitleEl.textContent = currentMode
@@ -190,6 +254,9 @@ function openConfirmModal({
         : TB.MESSAGES.MODAL.SUBTITLE;
       standardFields.hidden = false;
       migrationFields.hidden = true;
+      commentsPreviewGroup.hidden = true;
+      previewLabel.textContent = TB.MESSAGES.MODAL.PREVIEW_LABEL;
+
       if (currentMode) {
         previewTextarea.value = memoizedBatchNotes
           ? [previewText, ...memoizedBatchNotes]
@@ -210,21 +277,55 @@ function openConfirmModal({
   }
 
   if (isMigration) {
-    fetchRedmineMetadataForModal();
+    confirmButton.disabled = true;
+    trackerSelect.onchange = () => {
+      const selectedTracker = trackerSelect.options[trackerSelect.selectedIndex]?.text;
+      // Handle defaults when switching tracker
+      if (selectedTracker === "Bug") {
+        migrateDueDateInput.value = getPlus3WorkingDays();
+      } else {
+        migrateDueDateInput.value = "";
+      }
+
+      renderTrackerFields(selectedTracker, validateMigrationForm);
+      validateMigrationForm();
+    };
+
+    migrateDueDateInput.onchange = validateMigrationForm;
+
+    fetchRedmineMetadataForModal().then(() => {
+      const initialTracker = trackerSelect.options[trackerSelect.selectedIndex]?.text;
+
+      if (initialTracker === "Bug") {
+        migrateDueDateInput.value = getPlus3WorkingDays();
+      }
+
+      renderTrackerFields(initialTracker, validateMigrationForm);
+      validateMigrationForm();
+    });
+
+    projectSelect.onchange = validateMigrationForm;
+    migrateSubjectInput.oninput = validateMigrationForm;
   }
 
-  if (!isMigration && hasBatchOption) {
+  if (hasBatchOption || (isMigration && commentsCount > 0)) {
     batchOptionEl.hidden = false;
-    batchOptionText.textContent = TB.MESSAGES.MODAL.BATCH_TEXT(remainingComments.length + 1);
+    batchOptionText.textContent = isMigration
+      ? TB.MESSAGES.MODAL.MIGRATE_COMMENTS_TEXT(commentsCount)
+      : TB.MESSAGES.MODAL.BATCH_TEXT(remainingComments.length + 1);
+
     batchOptionCheckbox.checked = false;
     batchOptionCheckbox.onchange = async (e) => {
       currentMode = e.target.checked;
+      updateModalState();
+
       if (currentMode && !memoizedBatchNotes) {
         confirmButton.disabled = true;
         try {
           memoizedBatchNotes = await translateBatch(remainingComments);
         } catch (err) {
           showToast(err.message, "error");
+          batchOptionCheckbox.checked = false;
           currentMode = false;
         }
         confirmButton.disabled = false;
@@ -238,21 +339,17 @@ function openConfirmModal({
   issueIdInput.value = redmineIssueId;
   issueTitleInput.value = issueTitle;
 
-  // Auto-load title logic
   let isValidated = false;
   let lastCheckedId = "";
 
   const loadRedmineTitle = async (id) => {
     id = id.trim();
-    if (!id || id === lastCheckedId) {
-      return;
-    }
+    if (!id || id === lastCheckedId) return;
 
     lastCheckedId = id;
     isValidated = false;
     confirmButton.disabled = true;
 
-    // Redmine Issue ID validation (numeric)
     if (!/^\d+$/.test(id)) {
       issueTitleInput.value = TB.MESSAGES.MODAL.ERROR_NUMERIC_ID;
       return;
@@ -279,30 +376,7 @@ function openConfirmModal({
     }
   };
 
-  let checkTimer = null;
-  issueIdInput.onblur = (e) => {
-    clearTimeout(checkTimer);
-    loadRedmineTitle(e.target.value);
-  };
-  issueIdInput.oninput = (e) => {
-    const val = e.target.value.trim();
-    // Keep disabled while typing unless it matches the last validated ID
-    confirmButton.disabled = !(isValidated && val === lastCheckedId);
-
-    // Auto-check after 600ms of inactivity
-    clearTimeout(checkTimer);
-    if (val && val !== lastCheckedId) {
-      checkTimer = setTimeout(() => loadRedmineTitle(val), 600);
-    }
-  };
-
-  // Initial load if ID exists
-  if (redmineIssueId) {
-    lastCheckedId = redmineIssueId; // Prevent double load if already correct
-    loadRedmineTitle(redmineIssueId);
-  } else {
-    confirmButton.disabled = true;
-  }
+  issueIdInput.onblur = (e) => loadRedmineTitle(e.target.value);
 
   const safeClose = () => {
     overlay.style.display = "none";
@@ -312,27 +386,36 @@ function openConfirmModal({
   closeButton.onclick = safeClose;
   cancelButton.onclick = safeClose;
   overlay.onclick = (e) => {
-    if (e.target === overlay) {
-      safeClose();
-    }
+    if (e.target === overlay) safeClose();
   };
 
   confirmButton.onclick = async () => {
     confirmButton.disabled = true;
     if (isMigration) {
+      const custom_fields = [];
+      const dynamicInputs = modalElements.dynamicFieldsContainer.querySelectorAll(".tb-cf-input");
+      dynamicInputs.forEach((input) => {
+        custom_fields.push({ id: input.getAttribute("data-cfId"), value: input.value.trim() });
+      });
+
       const issueData = {
         project_id: projectSelect.value,
         tracker_id: trackerSelect.value,
         priority_id: prioritySelect.value,
         subject: migrateSubjectInput.value.trim(),
         description: previewTextarea.value.trim(),
+        due_date: migrateDueDateInput.value,
+        custom_fields,
       };
       if (!issueData.project_id) {
         showToast(TB.MESSAGES.MODAL.ERROR_SELECT_PROJECT, "error");
         confirmButton.disabled = false;
         return;
       }
-      await onConfirm({ issueData });
+      await onConfirm({
+        issueData,
+        comments: batchOptionCheckbox.checked ? memoizedBatchNotes : [],
+      });
     } else {
       const id = issueIdInput.value.trim();
       if (!id) {
@@ -360,12 +443,7 @@ function openBacklogModal({ backlogIssueKey = "", previewText = "", onCancel, on
     issueIdInput,
     issueIdLabel,
     previewTextarea,
-    closeButton,
-    cancelButton,
     confirmButton,
-    standardFields,
-    migrationFields,
-    backlogFields,
     backlogNotifyInput,
   } = modalElements;
 
@@ -373,24 +451,12 @@ function openBacklogModal({ backlogIssueKey = "", previewText = "", onCancel, on
   subtitleEl.textContent = TB.MESSAGES.MODAL.BACKLOG_SUBTITLE;
   issueIdLabel.textContent = TB.MESSAGES.MODAL.BACKLOG_ISSUE_KEY_LABEL;
   issueIdInput.value = backlogIssueKey;
-  issueIdInput.placeholder = TB.MESSAGES.MODAL.BACKLOG_PLACEHOLDER;
   previewTextarea.value = previewText;
 
-  standardFields.hidden = false;
-  migrationFields.hidden = true;
-  backlogFields.hidden = false;
-  overlay.querySelector("#tb-redmine-issue-title").parentElement.hidden = true;
-
+  modalElements.standardFields.hidden = false;
+  modalElements.migrationFields.hidden = true;
+  modalElements.backlogFields.hidden = false;
   confirmButton.disabled = false;
-  confirmButton.textContent = TB.MESSAGES.MODAL.CONFIRM;
-
-  const safeClose = () => {
-    overlay.style.display = "none";
-    document.body.classList.remove("tb-modal-open");
-    onCancel?.();
-  };
-  closeButton.onclick = safeClose;
-  cancelButton.onclick = safeClose;
 
   confirmButton.onclick = async () => {
     const key = issueIdInput.value.trim();
@@ -427,14 +493,12 @@ function openSuccessModal({ redmineUrl, commentCount = 1, onClose }) {
     successViewButton,
     successCloseButton,
   } = modalElements;
-  successTitleEl.textContent =
-    commentCount > 1
-      ? TB.MESSAGES.MODAL.BATCH_TITLE_MULTIPLE(commentCount)
-      : TB.MESSAGES.MODAL.SUCCESS_TITLE;
-  successSubtitleEl.textContent =
-    commentCount > 1
-      ? TB.MESSAGES.MODAL.BATCH_SUBTITLE_MULTIPLE
-      : TB.MESSAGES.MODAL.SUCCESS_SUBTITLE;
+  successTitleEl.textContent = commentCount > 1
+    ? TB.MESSAGES.MODAL.BATCH_TITLE_MULTIPLE(commentCount)
+    : TB.MESSAGES.MODAL.SUCCESS_TITLE;
+  successSubtitleEl.textContent = commentCount > 1
+    ? TB.MESSAGES.MODAL.BATCH_SUBTITLE_MULTIPLE
+    : TB.MESSAGES.MODAL.SUCCESS_SUBTITLE;
   successLinkEl.textContent = redmineUrl;
   successLinkEl.href = redmineUrl;
   successViewButton.onclick = () => window.open(redmineUrl, "_blank");
@@ -452,24 +516,135 @@ function openSuccessModal({ redmineUrl, commentCount = 1, onClose }) {
 async function fetchRedmineMetadataForModal() {
   const { projectSelect, trackerSelect, prioritySelect } = modalElements;
   try {
-    const [projectsRes, trackersRes, prioritiesRes] = await Promise.all([
-      sendRuntimeMessage({ type: "FETCH_REDMINE_METADATA", endpoint: "/projects.json?limit=100" }),
-      sendRuntimeMessage({ type: "FETCH_REDMINE_METADATA", endpoint: "/trackers.json" }),
-      sendRuntimeMessage({
-        type: "FETCH_REDMINE_METADATA",
-        endpoint: "/enumerations/issue_priorities.json",
-      }),
+    const [settings, projectsRes, trackersRes, prioritiesRes, customRes] = await Promise.all([
+      sendRuntimeMessage({ type: "GET_SETTINGS" }).catch(() => ({})),
+      sendRuntimeMessage({ type: "FETCH_REDMINE_METADATA", endpoint: "/projects.json?limit=100" }).catch(e => ({ error: e.message, data: { projects: [] } })),
+      sendRuntimeMessage({ type: "FETCH_REDMINE_METADATA", endpoint: "/trackers.json" }).catch(e => ({ error: e.message, data: { trackers: [] } })),
+      sendRuntimeMessage({ type: "FETCH_REDMINE_METADATA", endpoint: "/enumerations/issue_priorities.json" }).catch(() => ({ data: { issue_priorities: [] } })),
+      sendRuntimeMessage({ type: "FETCH_REDMINE_METADATA", endpoint: "/custom_fields.json" }).catch(() => ({ data: { custom_fields: [] } })),
     ]);
-    projectSelect.innerHTML = projectsRes.data.projects
-      .map((p) => `<option value="${p.id}">${p.name}</option>`)
-      .join("");
-    trackerSelect.innerHTML = trackersRes.data.trackers
-      .map((t) => `<option value="${t.id}">${t.name}</option>`)
-      .join("");
-    prioritySelect.innerHTML = prioritiesRes.data.issue_priorities
-      .map((p) => `<option value="${p.id}" ${p.is_default ? "selected" : ""}>${p.name}</option>`)
-      .join("");
+
+    redmineSettings = settings.data || settings;
+    customFieldsMetadata = customRes?.data?.custom_fields || [];
+
+    // Fallback: If custom fields are empty (likely 403), try to discover them from general project history
+    if (customFieldsMetadata.length === 0) {
+      console.log("[TB-MODAL] 403 on custom_fields.json. Attempting auto-discovery from latest issues...");
+      const discoveryRes = await sendRuntimeMessage({
+        type: "FETCH_REDMINE_METADATA",
+        endpoint: "/issues.json?limit=20",
+      }).catch(() => null);
+
+      if (discoveryRes?.data?.issues) {
+        const foundFields = new Map();
+        discoveryRes.data.issues.forEach((issue) => {
+          (issue.custom_fields || []).forEach((cf) => {
+            foundFields.set(cf.name, { id: cf.id, name: cf.name });
+          });
+        });
+        customFieldsMetadata = Array.from(foundFields.values());
+        console.log(`[TB-MODAL] Discovered ${customFieldsMetadata.length} unique fields from history.`);
+      }
+    }
+
+    projectSelect.innerHTML = (projectsRes.data?.projects || [])
+      .map(p => `<option value="${p.id}">${p.name}</option>`).join("");
+    if (redmineSettings?.defaultProjectId) projectSelect.value = redmineSettings.defaultProjectId;
+
+    const allowedTrackers = ["Task", "Bug", "Issue", "CR"];
+    trackerSelect.innerHTML = (trackersRes.data?.trackers || [])
+      .filter(t => allowedTrackers.includes(t.name))
+      .map(t => `<option value="${t.id}">${t.name}</option>`).join("");
+
+    // Set default tracker to Task if available
+    const taskOption = Array.from(trackerSelect.options).find(opt => opt.text === "Task");
+    if (taskOption) {
+      trackerSelect.value = taskOption.value;
+    }
+
+    prioritySelect.innerHTML = (prioritiesRes.data?.issue_priorities || [])
+      .map(p => `<option value="${p.id}" ${p.is_default ? "selected" : ""}>${p.name}</option>`).join("");
   } catch (error) {
-    showToast(TB.MESSAGES.MODAL.ERROR_METADATA, "error");
+    showToast(`${TB.MESSAGES.MODAL.ERROR_METADATA}: ${error.message}`, "error");
   }
 }
+
+function renderTrackerFields(trackerName, validateCallback) {
+  const container = modalElements.dynamicFieldsContainer;
+  if (!container) return;
+  container.innerHTML = "";
+
+  let manualMap = {};
+  if (redmineSettings?.manualFields) {
+    try { manualMap = JSON.parse(redmineSettings.manualFields); } catch (e) { /* ignore */ }
+  }
+
+  const configs = {
+    Bug: ["Severity", "Reproduction Rate", "Role", "QC Activity"],
+    CR: ["Severity"],
+    Task: [],
+    Issue: [],
+  };
+
+  const fieldsToShow = configs[trackerName] || [];
+  if (fieldsToShow.length === 0) {
+    container.style.display = "none";
+    return;
+  }
+
+  container.style.display = "grid";
+  container.className = "tb-field-grid";
+
+  fieldsToShow.forEach(fieldName => {
+    let cfId = manualMap[fieldName];
+    if (!cfId) {
+      cfId = customFieldsMetadata.find(cf => cf.name.toLowerCase() === fieldName.toLowerCase())?.id;
+    }
+    if (!cfId) return;
+
+    const group = document.createElement("div");
+    group.className = "tb-field-group";
+    group.innerHTML = `<label>${fieldName}<span class="tb-required">*</span></label>`;
+
+    const optionsMap = {
+      Severity: ["Critical", "Major", "Minor", "Trivial"],
+      Role: ["Business Analysis", "Developer", "Tester", "Quality Assurance", "Reporter", "Comtor", "Customer", "Others"],
+      "QC Activity": ["Document Review", "Code Review", "Unit Test", "Integration Test", "Acceptance Test"],
+    };
+
+    if (optionsMap[fieldName]) {
+      const select = document.createElement("select");
+      select.className = "tb-cf-input";
+      select.dataset.cfId = cfId;
+      select.innerHTML = "<option value=\"\">-- Select --</option>";
+      optionsMap[fieldName].forEach(opt => {
+        const o = document.createElement("option");
+        o.value = opt;
+        o.textContent = opt;
+        select.appendChild(o);
+      });
+      select.addEventListener("change", validateCallback);
+      group.appendChild(select);
+    } else {
+      const input = document.createElement("input");
+      input.className = "tb-cf-input";
+      input.dataset.cfId = cfId;
+      if (fieldName === "Reproduction Rate") input.value = "100%";
+      input.addEventListener("input", validateCallback);
+      group.appendChild(input);
+    }
+    container.appendChild(group);
+  });
+}
+
+function getPlus3WorkingDays() {
+  const d = new Date();
+  let count = 0;
+  while (count < 3) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) count++;
+  }
+  return d.toISOString().split("T")[0];
+}
+
+window.TB_MODAL = { openConfirmModal, openBacklogModal, openSuccessModal };

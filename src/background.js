@@ -98,13 +98,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       );
       return { previewText: result };
     },
+
+    /**
+     * TRANSLATE_TEXT_SIMPLE:
+     * Translate plain text to Vietnamese without Reddy issue lookup.
+     */
+    TRANSLATE_TEXT_SIMPLE: async () => {
+      const settings = await getSettings();
+      assertSettings(settings);
+      const translated = await translateText(
+        message.text,
+        settings,
+        null,
+        TB.PROMPTS.SIMPLE_TRANSLATE || ((t) => t)
+      );
+      return { translatedText: translated };
+    },
   }[message.type];
 
   if (handler) {
     handler()
       .then((data) => sendResponse({ ok: true, data }))
       .catch((err) => {
-        console.error(`${DEBUG_PREFIX} Message handler error:`, err);
+        // Silently handle 403 for metadata to avoid console noise if permissions are expectedly missing
+        if (!err.message.includes("(403)")) {
+          console.error(`${DEBUG_PREFIX} Message handler error:`, err);
+        } else {
+          console.warn(`${DEBUG_PREFIX} Permission denied (403) for:`, message.endpoint || message.type);
+        }
         sendResponse({ ok: false, error: err.message });
       });
     return true; // Keep channel open for async response
@@ -128,6 +149,7 @@ async function getSettings() {
         "geminiModel",
         "geminiFallbackModel",
         "cerebrasModel",
+        "defaultProjectId",
       ],
       async (items) => {
         resolve({
@@ -141,6 +163,7 @@ async function getSettings() {
           geminiFallbackModel: items.geminiFallbackModel ?? TB.GEMINI_FALLBACK_MODEL,
           cerebrasApiKey: await decryptData(items.cerebrasApiKey ?? ""),
           cerebrasModel: items.cerebrasModel ?? TB.CEREBRAS_MODEL,
+          defaultProjectId: items.defaultProjectId || "",
         });
       }
     );
@@ -189,7 +212,7 @@ async function handleFetchMetadata(endpoint) {
   ); // 10s timeout for metadata fetch
 
   if (!response.ok) {
-    throw new Error(`${TB.MESSAGES.REDMINE.API_REQUEST_FAILED} (${response.status})`);
+    throw new Error(`${TB.MESSAGES.REDMINE.API_REQUEST_FAILED} (${response.status}) for ${endpoint}`);
   }
 
   return await response.json();
