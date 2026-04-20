@@ -1,4 +1,4 @@
-/* global downloadBacklogFile */
+/* global downloadBacklogFile, TB_LOGGER */
 /**
  * Redmine API Service for Backlog2Redmine Extension.
  * Handles operations with Redmine API: finding issues, sending notes, and uploading files.
@@ -94,6 +94,13 @@ async function handleSendToRedmine({ redmineIssueId, notes, backlogIssueKey }, s
   );
 
   const endpoint = buildRedmineUrl(settings.redmineDomain, `/issues/${redmineIssueId}.json`);
+  const payload = {
+    issue: {
+      notes: updatedNotes,
+      uploads: uploads.length > 0 ? uploads : undefined,
+    },
+  };
+
   const response = await fetch(endpoint, {
     method: "PUT",
     headers: {
@@ -101,16 +108,18 @@ async function handleSendToRedmine({ redmineIssueId, notes, backlogIssueKey }, s
       "X-Redmine-API-Key": settings.redmineApiKey,
       Accept: "application/json",
     },
-    body: JSON.stringify({
-      issue: {
-        notes: updatedNotes,
-        uploads: uploads.length > 0 ? uploads : undefined,
-      },
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
     const errorMsg = await readErrorMessage(response);
+    if (typeof TB_LOGGER !== "undefined") {
+      TB_LOGGER.logError(
+        "RedmineService",
+        `API Error during comment submission: ${errorMsg}`,
+        { requestPayload: payload, redmineResponse: errorMsg }
+      );
+    }
     throw new Error(
       `${TB.MESSAGES.REDMINE.SEARCH_PAGE_ERROR}: ${sanitizeErrorMessage(errorMsg, response.status)}`
     );
@@ -139,6 +148,20 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
   );
 
   const createUrl = buildRedmineUrl(settings.redmineDomain, "/issues.json");
+  const payload = {
+    issue: {
+      project_id: issueData.project_id,
+      tracker_id: issueData.tracker_id,
+      priority_id: issueData.priority_id,
+      subject: issueData.subject,
+      description: updatedDescription,
+      due_date: issueData.due_date || undefined,
+      category_id: issueData.category_id || undefined,
+      uploads: descUploads.length > 0 ? descUploads : undefined,
+      custom_fields: issueData.custom_fields || [],
+    },
+  };
+
   const response = await fetch(createUrl, {
     method: "POST",
     headers: {
@@ -146,23 +169,17 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
       "Content-Type": "application/json",
       Accept: "application/json",
     },
-    body: JSON.stringify({
-      issue: {
-        project_id: issueData.project_id,
-        tracker_id: issueData.tracker_id,
-        priority_id: issueData.priority_id,
-        subject: issueData.subject,
-        description: updatedDescription,
-        due_date: issueData.due_date || undefined,
-        category_id: issueData.category_id || undefined,
-        uploads: descUploads.length > 0 ? descUploads : undefined,
-        custom_fields: issueData.custom_fields || [],
-      },
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
     const errorMsg = await readErrorMessage(response);
+    if (typeof TB_LOGGER !== "undefined") {
+      TB_LOGGER.logError("RedmineService", `API Error during issue creation: ${errorMsg}`, {
+        requestPayload: payload,
+        redmineResponse: errorMsg,
+      });
+    }
     throw new Error(
       `${TB.MESSAGES.REDMINE.API_REQUEST_FAILED}: ${sanitizeErrorMessage(errorMsg, response.status)}`
     );
@@ -185,6 +202,11 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
         );
       } catch (e) {
         console.error("Comment migration failed", e);
+        if (typeof TB_LOGGER !== "undefined") {
+          TB_LOGGER.logError("RedmineService", `Failed to migrate comment: ${e.message}`, {
+            commentText,
+          });
+        }
       }
     }
   }

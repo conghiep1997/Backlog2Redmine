@@ -264,8 +264,8 @@ function openConfirmModal(options) {
       if (currentMode) {
         previewTextarea.value = memoizedBatchNotes
           ? [previewText, ...memoizedBatchNotes]
-              .map((text, index) => `--- Note ${index + 1} ---\n${text}`)
-              .join("\n\n")
+            .map((text, index) => `--- Note ${index + 1} ---\n${text}`)
+            .join("\n\n")
           : `${previewText}\n\n${TB.MESSAGES.MODAL.WAITING_TRANSLATION}`;
         currentNotesList = memoizedBatchNotes
           ? [previewText, ...memoizedBatchNotes]
@@ -287,9 +287,9 @@ function openConfirmModal(options) {
       // Handle defaults when switching tracker
       if (selectedTracker === "Bug") {
         migrateDueDateInput.value = getPlus3WorkingDays();
-        modalElements.migrateDueDateLabel.innerHTML = 'Due Date<span class="tb-required">*</span>';
+        modalElements.migrateDueDateLabel.innerHTML = "Due Date<span class=\"tb-required\">*</span>";
       } else if (selectedTracker === "Task") {
-        modalElements.migrateDueDateLabel.innerHTML = 'Due Date<span class="tb-required">*</span>';
+        modalElements.migrateDueDateLabel.innerHTML = "Due Date<span class=\"tb-required\">*</span>";
       } else {
         migrateDueDateInput.value = "";
         modalElements.migrateDueDateLabel.innerHTML = "Due Date";
@@ -310,9 +310,9 @@ function openConfirmModal(options) {
 
       if (initialTracker === "Bug") {
         migrateDueDateInput.value = getPlus3WorkingDays();
-        modalElements.migrateDueDateLabel.innerHTML = 'Due Date<span class="tb-required">*</span>';
+        modalElements.migrateDueDateLabel.innerHTML = "Due Date<span class=\"tb-required\">*</span>";
       } else if (initialTracker === "Task") {
-        modalElements.migrateDueDateLabel.innerHTML = 'Due Date<span class="tb-required">*</span>';
+        modalElements.migrateDueDateLabel.innerHTML = "Due Date<span class=\"tb-required\">*</span>";
       }
 
       const isDueDateVisible = ["Bug", "Task"].includes(initialTracker);
@@ -679,7 +679,7 @@ function renderTrackerFields(trackerName, validateCallback) {
       const select = document.createElement("select");
       select.className = "tb-cf-input";
       select.dataset.cfId = cfId;
-      select.innerHTML = '<option value="">-- Select --</option>';
+      select.innerHTML = "<option value=\"\">-- Select --</option>";
       optionsMap[fieldName].forEach((opt) => {
         const o = document.createElement("option");
         o.value = opt;

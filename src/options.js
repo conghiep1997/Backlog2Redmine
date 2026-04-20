@@ -281,13 +281,13 @@ document.addEventListener("DOMContentLoaded", () => {
   async function fetchProjects(apiKey, selectedId = "") {
     if (!apiKey) return;
     try {
-      defaultProjectIdSelect.innerHTML = '<option value="">Đang tải project...</option>';
+      defaultProjectIdSelect.innerHTML = "<option value=\"\">Đang tải project...</option>";
       const response = await fetch(`${TB.REDMINE_DOMAIN}/projects.json?limit=100`, {
         headers: { "X-Redmine-API-Key": apiKey, Accept: "application/json" },
       });
       if (!response.ok) throw new Error("Failed to fetch");
       const data = await response.json();
-      defaultProjectIdSelect.innerHTML = '<option value="">-- Chọn project --</option>';
+      defaultProjectIdSelect.innerHTML = "<option value=\"\">-- Chọn project --</option>";
       data.projects.forEach((p) => {
         const opt = document.createElement("option");
         opt.value = p.id;
@@ -299,7 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (e) {
       defaultProjectIdSelect.innerHTML =
-        '<option value="">Lỗi tải project (Kiểm tra API Key)</option>';
+        "<option value=\"\">Lỗi tải project (Kiểm tra API Key)</option>";
     }
   }
 
