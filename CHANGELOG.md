@@ -1,5 +1,8 @@
 # Nhật ký thay đổi (Changelog)
 
+## [1.5.1] - 2026-04-19
+- **🔧 Sửa lỗi & Chuẩn hóa code**: Sửa một số lỗi kỹ thuật trong mã nguồn (lỗi "linting") để giúp code sạch hơn, hoạt động ổn định và dễ bảo trì hơn trong tương lai.
+
 ## [1.5.0] - 2026-04-19
 - **✨ Trải nghiệm người dùng (UX)**:
   - **Lỗi thông minh**: Khi gặp lỗi cấu hình (thiếu API key...), extension sẽ hiển thị thông báo lỗi rõ ràng kèm link trực tiếp đến trang Options để người dùng có thể sửa lỗi ngay lập tức.

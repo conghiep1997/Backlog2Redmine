@@ -278,87 +278,111 @@ function pickBestRedmineSearchResult(results, normalizedIssueKey, normalizedIssu
 
 /**
  * Process attachments in notes: download from Backlog, upload to Redmine.
- * Replaces [[TB_IMG:id]] markers with !filename! for Redmine.
- * Replaces [[TB_FILE:id:filename]] markers with appropriate tags.
- * @param {string} notes - Notes text containing attachment markers
- * @param {string} backlogDomain - Backlog domain for download
- * @param {object} settings - Extension settings
+ * Replaces [[TB_IMG:id]] and [[TB_FILE:id:filename]] markers with appropriate Redmine markup.
+ * This function is optimized to prevent duplicate uploads of the same attachment ID.
+ *
+ * @param {string} notes - The text containing attachment markers.
+ * @param {string} backlogDomain - The Backlog domain for downloading files.
+ * @param {object} settings - The extension\'s settings.
+ * @param {string} backlogIssueKey - The Backlog issue key.
  * @returns {Promise<{updatedNotes: string, uploads: Array}>}
  */
 async function processNotesAttachments(notes, backlogDomain, settings, backlogIssueKey) {
-  let updatedNotes = notes;
-  const uploads = [];
+  if (!notes) {
+    return { updatedNotes: "", uploads: [] };
+  }
 
-  // 1. Process Legacy Image Markers: [[TB_IMG:id]]
-  const imageMatches = [...notes.matchAll(/\[\[TB_IMG:(\d+)\]\]/g)];
-  for (const match of imageMatches) {
+  const uploads = [];
+  // A map to hold information about each unique attachment ID found.
+  // Key: attachmentId (string), Value: { filename: string, markup: string, isImageOnly: boolean }
+  const attachmentRegistry = new Map();
+
+  const imagePattern = /\[\[TB_IMG:(\d+)\]\]/g;
+  const filePattern = /\[\[TB_FILE:(\d+):([^\]]+)\]\]/g;
+
+  // --- Step 1: Scan text and register all unique attachments that need processing ---
+  for (const match of notes.matchAll(imagePattern)) {
     const attachmentId = match[1];
-    const filename = `image_${attachmentId}.png`;
-    try {
-      const blob = await downloadBacklogFile(
-        backlogDomain,
-        attachmentId,
-        filename,
-        backlogIssueKey
-      );
-      const token = await uploadToRedmine(
-        settings.redmineDomain,
-        settings.redmineApiKey,
-        blob,
-        filename
-      );
-      if (token) {
-        uploads.push({ token, filename, content_type: blob.type || "image/png" });
-        updatedNotes = updatedNotes.replace(match[0], `!${filename}!`);
-      }
-    } catch (e) {
-      updatedNotes = updatedNotes.replace(match[0], `[Image Error: ${attachmentId}]`);
+    if (!attachmentRegistry.has(attachmentId)) {
+      attachmentRegistry.set(attachmentId, {
+        filename: `image_${attachmentId}.png`,
+        isImageOnly: true, // This was a legacy TB_IMG marker
+      });
     }
   }
 
-  // 2. Process General File Markers: [[TB_FILE:id:filename]]
-  const fileMatches = [...notes.matchAll(/\[\[TB_FILE:(\d+):([^\]]+)\]\]/g)];
-  for (const match of fileMatches) {
+  for (const match of notes.matchAll(filePattern)) {
     const attachmentId = match[1];
     const filename = match[2].trim();
+    if (!attachmentRegistry.has(attachmentId)) {
+      // The first encountered filename for an ID is used.
+      attachmentRegistry.set(attachmentId, { filename, isImageOnly: false });
+    }
+  }
+
+  // --- Step 2: Process each unique attachment from the registry ---
+  for (const [attachmentId, info] of attachmentRegistry.entries()) {
     try {
+      const { filename } = info;
+
       const blob = await downloadBacklogFile(
         backlogDomain,
         attachmentId,
         filename,
         backlogIssueKey
       );
+
       const token = await uploadToRedmine(
         settings.redmineDomain,
         settings.redmineApiKey,
         blob,
         filename
       );
-      if (token) {
-        uploads.push({ token, filename, content_type: blob.type || "application/octet-stream" });
 
-        // Handle formatting based on file type
+      if (token) {
+        uploads.push({
+          token,
+          filename,
+          content_type: blob.type || "application/octet-stream",
+        });
+
+        // Determine the correct Redmine markup.
         const ext = filename.split(".").pop().toLowerCase();
         const videoExts = ["mp4", "mov", "webm", "m4v"];
         const imageExts = ["jpg", "jpeg", "png", "gif", "webp"];
 
         if (videoExts.includes(ext)) {
-          // Redmine Video Player tag (supported by some plugins) or fallback
-          updatedNotes = updatedNotes.replace(match[0], `{{video(${filename})}}`);
-        } else if (imageExts.includes(ext)) {
-          updatedNotes = updatedNotes.replace(match[0], `!${filename}!`);
+          info.markup = `{{video(${filename})}}`;
+        } else if (imageExts.includes(ext) || info.isImageOnly) {
+          info.markup = `!${filename}!`;
         } else {
-          // General attachment link
-          updatedNotes = updatedNotes.replace(match[0], `attachment:${filename}`);
+          info.markup = `attachment:${filename}`;
         }
+      } else {
+        throw new Error("Upload token was not received.");
       }
     } catch (e) {
-      updatedNotes = updatedNotes.replace(match[0], `[File Error: ${filename}]`);
+      console.error(`[TB] Attachment processing failed for ID ${attachmentId}:`, e.message);
+      info.markup = `[Attachment Error: ${info.filename}]`;
     }
   }
 
-  return { updatedNotes, uploads };
+  // --- Step 3: Replace all markers in the text with the generated markup ---
+  let finalNotes = notes;
+  for (const [attachmentId, info] of attachmentRegistry.entries()) {
+    if (info.markup) {
+      // Regex to find all markers for the current ID and replace them.
+      const imageMarkerPattern = new RegExp(`\\[\\[TB_IMG:${attachmentId}\\]\\]`, "g");
+      const fileMarkerPattern = new RegExp(`\\[\\[TB_FILE:${attachmentId}:[^\\]]+\\]\\]`, "g");
+
+      finalNotes = finalNotes.replace(imageMarkerPattern, info.markup);
+      finalNotes = finalNotes.replace(fileMarkerPattern, info.markup);
+    }
+  }
+
+  return { updatedNotes: finalNotes, uploads };
 }
+
 
 /**
  * Upload file to Redmine and get token.
