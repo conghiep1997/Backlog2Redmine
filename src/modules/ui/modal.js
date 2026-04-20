@@ -50,16 +50,16 @@ function ensureModalShell() {
               <input type="text" id="tb-migrate-subject">
             </div>
             <div class="tb-field-row">
-              <div class="tb-field-group" style="flex: 1.2;">
+              <div class="tb-field-group">
                 <label for="tb-migrate-tracker">${TB.MESSAGES.MODAL.TRACKER_LABEL}<span class="tb-required">*</span></label>
                 <select id="tb-migrate-tracker"><option value="">-- Loader --</option></select>
               </div>
-              <div class="tb-field-group" style="flex: 1; margin-left: 10px;">
+              <div class="tb-field-group">
                 <label for="tb-migrate-priority">${TB.MESSAGES.MODAL.PRIORITY_LABEL}<span class="tb-required">*</span></label>
                 <select id="tb-migrate-priority"><option value="">-- Loader --</option></select>
               </div>
-              <div class="tb-field-group" style="flex: 1; margin-left: 10px;">
-                <label for="tb-migrate-due-date">Due Date<span class="tb-required">*</span></label>
+              <div id="tb-migrate-due-date-group" class="tb-field-group">
+                <label id="tb-migrate-due-date-label" for="tb-migrate-due-date">Due Date</label>
                 <input type="date" id="tb-migrate-due-date">
               </div>
             </div>
@@ -139,6 +139,8 @@ function ensureModalShell() {
     prioritySelect: overlay.querySelector("#tb-migrate-priority"),
     migrateSubjectInput: overlay.querySelector("#tb-migrate-subject"),
     migrateDueDateInput: overlay.querySelector("#tb-migrate-due-date"),
+    migrateDueDateLabel: overlay.querySelector("#tb-migrate-due-date-label"),
+    migrateDueDateGroup: overlay.querySelector("#tb-migrate-due-date-group"),
 
     // Migration Specific
     commentsPreviewGroup: overlay.querySelector("#tb-comments-preview-group"),
@@ -152,18 +154,20 @@ function ensureModalShell() {
   };
 }
 
-function openConfirmModal({
-  redmineIssueId = "",
-  issueTitle = "",
-  previewText = "",
-  remainingComments = [],
-  hasBatchOption = false,
-  isMigration = false,
-  commentsCount = 0,
-  onCancel,
-  onConfirm,
-  translateBatch,
-}) {
+function openConfirmModal(options) {
+  const {
+    redmineIssueId = "",
+    issueTitle = "",
+    previewText = "",
+    remainingComments = [],
+    hasBatchOption = false,
+    isMigration = false,
+    commentsCount = 0,
+    onCancel,
+    onConfirm,
+    translateBatch,
+    backlogIssueType = "",
+  } = options;
   ensureModalShell();
   const {
     overlay,
@@ -201,7 +205,7 @@ function openConfirmModal({
     const isTranslationDone = !batchOptionCheckbox.checked || !!memoizedBatchNotes;
 
     const selectedTracker = trackerSelect.options[trackerSelect.selectedIndex]?.text;
-    const isDueDateRequired = ["Bug", "Task", "Issue", "CR"].includes(selectedTracker); // Based on user latest, but let's stick to what they said: Bug (mandatory), Task (mandatory)
+    const isDueDateRequired = ["Bug", "Task"].includes(selectedTracker);
     const isDueDateFilled = !isDueDateRequired || migrateDueDateInput.value;
 
     // Validate dynamic mandatory fields
@@ -283,9 +287,17 @@ function openConfirmModal({
       // Handle defaults when switching tracker
       if (selectedTracker === "Bug") {
         migrateDueDateInput.value = getPlus3WorkingDays();
+        modalElements.migrateDueDateLabel.innerHTML = 'Due Date<span class="tb-required">*</span>';
+      } else if (selectedTracker === "Task") {
+        modalElements.migrateDueDateLabel.innerHTML = 'Due Date<span class="tb-required">*</span>';
       } else {
         migrateDueDateInput.value = "";
+        modalElements.migrateDueDateLabel.innerHTML = "Due Date";
       }
+
+      // Hide Due Date for others
+      const isDueDateVisible = ["Bug", "Task"].includes(selectedTracker);
+      modalElements.migrateDueDateGroup.style.display = isDueDateVisible ? "flex" : "none";
 
       renderTrackerFields(selectedTracker, validateMigrationForm);
       validateMigrationForm();
@@ -293,12 +305,18 @@ function openConfirmModal({
 
     migrateDueDateInput.onchange = validateMigrationForm;
 
-    fetchRedmineMetadataForModal().then(() => {
+    fetchRedmineMetadataForModal(backlogIssueType).then(() => {
       const initialTracker = trackerSelect.options[trackerSelect.selectedIndex]?.text;
 
       if (initialTracker === "Bug") {
         migrateDueDateInput.value = getPlus3WorkingDays();
+        modalElements.migrateDueDateLabel.innerHTML = 'Due Date<span class="tb-required">*</span>';
+      } else if (initialTracker === "Task") {
+        modalElements.migrateDueDateLabel.innerHTML = 'Due Date<span class="tb-required">*</span>';
       }
+
+      const isDueDateVisible = ["Bug", "Task"].includes(initialTracker);
+      modalElements.migrateDueDateGroup.style.display = isDueDateVisible ? "flex" : "none";
 
       renderTrackerFields(initialTracker, validateMigrationForm);
       validateMigrationForm();
@@ -391,39 +409,45 @@ function openConfirmModal({
 
   confirmButton.onclick = async () => {
     confirmButton.disabled = true;
-    if (isMigration) {
-      const custom_fields = [];
-      const dynamicInputs = modalElements.dynamicFieldsContainer.querySelectorAll(".tb-cf-input");
-      dynamicInputs.forEach((input) => {
-        custom_fields.push({ id: input.getAttribute("data-cfId"), value: input.value.trim() });
-      });
+    try {
+      if (isMigration) {
+        const custom_fields = [];
+        const dynamicInputs = modalElements.dynamicFieldsContainer.querySelectorAll(".tb-cf-input");
+        dynamicInputs.forEach((input) => {
+          custom_fields.push({ id: input.getAttribute("data-cfId"), value: input.value.trim() });
+        });
 
-      const issueData = {
-        project_id: projectSelect.value,
-        tracker_id: trackerSelect.value,
-        priority_id: prioritySelect.value,
-        subject: migrateSubjectInput.value.trim(),
-        description: previewTextarea.value.trim(),
-        due_date: migrateDueDateInput.value,
-        custom_fields,
-      };
-      if (!issueData.project_id) {
-        showToast(TB.MESSAGES.MODAL.ERROR_SELECT_PROJECT, "error");
-        confirmButton.disabled = false;
-        return;
+        const issueData = {
+          project_id: projectSelect.value,
+          tracker_id: trackerSelect.value,
+          priority_id: prioritySelect.value,
+          subject: migrateSubjectInput.value.trim(),
+          description: previewTextarea.value.trim(),
+          due_date: migrateDueDateInput.value,
+          custom_fields,
+        };
+        if (!issueData.project_id) {
+          showToast(TB.MESSAGES.MODAL.ERROR_SELECT_PROJECT, "error");
+          confirmButton.disabled = false;
+          return;
+        }
+        await onConfirm({
+          issueData,
+          comments: batchOptionCheckbox.checked ? memoizedBatchNotes : [],
+        });
+      } else {
+        const id = issueIdInput.value.trim();
+        if (!id) {
+          showToast(TB.MESSAGES.MODAL.EMPTY_ISSUE_ID, "error");
+          confirmButton.disabled = false;
+          return;
+        }
+        await onConfirm({ redmineIssueId: id, notesList: currentNotesList });
       }
-      await onConfirm({
-        issueData,
-        comments: batchOptionCheckbox.checked ? memoizedBatchNotes : [],
-      });
-    } else {
-      const id = issueIdInput.value.trim();
-      if (!id) {
-        showToast(TB.MESSAGES.MODAL.EMPTY_ISSUE_ID, "error");
-        confirmButton.disabled = false;
-        return;
-      }
-      await onConfirm({ redmineIssueId: id, notesList: currentNotesList });
+    } catch (err) {
+      console.error("[TB-MODAL] Confirm error:", err);
+      showToast(err.message || "An error occurred during migration", "error");
+      confirmButton.disabled = false;
     }
   };
 
@@ -515,10 +539,10 @@ function openSuccessModal({ redmineUrl, commentCount = 1, onClose }) {
   document.body.classList.add("tb-modal-open");
 }
 
-async function fetchRedmineMetadataForModal() {
+async function fetchRedmineMetadataForModal(backlogIssueType) {
   const { projectSelect, trackerSelect, prioritySelect } = modalElements;
   try {
-    const [settings, projectsRes, trackersRes, prioritiesRes, customRes] = await Promise.all([
+    const [settings, projectsRes, trackersRes, prioritiesRes] = await Promise.all([
       sendRuntimeMessage({ type: "GET_SETTINGS" }).catch(() => ({})),
       sendRuntimeMessage({
         type: "FETCH_REDMINE_METADATA",
@@ -531,53 +555,36 @@ async function fetchRedmineMetadataForModal() {
         type: "FETCH_REDMINE_METADATA",
         endpoint: "/enumerations/issue_priorities.json",
       }).catch(() => ({ data: { issue_priorities: [] } })),
-      sendRuntimeMessage({ type: "FETCH_REDMINE_METADATA", endpoint: "/custom_fields.json" }).catch(
-        () => ({ data: { custom_fields: [] } })
-      ),
     ]);
 
     redmineSettings = settings.data || settings;
-    customFieldsMetadata = customRes?.data?.custom_fields || [];
-
-    // Fallback: If custom fields are empty (likely 403), try to discover them from general project history
-    if (customFieldsMetadata.length === 0) {
-      console.log(
-        "[TB-MODAL] 403 on custom_fields.json. Attempting auto-discovery from latest issues..."
-      );
-      const discoveryRes = await sendRuntimeMessage({
-        type: "FETCH_REDMINE_METADATA",
-        endpoint: "/issues.json?limit=20",
-      }).catch(() => null);
-
-      if (discoveryRes?.data?.issues) {
-        const foundFields = new Map();
-        discoveryRes.data.issues.forEach((issue) => {
-          (issue.custom_fields || []).forEach((cf) => {
-            foundFields.set(cf.name, { id: cf.id, name: cf.name });
-          });
-        });
-        customFieldsMetadata = Array.from(foundFields.values());
-        console.log(
-          `[TB-MODAL] Discovered ${customFieldsMetadata.length} unique fields from history.`
-        );
-      }
-    }
+    customFieldsMetadata = [];
 
     projectSelect.innerHTML = (projectsRes.data?.projects || [])
       .map((p) => `<option value="${p.id}">${p.name}</option>`)
       .join("");
     if (redmineSettings?.defaultProjectId) projectSelect.value = redmineSettings.defaultProjectId;
 
-    const allowedTrackers = ["Task", "Bug", "Issue", "CR"];
+    const allowedTrackers = ["Task", "Bug", "Issue", "CR", "Q/A", "Q&A"];
     trackerSelect.innerHTML = (trackersRes.data?.trackers || [])
       .filter((t) => allowedTrackers.includes(t.name))
       .map((t) => `<option value="${t.id}">${t.name}</option>`)
       .join("");
 
-    // Set default tracker to Task if available
-    const taskOption = Array.from(trackerSelect.options).find((opt) => opt.text === "Task");
-    if (taskOption) {
-      trackerSelect.value = taskOption.value;
+    // Detect tracker from backlogIssueType
+    const mappedTracker = getMappedTrackerName(backlogIssueType || "");
+    const matchedOption = Array.from(trackerSelect.options).find(
+      (opt) => opt.text.toLowerCase() === mappedTracker.toLowerCase()
+    );
+
+    if (matchedOption) {
+      trackerSelect.value = matchedOption.value;
+    } else {
+      // Fallback to Task
+      const taskOption = Array.from(trackerSelect.options).find((opt) => opt.text === "Task");
+      if (taskOption) {
+        trackerSelect.value = taskOption.value;
+      }
     }
 
     prioritySelect.innerHTML = (prioritiesRes.data?.issue_priorities || [])
@@ -603,7 +610,9 @@ function renderTrackerFields(trackerName, validateCallback) {
   }
 
   const configs = {
-    Bug: ["Severity", "Reproduction Rate", "Role", "QC Activity"],
+    Bug: ["Severity", "Role", "QC Activity"],
+    "Q/A": ["Severity", "Role", "QC Activity", "Q&A Category"],
+    "Q&A": ["Severity", "Role", "QC Activity", "Q&A Category"],
     CR: ["Severity"],
     Task: [],
     Issue: [],
@@ -625,6 +634,9 @@ function renderTrackerFields(trackerName, validateCallback) {
         (cf) => cf.name.toLowerCase() === fieldName.toLowerCase()
       )?.id;
     }
+    // Hardcoded fallback for known fields if discovery fails (Case-insensitive)
+    if (!cfId && fieldName.toLowerCase() === "q&a category") cfId = 58;
+
     if (!cfId) return;
 
     const group = document.createElement("div");
@@ -649,6 +661,17 @@ function renderTrackerFields(trackerName, validateCallback) {
         "Unit Test",
         "Integration Test",
         "Acceptance Test",
+      ],
+      "Q&A Category": [
+        "10_Requirement",
+        "20_Database Definition",
+        "30_UI Design",
+        "40_Logic",
+        "50_Technical Issue",
+        "60_API",
+        "70_DLL",
+        "80_Test Data",
+        "90_Other",
       ],
     };
 
@@ -684,7 +707,22 @@ function getPlus3WorkingDays() {
     d.setDate(d.getDate() + 1);
     if (d.getDay() !== 0 && d.getDay() !== 6) count++;
   }
-  return d.toISOString().split("T")[0];
+  // Use local ISO format YYYY-MM-DD
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
-window.TB_MODAL = { openConfirmModal, openBacklogModal, openSuccessModal };
+// Global for scripts loaded via manifest
+globalThis.TB_MODAL = { openConfirmModal, openBacklogModal, openSuccessModal };
+
+function getMappedTrackerName(backlogType) {
+  if (!backlogType) return "";
+  const type = backlogType.toLowerCase();
+  if (type === "qa") return "Q&A";
+  if (type === "bug") return "Bug";
+  if (type === "task") return "Task";
+  if (type === "cr") return "CR";
+  return backlogType;
+}

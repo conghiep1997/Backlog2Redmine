@@ -3,6 +3,8 @@
  * Loads modules and coordinates message handling between content scripts and external APIs.
  */
 
+/* global TB_LOGGER */
+
 importScripts(
   "modules/constants/models.js",
   "modules/constants/icons.js",
@@ -10,6 +12,7 @@ importScripts(
   "constants.js",
   "modules/utils/helpers.js",
   "modules/utils/crypto.js",
+  "modules/utils/logger.js",
   "modules/services/ai.js",
   "modules/services/redmine.js",
   "modules/services/backlog.js"
@@ -29,7 +32,6 @@ chrome.action.onClicked.addListener(() => {
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
     console.log(`${DEBUG_PREFIX} Extension installed, opening options page.`);
-    chrome.storage.local.set({ showDonateModal: true }); // Set the flag to show the donate modal
     chrome.runtime.openOptionsPage();
   }
 });
@@ -39,6 +41,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     OPEN_OPTIONS_PAGE: () => {
       chrome.runtime.openOptionsPage();
       return Promise.resolve();
+    },
+
+    /**
+     * GET_SETTINGS:
+     * Returns the decrypted extension settings.
+     */
+    GET_SETTINGS: async () => {
+      const settings = await getSettings();
+      return settings;
+    },
+
+    /**
+     * LOG_ERROR:
+     * Saves an error log entry to storage.
+     */
+    LOG_ERROR: async ({ log }) => {
+      if (typeof TB_LOGGER !== "undefined") {
+        await TB_LOGGER.saveLogToStorage(log);
+      }
+      return { ok: true };
     },
 
     /**
@@ -150,8 +172,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             `${DEBUG_PREFIX} Permission denied (403) for:`,
             message.endpoint || message.type
           );
+        } else if (!isSettingsError && err.message.includes("(404)")) {
+          console.warn(
+            `${DEBUG_PREFIX} Resource not found (404) for:`,
+            message.endpoint || message.type
+          );
         } else {
           console.error(`${DEBUG_PREFIX} Message handler error:`, err);
+          if (typeof TB_LOGGER !== "undefined") {
+            TB_LOGGER.logError("Background", err, { messageType: message.type });
+          }
         }
 
         sendResponse({ ok: false, error: err.message, isSettingsError: !!isSettingsError });

@@ -214,6 +214,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
       previewText: result.data.previewText || "",
       remainingComments: remainingItems,
       hasBatchOption: remainingItems.length > 0,
+      backlogIssueType: result.data.backlogIssueType,
       onCancel: () => setButtonLoading(button, false),
       onConfirm: async ({ redmineIssueId, notesList }) => {
         let lastRes = null;
@@ -222,6 +223,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
             type: "SEND_TO_REDMINE",
             redmineIssueId,
             notes,
+            backlogIssueKey: issueKey,
           });
           lastRes = sendRes.data;
         }
@@ -257,7 +259,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
 
 async function handleIssueMigration(button) {
   // Migration: Create a new issue on Redmine from a Backlog issue
-  const { issueKey, issueSummary } = getBacklogHeaderInfo();
+  const { issueKey, issueSummary, backlogIssueType } = getBacklogHeaderInfo();
   if (!issueKey) {
     showToast(TB.MESSAGES.TOAST.MISSING_ISSUE_KEY, "error");
     return;
@@ -320,11 +322,16 @@ async function handleIssueMigration(button) {
       previewText: descRes.data.previewText,
       remainingComments: comments,
       commentsCount: comments.length,
+      backlogIssueType,
       onCancel: () => setButtonLoading(button, false),
       onConfirm: async ({ issueData, comments: translatedComments }) => {
+        const issueDataToSend = {
+          ...issueData,
+          backlogIssueKey: issueKey,
+        };
         const result = await sendRuntimeMessageWithResponse({
           type: "CREATE_REDMINE_ISSUE",
-          issueData,
+          issueData: issueDataToSend,
           comments: translatedComments, // Use translated comments from modal if any
         });
         openSuccessModal({
@@ -422,15 +429,23 @@ function getCommentFullText(itemEl) {
 
   let text = contentEl ? extractBacklogContent(contentEl) : itemEl.innerText || "";
 
-  // Scrape attachments from Changelog
+  // Scrape attachments from Changelog and modern lists
   const attachmentLinks = itemEl.querySelectorAll(
-    '.comment-changelog__item a[href*="attachmentId="], .upload-item-list li a[href*="attachmentId="]'
+    '.comment-changelog__item a[href*="attachmentId="], ' +
+      '.upload-item-list li a[href*="attachmentId="], ' +
+      '.comment-attachments a[href*="attachmentId="], ' +
+      'a.attachment-file[href*="attachmentId="]'
   );
+
+  const foundIds = new Set();
   attachmentLinks.forEach((link) => {
     const href = link.getAttribute("href");
     const match = href.match(/attachmentId=(\d+)/);
     if (match) {
       const id = match[1];
+      if (foundIds.has(id)) return;
+      foundIds.add(id);
+
       const filename = link.textContent.trim();
       // Skip download links and duplicate entries
       if (
@@ -476,7 +491,14 @@ function getBacklogHeaderInfo() {
     issueSummary = document.title.split("]")[1]?.split("-")[0]?.trim() || document.title;
   }
 
-  return { issueKey: issueKey || "", issueSummary: issueSummary || "" };
+  // Detect Issue Type (Modern UI)
+  const backlogIssueType = document.querySelector('[data-testid="issueType"]')?.textContent?.trim();
+
+  return {
+    issueKey: issueKey || "",
+    issueSummary: issueSummary || "",
+    backlogIssueType: backlogIssueType || "",
+  };
 }
 
 function getCommentUrl(item) {

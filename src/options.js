@@ -1,4 +1,5 @@
 // Wait for DOM and constants.js to be ready
+/* global TB_LOGGER, setStatus, loadOptions, updateModelDropdown, updateKeyVisibility, fetchProjects */
 document.addEventListener("DOMContentLoaded", () => {
   if (typeof TB === "undefined") {
     console.error("[OPTIONS] TB is not defined! constants.js may not have loaded.");
@@ -86,6 +87,51 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   syncFields("gemini-key-sync");
   syncFields("cerebras-key-sync");
+
+  // Handle Export Logs
+  const exportLogsBtn = document.getElementById("exportLogsBtn");
+  exportLogsBtn?.addEventListener("click", async () => {
+    try {
+      if (typeof TB_LOGGER === "undefined") {
+        alert("Logger utility not loaded.");
+        return;
+      }
+      const logs = await TB_LOGGER.getLogs();
+      if (logs.length === 0) {
+        alert("Hiện chưa có log lỗi nào.");
+        return;
+      }
+
+      const logLines = logs.map((log) => {
+        return `[${log.timestamp}] [${log.source}] ${log.message}\nContext: ${JSON.stringify(log.context || {})}\nStack: ${log.stack || "N/A"}\n----------------------------------------`;
+      });
+      const logContent = logLines.join("\n\n");
+
+      const blob = new Blob([logContent], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `b2r_error_logs_${new Date().getTime()}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Export failed", e);
+      alert("Lỗi khi xuất log: " + e.message);
+    }
+  });
+
+  // Handle Clear Logs
+  const clearLogsBtn = document.getElementById("clearLogsBtn");
+  clearLogsBtn?.addEventListener("click", async () => {
+    if (confirm("Bạn có chắc chắn muốn xóa toàn bộ lịch sử lỗi không?")) {
+      if (typeof TB_LOGGER !== "undefined") {
+        await TB_LOGGER.clearLogs();
+        alert("Đã xóa toàn bộ log.");
+      }
+    }
+  });
 
   // Form submit handler
   form.addEventListener("submit", async (event) => {
@@ -246,9 +292,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const opt = document.createElement("option");
         opt.value = p.id;
         opt.textContent = p.name;
-        if (selectedId && String(p.id) === String(selectedId)) opt.selected = true;
         defaultProjectIdSelect.appendChild(opt);
       });
+      if (selectedId) {
+        defaultProjectIdSelect.value = selectedId;
+      }
     } catch (e) {
       defaultProjectIdSelect.innerHTML =
         '<option value="">Lỗi tải project (Kiểm tra API Key)</option>';
@@ -296,35 +344,5 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // --- Donate Modal Logic ---
-  const donateModal = document.getElementById("donateModal");
-  const closeDonateButton = document.getElementById("closeDonateModal");
-
-  if (donateModal && closeDonateButton) {
-    // Check if we need to show the modal on first install
-    chrome.storage.local.get("showDonateModal", (data) => {
-      if (data.showDonateModal) {
-        donateModal.style.display = "flex";
-      }
-    });
-
-    const closeModal = () => {
-      donateModal.style.display = "none";
-      // Set flag to false so it won't show again
-      chrome.storage.local.set({ showDonateModal: false });
-    };
-
-    // Close with the button
-    closeDonateButton.addEventListener("click", closeModal);
-
-    // Close modal if user clicks the background overlay
-    donateModal.addEventListener("click", (event) => {
-      if (event.target === donateModal) {
-        closeModal();
-      }
-    });
-  } else {
-    if (!donateModal) console.error("Donate modal not found");
-    if (!closeDonateButton) console.error("Close donate button not found");
-  }
   // --- End of Donate Modal Logic ---
 });

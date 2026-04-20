@@ -81,12 +81,17 @@ async function findRedmineIssueViaApi(redmineDomain, apiKey, issueKey, issueSumm
   return { id: String(result.id), title: result.subject };
 }
 
-async function handleSendToRedmine({ redmineIssueId, notes }, sender) {
+async function handleSendToRedmine({ redmineIssueId, notes, backlogIssueKey }, sender) {
   // Send note to Redmine issue, including image processing
   const settings = await getSettings();
   const backlogDomain = sender?.tab?.url ? new URL(sender.tab.url).hostname : null;
   // Process attachments: download from Backlog, upload to Redmine
-  const { updatedNotes, uploads } = await processNotesAttachments(notes, backlogDomain, settings);
+  const { updatedNotes, uploads } = await processNotesAttachments(
+    notes,
+    backlogDomain,
+    settings,
+    backlogIssueKey
+  );
 
   const endpoint = buildRedmineUrl(settings.redmineDomain, `/issues/${redmineIssueId}.json`);
   const response = await fetch(endpoint, {
@@ -129,7 +134,8 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
   const { updatedNotes: updatedDescription, uploads: descUploads } = await processNotesAttachments(
     issueData.description || "",
     null,
-    settings
+    settings,
+    issueData.backlogIssueKey
   );
 
   const createUrl = buildRedmineUrl(settings.redmineDomain, "/issues.json");
@@ -147,6 +153,8 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
         priority_id: issueData.priority_id,
         subject: issueData.subject,
         description: updatedDescription,
+        due_date: issueData.due_date || undefined,
+        category_id: issueData.category_id || undefined,
         uploads: descUploads.length > 0 ? descUploads : undefined,
         custom_fields: issueData.custom_fields || [],
       },
@@ -167,7 +175,14 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
   if (Array.isArray(comments) && comments.length > 0) {
     for (const commentText of comments) {
       try {
-        await handleSendToRedmine({ redmineIssueId: newIssueId, notes: commentText }, null);
+        await handleSendToRedmine(
+          {
+            redmineIssueId: newIssueId,
+            notes: commentText,
+            backlogIssueKey: issueData.backlogIssueKey,
+          },
+          null
+        );
       } catch (e) {
         console.error("Comment migration failed", e);
       }
@@ -248,7 +263,7 @@ function pickBestRedmineSearchResult(results, normalizedIssueKey, normalizedIssu
  * @param {object} settings - Extension settings
  * @returns {Promise<{updatedNotes: string, uploads: Array}>}
  */
-async function processNotesAttachments(notes, backlogDomain, settings) {
+async function processNotesAttachments(notes, backlogDomain, settings, backlogIssueKey) {
   let updatedNotes = notes;
   const uploads = [];
 
@@ -258,7 +273,12 @@ async function processNotesAttachments(notes, backlogDomain, settings) {
     const attachmentId = match[1];
     const filename = `image_${attachmentId}.png`;
     try {
-      const blob = await downloadBacklogFile(backlogDomain, attachmentId, filename);
+      const blob = await downloadBacklogFile(
+        backlogDomain,
+        attachmentId,
+        filename,
+        backlogIssueKey
+      );
       const token = await uploadToRedmine(
         settings.redmineDomain,
         settings.redmineApiKey,
@@ -280,7 +300,12 @@ async function processNotesAttachments(notes, backlogDomain, settings) {
     const attachmentId = match[1];
     const filename = match[2].trim();
     try {
-      const blob = await downloadBacklogFile(backlogDomain, attachmentId, filename);
+      const blob = await downloadBacklogFile(
+        backlogDomain,
+        attachmentId,
+        filename,
+        backlogIssueKey
+      );
       const token = await uploadToRedmine(
         settings.redmineDomain,
         settings.redmineApiKey,

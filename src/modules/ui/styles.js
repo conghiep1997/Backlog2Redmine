@@ -107,7 +107,7 @@ function injectStyles() {
 
     /* Fields */
     .tb-field-group { margin-bottom: 6px; }
-    .tb-field-row { display: flex; gap: 12px; margin-bottom: 6px; }
+    .tb-field-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 6px; }
     .tb-field-group label { display: block; font-size: 10px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 2px; letter-spacing: 0.02em; }
     .tb-field-group input, .tb-field-group select, .tb-field-group textarea {
       width: 100%; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 13px; color: #1e293b; transition: all 0.2s;

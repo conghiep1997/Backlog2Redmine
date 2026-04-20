@@ -45,10 +45,33 @@ async function handleSendToBacklog({ backlogIssueKey, content, notifiedUserId })
   };
 }
 
-async function downloadBacklogFile(domain, attachmentId, filename = "") {
-  // Use DownloadAttachment endpoint for more universal support including videos
-  const url = `https://${domain}/downloadAttachment/${attachmentId}/${encodeURIComponent(filename)}`;
-  const response = await fetch(url, { credentials: "include" });
+async function downloadBacklogFile(domain, attachmentId, filename = "", issueKey = "") {
+  const settings = await getSettings();
+
+  // Try API first if we have a key and issueKey
+  if (settings.backlogApiKey && issueKey) {
+    try {
+      const apiUrl = new URL(
+        `api/v2/issues/${issueKey}/attachments/${attachmentId}`,
+        settings.backlogDomain || TB.BACKLOG_DOMAIN
+      );
+      apiUrl.searchParams.set("apiKey", settings.backlogApiKey);
+
+      const apiRes = await fetch(apiUrl.toString());
+      if (apiRes.ok) {
+        return await apiRes.blob();
+      }
+      console.warn(
+        `[BacklogService] API download failed (${apiRes.status}), falling back to web URL.`
+      );
+    } catch (e) {
+      console.warn("[BacklogService] API download error, falling back to web URL:", e);
+    }
+  }
+
+  // Fallback to web download URL (requires user session)
+  const webUrl = `https://${domain}/downloadAttachment/${attachmentId}/${encodeURIComponent(filename)}`;
+  const response = await fetch(webUrl, { credentials: "include" });
 
   if (!response.ok) {
     throw new Error(`Backlog file download failed: ${response.status}`);
