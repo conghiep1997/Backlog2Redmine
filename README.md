@@ -1,15 +1,15 @@
-# Backlog to Redmine Translator (v1.4.7)
+# B2R - Backlog to Redmine (v1.5.0)
 
-Chrome extension dịch comment từ Backlog sang tiếng Việt và đồng bộ dữ liệu thông minh sang Redmine.
+Chrome extension dịch comment từ Backlog sang tiếng Việt và đồng bộ dữ liệu thông minh sang Redmine. Tên mới: **B2R**.
 
-**Latest Update:** Phase 1 & 2 completed - Improved Markdown conversion, per-user encryption, timeout handling, and full JSDoc documentation.
+**Latest Update:** v1.5.0 - Major UX improvements with smart error handling and quick access to settings.
 
 ---
 
 ## 📦 Cấu trúc dự án
 
 ```
-Backlog2Redmine/
+B2R/
 ├── src/                         # Source code
 │   ├── background.js            # Service worker (API orchestration)
 │   ├── content.js               # Backlog content script
@@ -46,7 +46,7 @@ Backlog2Redmine/
 
 ## 🤖 Hệ thống AI hỗ trợ
 
-Phiên bản 1.4.7 tối ưu hóa cho tài khoản Free Tier:
+Phiên bản 1.5.0 tối ưu hóa cho tài khoản Free Tier:
 
 | Provider | Model | Rate Limit | Best For |
 |----------|-------|------------|----------|
@@ -70,9 +70,10 @@ Phiên bản 1.4.7 tối ưu hóa cho tài khoản Free Tier:
 ### UI/UX
 
 - 🎨 **Cyan-Flow Design**: Giao diện modern, pill-shaped buttons
-- 🔔 **Toast Notifications**: Feedback trực quan cho mọi action
+- 🔔 **Smart Error Handling**: Tự động hiển thị link tới trang cấu hình khi có lỗi API key.
+- ⚡ **Quick Settings Access**: Click vào biểu tượng extension để mở nhanh trang Options.
 - 📦 **Confirm Modal**: Preview và edit trước khi gửi
-- ⚡ **Loading States**: Spinner và disabled states rõ ràng
+- 🏃 **Loading States**: Spinner và disabled states rõ ràng
 
 ### Security
 
@@ -171,6 +172,8 @@ npm run build:zip
 - [ ] Markdown format được giữ nguyên (bold, lists, tables, code)
 - [ ] Settings lưu và load đúng
 - [ ] Fallback AI hoạt động khi rate limit
+- [ ] **Lỗi cấu hình hiển thị link tới Options**
+- [ ] **Click icon mở Options**
 
 ---
 
@@ -194,7 +197,7 @@ npm run build:zip
 
 ---
 
-## 📜 Nhật ký thay đổi 
+## 📜 Nhật ký thay đổi
 
 Chi tiết các thay đổi qua từng phiên bản có thể được xem tại: **[CHANGELOG.md](./CHANGELOG.md)**
 
@@ -210,4 +213,4 @@ Chi tiết các thay đổi qua từng phiên bản có thể được xem tại
 
 ---
 
-**Developed by Hipppo** 🦛 | Version **1.4.7** (April 2026)
+**Developed by Hipppo** 🦛 | Version **1.5.0** (April 2026)

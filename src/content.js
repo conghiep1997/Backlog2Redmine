@@ -9,7 +9,7 @@
 const BUTTON_CLASS = "tb-redmine-btn";
 const REDMINE_ICON =
   TB?.ICONS?.REDMINE ||
-  "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"24px\" height=\"24px\"><path d=\"M 4 2 C 2.894531 2 2 2.894531 2 4 L 2 13 C 2 14.105469 2.894531 15 4 15 L 5 15 L 5 17 L 7 19 L 9 19 L 9 20 C 9 21.105469 9.894531 22 11 22 L 20 22 C 21.105469 22 22 21.105469 22 20 L 22 11 C 22 9.894531 21.105469 9 20 9 L 15 9 L 15 4 C 15 2.894531 14.105469 2 13 2 Z M 4 4 L 13 4 L 13 9 L 11 9 C 10.339844 9 9.769531 9.320313 9.40625 9.8125 C 9.246094 9.703125 9.109375 9.574219 8.96875 9.46875 C 9.601563 8.804688 10.234375 8 10.75 7 L 12 7 L 12 6 L 9 6 L 9 5 L 8 5 L 8 6 L 5 6 L 5 7 L 6.125 7 C 6.003906 7.136719 5.96875 7.328125 6.03125 7.5 C 6.03125 7.5 6.199219 8.007813 6.71875 8.6875 C 6.90625 8.933594 7.167969 9.207031 7.46875 9.5 C 6.324219 10.472656 5.34375 10.90625 5.34375 10.90625 C 5.085938 11.011719 4.957031 11.304688 5.0625 11.5625 C 5.167969 11.820313 5.460938 11.949219 5.71875 11.84375 C 5.71875 11.84375 6.914063 11.355469 8.25 10.1875 C 8.484375 10.367188 8.75 10.535156 9.03125 10.71875 C 9.019531 10.8125 9 10.902344 9 11 L 9 13 L 4 13 Z M 6.875 7 L 9.5625 7 C 9.136719 7.722656 8.671875 8.34375 8.1875 8.84375 C 7.902344 8.574219 7.667969 8.3125 7.5 8.09375 C 7.0625 7.523438 7 7.21875 7 7.21875 C 6.976563 7.136719 6.933594 7.0625 6.875 7 Z M 14.84375 12 L 16.15625 12 L 19 20 L 17.84375 20 L 17.09375 17.8125 L 13.84375 17.8125 L 13.125 20 L 12 20 Z M 15.4375 12.90625 C 15.3125 13.382813 14.15625 17 14.15625 17 L 16.8125 17 C 16.8125 17 15.59375 13.371094 15.46875 12.90625 Z M 7 15 L 9 15 L 9 17 L 7 17 Z\"/></svg>";
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24px" height="24px"><path d="M 4 2 C 2.894531 2 2 2.894531 2 4 L 2 13 C 2 14.105469 2.894531 15 4 15 L 5 15 L 5 17 L 7 19 L 9 19 L 9 20 C 9 21.105469 9.894531 22 11 22 L 20 22 C 21.105469 22 22 21.105469 22 20 L 22 11 C 22 9.894531 21.105469 9 20 9 L 15 9 L 15 4 C 15 2.894531 14.105469 2 13 2 Z M 4 4 L 13 4 L 13 9 L 11 9 C 10.339844 9 9.769531 9.320313 9.40625 9.8125 C 9.246094 9.703125 9.109375 9.574219 8.96875 9.46875 C 9.601563 8.804688 10.234375 8 10.75 7 L 12 7 L 12 6 L 9 6 L 9 5 L 8 5 L 8 6 L 5 6 L 5 7 L 6.125 7 C 6.003906 7.136719 5.96875 7.328125 6.03125 7.5 C 6.03125 7.5 6.199219 8.007813 6.71875 8.6875 C 6.90625 8.933594 7.167969 9.207031 7.46875 9.5 C 6.324219 10.472656 5.34375 10.90625 5.34375 10.90625 C 5.085938 11.011719 4.957031 11.304688 5.0625 11.5625 C 5.167969 11.820313 5.460938 11.949219 5.71875 11.84375 C 5.71875 11.84375 6.914063 11.355469 8.25 10.1875 C 8.484375 10.367188 8.75 10.535156 9.03125 10.71875 C 9.019531 10.8125 9 10.902344 9 11 L 9 13 L 4 13 Z M 6.875 7 L 9.5625 7 C 9.136719 7.722656 8.671875 8.34375 8.1875 8.84375 C 7.902344 8.574219 7.667969 8.3125 7.5 8.09375 C 7.0625 7.523438 7 7.21875 7 7.21875 C 6.976563 7.136719 6.933594 7.0625 6.875 7 Z M 14.84375 12 L 16.15625 12 L 19 20 L 17.84375 20 L 17.09375 17.8125 L 13.84375 17.8125 L 13.125 20 L 12 20 Z M 15.4375 12.90625 C 15.3125 13.382813 14.15625 17 14.15625 17 L 16.8125 17 C 16.8125 17 15.59375 13.371094 15.46875 12.90625 Z M 7 15 L 9 15 L 9 17 L 7 17 Z"/></svg>';
 
 let commentObserver = null;
 
@@ -200,7 +200,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
   setButtonLoading(button, true);
   try {
     // Translate the clicked comment from Backlog to Vietnamese
-    const result = await sendRuntimeMessage({
+    const result = await sendRuntimeMessageWithResponse({
       type: "LOOKUP_AND_TRANSLATE_COMMENT",
       issueKey,
       issueSummary,
@@ -218,7 +218,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
       onConfirm: async ({ redmineIssueId, notesList }) => {
         let lastRes = null;
         for (const notes of notesList) {
-          const sendRes = await sendRuntimeMessage({
+          const sendRes = await sendRuntimeMessageWithResponse({
             type: "SEND_TO_REDMINE",
             redmineIssueId,
             notes,
@@ -234,7 +234,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
       translateBatch: (comments) =>
         Promise.all(
           comments.map((c) =>
-            sendRuntimeMessage({
+            sendRuntimeMessageWithResponse({
               type: "LOOKUP_AND_TRANSLATE_COMMENT",
               issueKey,
               issueSummary,
@@ -247,7 +247,11 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
     setButtonLoading(button, false);
   } catch (err) {
     setButtonLoading(button, false);
-    showToast(err.message, "error");
+    if (err.isSettingsError) {
+      showSettingsErrorLink(err.error);
+    } else {
+      showToast(err.error || err.message, "error");
+    }
   }
 }
 
@@ -279,27 +283,32 @@ async function handleIssueMigration(button) {
     const descriptionText = descriptionEl ? extractBacklogContent(descriptionEl) : "";
     // Scrape attachments for description (it has its own attachment list in Modern UI)
     let fullDescription = descriptionText;
-    const descAttachments = document.querySelectorAll(".issue-attachments .upload-item-list li a[href*=\"attachmentId=\"]");
+    const descAttachments = document.querySelectorAll(
+      '.issue-attachments .upload-item-list li a[href*="attachmentId="]'
+    );
     descAttachments.forEach((link) => {
       const match = link.getAttribute("href").match(/attachmentId=(\d+)/);
       if (match) {
         const id = match[1];
         const filename = link.textContent.trim();
-        if (filename.toLowerCase() !== "download" && !fullDescription.includes(`[[TB_FILE:${id}:`)) {
+        if (
+          filename.toLowerCase() !== "download" &&
+          !fullDescription.includes(`[[TB_FILE:${id}:`)
+        ) {
           fullDescription += `\n\n**Attachment**: [[TB_FILE:${id}:${filename}]]`;
         }
       }
     });
 
     const [descRes, subRes] = await Promise.all([
-      sendRuntimeMessage({
+      sendRuntimeMessageWithResponse({
         type: "LOOKUP_AND_TRANSLATE_COMMENT",
         issueKey,
         issueSummary,
         commentText: fullDescription,
         commentUrl: window.location.href,
       }),
-      sendRuntimeMessage({
+      sendRuntimeMessageWithResponse({
         type: "TRANSLATE_TEXT_SIMPLE",
         text: issueSummary,
       }),
@@ -313,7 +322,7 @@ async function handleIssueMigration(button) {
       commentsCount: comments.length,
       onCancel: () => setButtonLoading(button, false),
       onConfirm: async ({ issueData, comments: translatedComments }) => {
-        const result = await sendRuntimeMessage({
+        const result = await sendRuntimeMessageWithResponse({
           type: "CREATE_REDMINE_ISSUE",
           issueData,
           comments: translatedComments, // Use translated comments from modal if any
@@ -327,7 +336,7 @@ async function handleIssueMigration(button) {
       translateBatch: (commentsList) =>
         Promise.all(
           commentsList.map((c) =>
-            sendRuntimeMessage({
+            sendRuntimeMessageWithResponse({
               type: "LOOKUP_AND_TRANSLATE_COMMENT",
               issueKey,
               issueSummary,
@@ -340,11 +349,68 @@ async function handleIssueMigration(button) {
     setButtonLoading(button, false);
   } catch (err) {
     setButtonLoading(button, false);
-    showToast(err.message, "error");
+    if (err.isSettingsError) {
+      showSettingsErrorLink(err.error);
+    } else {
+      showToast(err.error || err.message, "error");
+    }
   }
 }
 
 // Helpers
+
+function showSettingsErrorLink(message) {
+  let container = document.getElementById("tb-settings-error");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "tb-settings-error";
+    Object.assign(container.style, {
+      position: "fixed",
+      top: "20px",
+      right: "20px",
+      zIndex: "9999",
+      padding: "15px 20px",
+      backgroundColor: "#FFFBEB",
+      border: "1px solid #FBBF24",
+      borderRadius: "8px",
+      boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+      display: "flex",
+      alignItems: "center",
+      gap: "15px",
+    });
+    document.body.appendChild(container);
+  }
+
+  container.innerHTML = `
+    <span style="color: #92400E;">${message}</span>
+    <a href="#" id="tb-open-settings-link" style="color: #05668D; text-decoration: underline; font-weight: bold;">Click here to fix.</a>
+    <button id="tb-close-error-link" style="background:none; border:none; font-size: 20px; cursor:pointer; color: #92400E;">&times;</button>
+  `;
+
+  document.getElementById("tb-open-settings-link").onclick = (e) => {
+    e.preventDefault();
+    chrome.runtime.sendMessage({ type: "OPEN_OPTIONS_PAGE" });
+    container.remove();
+  };
+
+  document.getElementById("tb-close-error-link").onclick = (e) => {
+    e.preventDefault();
+    container.remove();
+  };
+}
+
+function sendRuntimeMessageWithResponse(message) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(message, (response) => {
+      if (response && response.ok) {
+        resolve(response);
+      } else {
+        reject(response || { error: "An unknown error occurred." });
+      }
+    });
+  });
+}
+
 function getCommentFullText(itemEl) {
   if (!itemEl) return "";
   const contentEl =
@@ -358,7 +424,7 @@ function getCommentFullText(itemEl) {
 
   // Scrape attachments from Changelog
   const attachmentLinks = itemEl.querySelectorAll(
-    ".comment-changelog__item a[href*=\"attachmentId=\"], .upload-item-list li a[href*=\"attachmentId=\"]"
+    '.comment-changelog__item a[href*="attachmentId="], .upload-item-list li a[href*="attachmentId="]'
   );
   attachmentLinks.forEach((link) => {
     const href = link.getAttribute("href");
@@ -382,8 +448,8 @@ function getCommentFullText(itemEl) {
 
 function getBacklogHeaderInfo() {
   // Try data-testid first (Modern UI)
-  let issueKey = document.querySelector("[data-testid=\"issueKey\"]")?.textContent?.trim();
-  let issueSummary = document.querySelector("[data-testid=\"issueSummary\"]")?.textContent?.trim();
+  let issueKey = document.querySelector('[data-testid="issueKey"]')?.textContent?.trim();
+  let issueSummary = document.querySelector('[data-testid="issueSummary"]')?.textContent?.trim();
 
   // Try legacy/alternative selectors
   if (!issueKey) {
@@ -428,7 +494,6 @@ function setButtonLoading(btn, isLoading) {
   if (!btn) {
     return;
   }
-  btn.disabled = isLoading;
   btn.dataset.originalHtml = btn.dataset.originalHtml || btn.innerHTML;
 
   if (isLoading) {

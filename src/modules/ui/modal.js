@@ -260,8 +260,8 @@ function openConfirmModal({
       if (currentMode) {
         previewTextarea.value = memoizedBatchNotes
           ? [previewText, ...memoizedBatchNotes]
-            .map((text, index) => `--- Note ${index + 1} ---\n${text}`)
-            .join("\n\n")
+              .map((text, index) => `--- Note ${index + 1} ---\n${text}`)
+              .join("\n\n")
           : `${previewText}\n\n${TB.MESSAGES.MODAL.WAITING_TRANSLATION}`;
         currentNotesList = memoizedBatchNotes
           ? [previewText, ...memoizedBatchNotes]
@@ -493,12 +493,14 @@ function openSuccessModal({ redmineUrl, commentCount = 1, onClose }) {
     successViewButton,
     successCloseButton,
   } = modalElements;
-  successTitleEl.textContent = commentCount > 1
-    ? TB.MESSAGES.MODAL.BATCH_TITLE_MULTIPLE(commentCount)
-    : TB.MESSAGES.MODAL.SUCCESS_TITLE;
-  successSubtitleEl.textContent = commentCount > 1
-    ? TB.MESSAGES.MODAL.BATCH_SUBTITLE_MULTIPLE
-    : TB.MESSAGES.MODAL.SUCCESS_SUBTITLE;
+  successTitleEl.textContent =
+    commentCount > 1
+      ? TB.MESSAGES.MODAL.BATCH_TITLE_MULTIPLE(commentCount)
+      : TB.MESSAGES.MODAL.SUCCESS_TITLE;
+  successSubtitleEl.textContent =
+    commentCount > 1
+      ? TB.MESSAGES.MODAL.BATCH_SUBTITLE_MULTIPLE
+      : TB.MESSAGES.MODAL.SUCCESS_SUBTITLE;
   successLinkEl.textContent = redmineUrl;
   successLinkEl.href = redmineUrl;
   successViewButton.onclick = () => window.open(redmineUrl, "_blank");
@@ -518,10 +520,20 @@ async function fetchRedmineMetadataForModal() {
   try {
     const [settings, projectsRes, trackersRes, prioritiesRes, customRes] = await Promise.all([
       sendRuntimeMessage({ type: "GET_SETTINGS" }).catch(() => ({})),
-      sendRuntimeMessage({ type: "FETCH_REDMINE_METADATA", endpoint: "/projects.json?limit=100" }).catch(e => ({ error: e.message, data: { projects: [] } })),
-      sendRuntimeMessage({ type: "FETCH_REDMINE_METADATA", endpoint: "/trackers.json" }).catch(e => ({ error: e.message, data: { trackers: [] } })),
-      sendRuntimeMessage({ type: "FETCH_REDMINE_METADATA", endpoint: "/enumerations/issue_priorities.json" }).catch(() => ({ data: { issue_priorities: [] } })),
-      sendRuntimeMessage({ type: "FETCH_REDMINE_METADATA", endpoint: "/custom_fields.json" }).catch(() => ({ data: { custom_fields: [] } })),
+      sendRuntimeMessage({
+        type: "FETCH_REDMINE_METADATA",
+        endpoint: "/projects.json?limit=100",
+      }).catch((e) => ({ error: e.message, data: { projects: [] } })),
+      sendRuntimeMessage({ type: "FETCH_REDMINE_METADATA", endpoint: "/trackers.json" }).catch(
+        (e) => ({ error: e.message, data: { trackers: [] } })
+      ),
+      sendRuntimeMessage({
+        type: "FETCH_REDMINE_METADATA",
+        endpoint: "/enumerations/issue_priorities.json",
+      }).catch(() => ({ data: { issue_priorities: [] } })),
+      sendRuntimeMessage({ type: "FETCH_REDMINE_METADATA", endpoint: "/custom_fields.json" }).catch(
+        () => ({ data: { custom_fields: [] } })
+      ),
     ]);
 
     redmineSettings = settings.data || settings;
@@ -529,7 +541,9 @@ async function fetchRedmineMetadataForModal() {
 
     // Fallback: If custom fields are empty (likely 403), try to discover them from general project history
     if (customFieldsMetadata.length === 0) {
-      console.log("[TB-MODAL] 403 on custom_fields.json. Attempting auto-discovery from latest issues...");
+      console.log(
+        "[TB-MODAL] 403 on custom_fields.json. Attempting auto-discovery from latest issues..."
+      );
       const discoveryRes = await sendRuntimeMessage({
         type: "FETCH_REDMINE_METADATA",
         endpoint: "/issues.json?limit=20",
@@ -543,27 +557,32 @@ async function fetchRedmineMetadataForModal() {
           });
         });
         customFieldsMetadata = Array.from(foundFields.values());
-        console.log(`[TB-MODAL] Discovered ${customFieldsMetadata.length} unique fields from history.`);
+        console.log(
+          `[TB-MODAL] Discovered ${customFieldsMetadata.length} unique fields from history.`
+        );
       }
     }
 
     projectSelect.innerHTML = (projectsRes.data?.projects || [])
-      .map(p => `<option value="${p.id}">${p.name}</option>`).join("");
+      .map((p) => `<option value="${p.id}">${p.name}</option>`)
+      .join("");
     if (redmineSettings?.defaultProjectId) projectSelect.value = redmineSettings.defaultProjectId;
 
     const allowedTrackers = ["Task", "Bug", "Issue", "CR"];
     trackerSelect.innerHTML = (trackersRes.data?.trackers || [])
-      .filter(t => allowedTrackers.includes(t.name))
-      .map(t => `<option value="${t.id}">${t.name}</option>`).join("");
+      .filter((t) => allowedTrackers.includes(t.name))
+      .map((t) => `<option value="${t.id}">${t.name}</option>`)
+      .join("");
 
     // Set default tracker to Task if available
-    const taskOption = Array.from(trackerSelect.options).find(opt => opt.text === "Task");
+    const taskOption = Array.from(trackerSelect.options).find((opt) => opt.text === "Task");
     if (taskOption) {
       trackerSelect.value = taskOption.value;
     }
 
     prioritySelect.innerHTML = (prioritiesRes.data?.issue_priorities || [])
-      .map(p => `<option value="${p.id}" ${p.is_default ? "selected" : ""}>${p.name}</option>`).join("");
+      .map((p) => `<option value="${p.id}" ${p.is_default ? "selected" : ""}>${p.name}</option>`)
+      .join("");
   } catch (error) {
     showToast(`${TB.MESSAGES.MODAL.ERROR_METADATA}: ${error.message}`, "error");
   }
@@ -576,7 +595,11 @@ function renderTrackerFields(trackerName, validateCallback) {
 
   let manualMap = {};
   if (redmineSettings?.manualFields) {
-    try { manualMap = JSON.parse(redmineSettings.manualFields); } catch (e) { /* ignore */ }
+    try {
+      manualMap = JSON.parse(redmineSettings.manualFields);
+    } catch (e) {
+      /* ignore */
+    }
   }
 
   const configs = {
@@ -595,10 +618,12 @@ function renderTrackerFields(trackerName, validateCallback) {
   container.style.display = "grid";
   container.className = "tb-field-grid";
 
-  fieldsToShow.forEach(fieldName => {
+  fieldsToShow.forEach((fieldName) => {
     let cfId = manualMap[fieldName];
     if (!cfId) {
-      cfId = customFieldsMetadata.find(cf => cf.name.toLowerCase() === fieldName.toLowerCase())?.id;
+      cfId = customFieldsMetadata.find(
+        (cf) => cf.name.toLowerCase() === fieldName.toLowerCase()
+      )?.id;
     }
     if (!cfId) return;
 
@@ -608,16 +633,31 @@ function renderTrackerFields(trackerName, validateCallback) {
 
     const optionsMap = {
       Severity: ["Critical", "Major", "Minor", "Trivial"],
-      Role: ["Business Analysis", "Developer", "Tester", "Quality Assurance", "Reporter", "Comtor", "Customer", "Others"],
-      "QC Activity": ["Document Review", "Code Review", "Unit Test", "Integration Test", "Acceptance Test"],
+      Role: [
+        "Business Analysis",
+        "Developer",
+        "Tester",
+        "Quality Assurance",
+        "Reporter",
+        "Comtor",
+        "Customer",
+        "Others",
+      ],
+      "QC Activity": [
+        "Document Review",
+        "Code Review",
+        "Unit Test",
+        "Integration Test",
+        "Acceptance Test",
+      ],
     };
 
     if (optionsMap[fieldName]) {
       const select = document.createElement("select");
       select.className = "tb-cf-input";
       select.dataset.cfId = cfId;
-      select.innerHTML = "<option value=\"\">-- Select --</option>";
-      optionsMap[fieldName].forEach(opt => {
+      select.innerHTML = '<option value="">-- Select --</option>';
+      optionsMap[fieldName].forEach((opt) => {
         const o = document.createElement("option");
         o.value = opt;
         o.textContent = opt;

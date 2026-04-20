@@ -235,13 +235,13 @@ document.addEventListener("DOMContentLoaded", () => {
   async function fetchProjects(apiKey, selectedId = "") {
     if (!apiKey) return;
     try {
-      defaultProjectIdSelect.innerHTML = "<option value=\"\">Đang tải project...</option>";
+      defaultProjectIdSelect.innerHTML = '<option value="">Đang tải project...</option>';
       const response = await fetch(`${TB.REDMINE_DOMAIN}/projects.json?limit=100`, {
         headers: { "X-Redmine-API-Key": apiKey, Accept: "application/json" },
       });
       if (!response.ok) throw new Error("Failed to fetch");
       const data = await response.json();
-      defaultProjectIdSelect.innerHTML = "<option value=\"\">-- Chọn project --</option>";
+      defaultProjectIdSelect.innerHTML = '<option value="">-- Chọn project --</option>';
       data.projects.forEach((p) => {
         const opt = document.createElement("option");
         opt.value = p.id;
@@ -250,7 +250,8 @@ document.addEventListener("DOMContentLoaded", () => {
         defaultProjectIdSelect.appendChild(opt);
       });
     } catch (e) {
-      defaultProjectIdSelect.innerHTML = "<option value=\"\">Lỗi tải project (Kiểm tra API Key)</option>";
+      defaultProjectIdSelect.innerHTML =
+        '<option value="">Lỗi tải project (Kiểm tra API Key)</option>';
     }
   }
 
@@ -293,4 +294,37 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }, 2500);
   }
+
+  // --- Donate Modal Logic ---
+  const donateModal = document.getElementById("donateModal");
+  const closeDonateButton = document.getElementById("closeDonateModal");
+
+  if (donateModal && closeDonateButton) {
+    // Check if we need to show the modal on first install
+    chrome.storage.local.get("showDonateModal", (data) => {
+      if (data.showDonateModal) {
+        donateModal.style.display = "flex";
+      }
+    });
+
+    const closeModal = () => {
+      donateModal.style.display = "none";
+      // Set flag to false so it won't show again
+      chrome.storage.local.set({ showDonateModal: false });
+    };
+
+    // Close with the button
+    closeDonateButton.addEventListener("click", closeModal);
+
+    // Close modal if user clicks the background overlay
+    donateModal.addEventListener("click", (event) => {
+      if (event.target === donateModal) {
+        closeModal();
+      }
+    });
+  } else {
+    if (!donateModal) console.error("Donate modal not found");
+    if (!closeDonateButton) console.error("Close donate button not found");
+  }
+  // --- End of Donate Modal Logic ---
 });

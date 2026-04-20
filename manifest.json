@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Backlog to Redmine Translator",
-  "version": "1.4.7",
-  "description": "Dịch comment từ Backlog sang tiếng Việt bằng Gemini và đẩy sang Redmine.",
+  "name": "B2R",
+  "version": "1.5.0",
+  "description": "Dịch và đồng bộ comment từ Backlog sang Redmine (B2R).",
   "icons": {
     "16": "assets/icons/icon-16.png",
     "48": "assets/icons/icon-48.png",
@@ -55,6 +55,12 @@
   ],
   "options_page": "src/options.html",
   "action": {
-    "default_title": "Translate Backlog Comment"
-  }
+    "default_title": "B2R - Backlog to Redmine"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/images/*.jpg", "assets/images/*.png"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

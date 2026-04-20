@@ -1,5 +1,11 @@
 # Nhật ký thay đổi (Changelog)
 
+## [1.5.0] - 2026-04-19
+- **✨ Trải nghiệm người dùng (UX)**:
+  - **Lỗi thông minh**: Khi gặp lỗi cấu hình (thiếu API key...), extension sẽ hiển thị thông báo lỗi rõ ràng kèm link trực tiếp đến trang Options để người dùng có thể sửa lỗi ngay lập tức.
+  - **Truy cập nhanh**: Nhấp vào biểu tượng extension trên thanh công cụ sẽ mở thẳng trang Options, giúp việc cấu hình nhanh chóng và thuận tiện hơn.
+- ** rebranding**: Đổi tên extension thành **B2R** cho ngắn gọn và dễ nhớ.
+
 ## [1.4.7] - 2026-04-19
 - **🎨 Tối ưu giao diện (UI)**: Hợp nhất khối cấu hình Redmine (Domain, API Key, Project, Custom Fields) vào một khung giao diện đồng nhất, trực quan hơn trong trang Options.
 - **🛠️ Nâng cao tính năng**: Tối ưu logic hiển thị nút Migrate Issue và tự động hóa việc xác định ID các trường Custom Fields của Redmine.

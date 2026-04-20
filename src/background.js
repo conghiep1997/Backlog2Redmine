@@ -17,6 +17,11 @@ importScripts(
 
 const DEBUG_PREFIX = "[TB-BG]";
 
+// When the user clicks on the extension icon, open the options page.
+chrome.action.onClicked.addListener(() => {
+  chrome.runtime.openOptionsPage();
+});
+
 /**
  * Message handler for chrome.runtime.onMessage.
  * Handles messages from content scripts and options page.
@@ -24,12 +29,18 @@ const DEBUG_PREFIX = "[TB-BG]";
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
     console.log(`${DEBUG_PREFIX} Extension installed, opening options page.`);
+    chrome.storage.local.set({ showDonateModal: true }); // Set the flag to show the donate modal
     chrome.runtime.openOptionsPage();
   }
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const handler = {
+    OPEN_OPTIONS_PAGE: () => {
+      chrome.runtime.openOptionsPage();
+      return Promise.resolve();
+    },
+
     /**
      * LOOKUP_AND_TRANSLATE_COMMENT:
      * 1. Find matched Redmine issue from Backlog issue key.
@@ -127,13 +138,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     handler()
       .then((data) => sendResponse({ ok: true, data }))
       .catch((err) => {
-        // Silently handle 403 for metadata to avoid console noise if permissions are expectedly missing
-        if (!err.message.includes("(403)")) {
-          console.error(`${DEBUG_PREFIX} Message handler error:`, err);
+        const isSettingsError =
+          err.message &&
+          (err.message.includes("API Key") ||
+            err.message.includes("API key") ||
+            err.message.includes("Setting") ||
+            err.message.includes("cấu hình"));
+
+        if (!isSettingsError && err.message.includes("(403)")) {
+          console.warn(
+            `${DEBUG_PREFIX} Permission denied (403) for:`,
+            message.endpoint || message.type
+          );
         } else {
-          console.warn(`${DEBUG_PREFIX} Permission denied (403) for:`, message.endpoint || message.type);
+          console.error(`${DEBUG_PREFIX} Message handler error:`, err);
         }
-        sendResponse({ ok: false, error: err.message });
+
+        sendResponse({ ok: false, error: err.message, isSettingsError: !!isSettingsError });
       });
     return true; // Keep channel open for async response
   }
@@ -219,7 +240,9 @@ async function handleFetchMetadata(endpoint) {
   ); // 10s timeout for metadata fetch
 
   if (!response.ok) {
-    throw new Error(`${TB.MESSAGES.REDMINE.API_REQUEST_FAILED} (${response.status}) for ${endpoint}`);
+    throw new Error(
+      `${TB.MESSAGES.REDMINE.API_REQUEST_FAILED} (${response.status}) for ${endpoint}`
+    );
   }
 
   return await response.json();

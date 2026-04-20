@@ -115,7 +115,8 @@ function extractBacklogContent(element) {
         if (href && linkText) {
           // Check if this is an attachment link (Video or File)
           if (href.includes("ViewAttachmentVideo.action") || href.includes("downloadAttachment/")) {
-            const match = href.match(/attachmentId=(\d+)/) || href.match(/downloadAttachment\/(\d+)/);
+            const match =
+              href.match(/attachmentId=(\d+)/) || href.match(/downloadAttachment\/(\d+)/);
             if (match) {
               result = textBefore + ` [[TB_FILE:${match[1]}:${linkText}]] `;
               return;
@@ -135,7 +136,6 @@ function extractBacklogContent(element) {
         }
         return;
       }
-
 
       // ========================================================================
       // BLOCK ELEMENTS

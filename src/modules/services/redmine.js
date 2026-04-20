@@ -153,7 +153,6 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
     }),
   });
 
-
   if (!response.ok) {
     const errorMsg = await readErrorMessage(response);
     throw new Error(
@@ -313,7 +312,6 @@ async function processNotesAttachments(notes, backlogDomain, settings) {
 
   return { updatedNotes, uploads };
 }
-
 
 /**
  * Upload file to Redmine and get token.
