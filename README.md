@@ -1,8 +1,8 @@
-# B2R - Backlog to Redmine (v1.5.0)
+# B2R - Backlog to Redmine (v1.6.0)
 
 Chrome extension dịch comment từ Backlog sang tiếng Việt và đồng bộ dữ liệu thông minh sang Redmine. Tên mới: **B2R**.
 
-**Latest Update:** v1.5.0 - Major UX improvements with smart error handling and quick access to settings.
+**Latest Update:** v1.6.0 - Enhanced AI Marker Recovery, Redundant Attachment Cache, and Improved Options UI.
 
 ---
 
@@ -46,7 +46,7 @@ B2R/
 
 ## 🤖 Hệ thống AI hỗ trợ
 
-Phiên bản 1.5.0 tối ưu hóa cho tài khoản Free Tier:
+Phiên bản 1.6.0 tối ưu hóa cho tài khoản Free Tier:
 
 | Provider | Model | Rate Limit | Best For |
 |----------|-------|------------|----------|
@@ -213,4 +213,4 @@ Chi tiết các thay đổi qua từng phiên bản có thể được xem tại
 
 ---
 
-**Developed by Hipppo** 🦛 | Version **1.5.0** (April 2026)
+**Developed by Hipppo** 🦛 | Version **1.6.0** (April 2026)

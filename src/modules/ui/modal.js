@@ -20,6 +20,11 @@ function ensureModalShell() {
 
   overlay.innerHTML = `
     <div class="tb-modal-container">
+      <!-- Loading Overlay -->
+      <div id="tb-modal-loading" class="tb-modal-loading" style="display: none;">
+        <div class="tb-spinner"></div>
+        <div id="tb-modal-loading-text" class="tb-loading-text">${TB.MESSAGES.PROCESSING}</div>
+      </div>
       <!-- Confirm Modal -->
       <div id="tb-confirm-modal" class="tb-modal-content">
         <div class="tb-modal-header">
@@ -151,7 +156,28 @@ function ensureModalShell() {
     // Backlog Specific UI elements
     backlogNotifyInput: overlay.querySelector("#tb-backlog-notify"),
     issueIdLabel: overlay.querySelector("label[for='tb-redmine-issue-id']"),
+
+    loadingOverlay: overlay.querySelector("#tb-modal-loading"),
+    loadingText: overlay.querySelector("#tb-modal-loading-text"),
   };
+}
+
+function setModalLoading(isLoading, customText = null) {
+  if (!modalElements || !modalElements.loadingOverlay) return;
+  modalElements.loadingOverlay.style.display = isLoading ? "flex" : "none";
+  if (isLoading && customText) {
+    modalElements.loadingText.textContent = customText;
+  } else if (isLoading) {
+    modalElements.loadingText.textContent = TB.MESSAGES.PROCESSING;
+  }
+}
+
+function closeModal() {
+  const overlay = document.getElementById("tb-redmine-overlay");
+  if (overlay) {
+    overlay.style.display = "none";
+    document.body.classList.remove("tb-modal-open");
+  }
 }
 
 function openConfirmModal(options) {
@@ -297,7 +323,7 @@ function openConfirmModal(options) {
 
       // Hide Due Date for others
       const isDueDateVisible = ["Bug", "Task"].includes(selectedTracker);
-      modalElements.migrateDueDateGroup.style.display = isDueDateVisible ? "flex" : "none";
+      modalElements.migrateDueDateGroup.style.display = isDueDateVisible ? "block" : "none";
 
       renderTrackerFields(selectedTracker, validateMigrationForm);
       validateMigrationForm();
@@ -316,7 +342,7 @@ function openConfirmModal(options) {
       }
 
       const isDueDateVisible = ["Bug", "Task"].includes(initialTracker);
-      modalElements.migrateDueDateGroup.style.display = isDueDateVisible ? "flex" : "none";
+      modalElements.migrateDueDateGroup.style.display = isDueDateVisible ? "block" : "none";
 
       renderTrackerFields(initialTracker, validateMigrationForm);
       validateMigrationForm();
@@ -397,8 +423,7 @@ function openConfirmModal(options) {
   issueIdInput.onblur = (e) => loadRedmineTitle(e.target.value);
 
   const safeClose = () => {
-    overlay.style.display = "none";
-    document.body.classList.remove("tb-modal-open");
+    closeModal();
     onCancel?.();
   };
   closeButton.onclick = safeClose;
@@ -408,6 +433,7 @@ function openConfirmModal(options) {
   };
 
   confirmButton.onclick = async () => {
+    setModalLoading(true);
     confirmButton.disabled = true;
     try {
       if (isMigration) {
@@ -448,6 +474,7 @@ function openConfirmModal(options) {
       console.error("[TB-MODAL] Confirm error:", err);
       showToast(err.message || "An error occurred during migration", "error");
       confirmButton.disabled = false;
+      setModalLoading(false);
     }
   };
 
@@ -488,6 +515,7 @@ function openBacklogModal({ backlogIssueKey = "", previewText = "", onCancel, on
       showToast(TB.MESSAGES.MODAL.BACKLOG_EMPTY_KEY, "error");
       return;
     }
+    setModalLoading(true);
     confirmButton.disabled = true;
     try {
       await onConfirm({
@@ -496,6 +524,7 @@ function openBacklogModal({ backlogIssueKey = "", previewText = "", onCancel, on
         notifiedUserId: backlogNotifyInput.value.trim(),
       });
     } catch (err) {
+      setModalLoading(false);
       confirmButton.disabled = false;
       showToast(err.message, "error");
     }
@@ -527,15 +556,18 @@ function openSuccessModal({ redmineUrl, commentCount = 1, onClose }) {
       : TB.MESSAGES.MODAL.SUCCESS_SUBTITLE;
   successLinkEl.textContent = redmineUrl;
   successLinkEl.href = redmineUrl;
-  successViewButton.onclick = () => window.open(redmineUrl, "_blank");
+  successViewButton.onclick = () => {
+    window.open(redmineUrl, "_blank");
+    closeModal();
+  };
   successCloseButton.onclick = () => {
-    overlay.style.display = "none";
-    document.body.classList.remove("tb-modal-open");
+    closeModal();
     onClose?.();
   };
   modalElements.confirmModal.style.display = "none";
   modalElements.successModal.style.display = "block";
   overlay.style.display = "flex";
+  setModalLoading(false);
   document.body.classList.add("tb-modal-open");
 }
 

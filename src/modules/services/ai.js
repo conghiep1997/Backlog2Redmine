@@ -255,6 +255,11 @@ function normalizeTranslationOutput(rawText) {
     cleaned = lines.slice(firstValidLineIndex).join("\n").trim();
   }
 
+  // --- Start Added Logic ---
+  // Fix mangled markers that AI often generates instead of keeping standard [[TB_IMG:id]]
+  cleaned = fixMangledMarkers(cleaned);
+  // --- End Added Logic ---
+
   cleaned = cleaned
     .replace(/\[KẾT THÚC NỘI DUNG\]\s*$/g, "")
     .replace(/\[BẮT ĐẦU NỘI DUNG\]\s*$/g, "")
@@ -268,6 +273,38 @@ function normalizeTranslationOutput(rawText) {
   }
 
   return cleaned;
+}
+
+/**
+ * Fixes common mangled marker formats that AI hallucinations produce.
+ * @param {string} text - The translated text to repair.
+ * @returns {string} Repaired text.
+ */
+function fixMangledMarkers(text) {
+  if (!text) return "";
+
+  let result = text;
+
+  // 1. Nested mangling: ![image]([[TB_IMG:12345]])
+  result = result.replace(/!\[[^\]]*\]\(\[\[TB_IMG:\s*(\d+)\s*\]\]\)/gi, "[[TB_IMG:$1]]");
+
+  // 2. Standard Markdown mangling: ![12345](image) OR ![image](12345)
+  result = result.replace(/!\[(\d+)\]\(image\)/gi, "[[TB_IMG:$1]]");
+  result = result.replace(/!\[image\]\((\d+)\)/gi, "[[TB_IMG:$1]]");
+
+  // 3. Descriptive mangling: ![Backlog Image](12345)
+  result = result.replace(/!\[[^\]]*\]\((\d+)\)/gi, "[[TB_IMG:$1]]");
+
+  // 4. Extra space mangling: [[TB_IMG: 12345]]
+  result = result.replace(/\[\[TB_IMG:\s*(\d+)\s*\]\]/gi, "[[TB_IMG:$1]]");
+
+  // 5. Double bracket mangling: [[TB_IMG:[12345]]]
+  result = result.replace(/\[\[TB_IMG:\[(\d+)\]\]\]/gi, "[[TB_IMG:$1]]");
+
+  // 6. Inline link mangling: [image_12345.png]([[TB_IMG:12345]])
+  result = result.replace(/\[[^\]]+\.(png|jpg|jpeg|gif)\]\(\[\[TB_IMG:\s*(\d+)\s*\]\]\)/gi, "[[TB_IMG:$2]]");
+
+  return result;
 }
 
 function formatTranslation(originalText, cleanedText, commentUrl = null) {

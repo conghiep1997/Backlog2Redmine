@@ -114,6 +114,18 @@
         border-color: #94a3b8;
       }
 
+      .btn-sync {
+        background: #fdf2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+        font-size: 13px;
+        padding: 8px 12px;
+        white-space: nowrap;
+      }
+      .btn-sync:hover {
+        background: #fee2e2;
+      }
+
       .status {
         color: var(--muted);
         font-size: 14px;
@@ -194,7 +206,17 @@
             </div>
 
             <div class="field" style="margin-bottom: 16px">
-              <label for="defaultProjectId">Project mặc định (Dùng cho Migrate)</label>
+              <label for="defaultProjectId"
+                >Project mặc định (Dùng cho Migrate)
+                <button
+                  type="button"
+                  id="syncProjectsBtn"
+                  class="secondary btn-sync"
+                  style="float: right; margin-top: -8px"
+                >
+                  🔄 Đồng bộ Project
+                </button>
+              </label>
               <select
                 id="defaultProjectId"
                 style="
@@ -478,8 +500,8 @@
             Nếu gặp sự cố, bạn có thể xuất file log lỗi để gửi cho đội phát triển.
           </p>
           <div class="actions">
-            <button id="exportLogsBtn" class="secondary">Export Logs</button>
-            <button id="clearLogsBtn" class="secondary">Clear Logs</button>
+            <button id="exportLogsBtn" class="secondary">📥 Xuất File Lỗi</button>
+            <button id="clearLogsBtn" class="secondary">🗑️ Xóa Lịch Sử Lỗi</button>
           </div>
         </div>
 

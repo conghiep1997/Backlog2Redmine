@@ -1,5 +1,18 @@
 # Nhật ký thay đổi (Changelog)
 
+## [1.6.0] - 2026-04-20
+- **✨ Trải nghiệm người dùng (UX)**:
+  - **Màn hình chờ (Loading Overlay)**: Thêm hiệu ứng làm mờ và vòng xoay (Spinner) khi đang di chuyển dữ liệu để tránh thao tác nhầm và cung cấp phản hồi trực quan.
+  - **Tối ưu điều hướng**: Tự động đóng Modal sau khi nhấn "Xem trên Redmine" để làm gọn giao diện người dùng.
+- **🎨 Giao diện & Cấu hình (Options)**:
+  - **Đồng bộ chủ động**: Thêm nút **🔄 Đồng bộ Project** giúp cập nhật danh sách dự án từ Redmine bất cứ lúc nào kèm trạng thái hiển thị.
+  - **Việt hóa Quản lý Lỗi**: Chuyển đổi và làm đẹp khu vực Logs (**📥 Xuất File Lỗi**, **🗑️ Xóa Lịch Sử Lỗi**).
+- **⚙️ Tối ưu hóa & Độ tin cậy**:
+  - **Khôi phục Marker tự động (Marker Recovery)**: Xử lý triệt để lỗi AI làm sai định dạng ảnh (ví dụ `![id](image)` -> `[[TB_IMG:id]]`).
+  - **Regex thông minh**: Nhận diện Marker linh hoạt hơn (Space-tolerant), chấp nhận các biến thể có dấu cách dư thừa từ AI.
+  - **Tiết kiệm tài nguyên**: Triển khai cơ chế Cache đính kèm (Deduplication) để tránh tải lên lặp lại cùng một tệp tin trong một phiên làm việc.
+- **🔧 Sửa lỗi layout**: Khắc phục lỗi hiển thị trường Due Date bị tràn dòng/bọc dòng không mong muốn.
+
 ## [1.5.1] - 2026-04-19
 - **🔧 Sửa lỗi & Chuẩn hóa code**: Sửa một số lỗi kỹ thuật trong mã nguồn (lỗi "linting") để giúp code sạch hơn, hoạt động ổn định và dễ bảo trì hơn trong tương lai.
 

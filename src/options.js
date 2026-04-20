@@ -72,6 +72,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  const syncProjectsBtn = document.getElementById("syncProjectsBtn");
+  syncProjectsBtn?.addEventListener("click", () => {
+    if (redmineApiKeyInput.value.trim()) {
+      fetchProjects(redmineApiKeyInput.value.trim());
+    } else {
+      alert("Vui lòng nhập Redmine API Key trước khi đồng bộ.");
+    }
+  });
+
   // Sync key fields with same class
   const syncFields = (className) => {
     const fields = document.querySelectorAll(`.${className}`);
@@ -280,7 +289,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function fetchProjects(apiKey, selectedId = "") {
     if (!apiKey) return;
+    const syncBtn = document.getElementById("syncProjectsBtn");
     try {
+      if (syncBtn) {
+        syncBtn.disabled = true;
+        syncBtn.textContent = "⌛ Đang tải...";
+      }
       defaultProjectIdSelect.innerHTML = "<option value=\"\">Đang tải project...</option>";
       const response = await fetch(`${TB.REDMINE_DOMAIN}/projects.json?limit=100`, {
         headers: { "X-Redmine-API-Key": apiKey, Accept: "application/json" },
@@ -300,6 +314,11 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (e) {
       defaultProjectIdSelect.innerHTML =
         "<option value=\"\">Lỗi tải project (Kiểm tra API Key)</option>";
+    } finally {
+      if (syncBtn) {
+        syncBtn.disabled = false;
+        syncBtn.textContent = "🔄 Đồng bộ Project";
+      }
     }
   }
 

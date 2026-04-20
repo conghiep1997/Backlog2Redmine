@@ -81,7 +81,7 @@ async function findRedmineIssueViaApi(redmineDomain, apiKey, issueKey, issueSumm
   return { id: String(result.id), title: result.subject };
 }
 
-async function handleSendToRedmine({ redmineIssueId, notes, backlogIssueKey }, sender) {
+async function handleSendToRedmine({ redmineIssueId, notes, backlogIssueKey, processedAttachments = null }, sender) {
   // Send note to Redmine issue, including image processing
   const settings = await getSettings();
   const backlogDomain = sender?.tab?.url ? new URL(sender.tab.url).hostname : null;
@@ -90,7 +90,8 @@ async function handleSendToRedmine({ redmineIssueId, notes, backlogIssueKey }, s
     notes,
     backlogDomain,
     settings,
-    backlogIssueKey
+    backlogIssueKey,
+    processedAttachments
   );
 
   const endpoint = buildRedmineUrl(settings.redmineDomain, `/issues/${redmineIssueId}.json`);
@@ -139,12 +140,17 @@ async function handleSendToRedmine({ redmineIssueId, notes, backlogIssueKey }, s
 async function handleCreateRedmineIssue({ issueData, comments }) {
   // Create new issue on Redmine with description and comments from Backlog
   const settings = await getSettings();
+  // Shared map to track already uploaded attachments during this migration session
+  // Key: attachmentId (string), Value: markup (string)
+  const processedAttachments = new Map();
+
   // Process attachments in description
   const { updatedNotes: updatedDescription, uploads: descUploads } = await processNotesAttachments(
     issueData.description || "",
     null,
     settings,
-    issueData.backlogIssueKey
+    issueData.backlogIssueKey,
+    processedAttachments
   );
 
   const createUrl = buildRedmineUrl(settings.redmineDomain, "/issues.json");
@@ -197,6 +203,7 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
             redmineIssueId: newIssueId,
             notes: commentText,
             backlogIssueKey: issueData.backlogIssueKey,
+            processedAttachments, // Reuse the map to avoid duplicate uploads
           },
           null
         );
@@ -285,9 +292,16 @@ function pickBestRedmineSearchResult(results, normalizedIssueKey, normalizedIssu
  * @param {string} backlogDomain - The Backlog domain for downloading files.
  * @param {object} settings - The extension\'s settings.
  * @param {string} backlogIssueKey - The Backlog issue key.
+ * @param {Map|null} processedAttachments - (Optional) Persistent map of [attachmentId -> markup] to reuse across calls.
  * @returns {Promise<{updatedNotes: string, uploads: Array}>}
  */
-async function processNotesAttachments(notes, backlogDomain, settings, backlogIssueKey) {
+async function processNotesAttachments(
+  notes,
+  backlogDomain,
+  settings,
+  backlogIssueKey,
+  processedAttachments = null
+) {
   if (!notes) {
     return { updatedNotes: "", uploads: [] };
   }
@@ -297,8 +311,8 @@ async function processNotesAttachments(notes, backlogDomain, settings, backlogIs
   // Key: attachmentId (string), Value: { filename: string, markup: string, isImageOnly: boolean }
   const attachmentRegistry = new Map();
 
-  const imagePattern = /\[\[TB_IMG:(\d+)\]\]/g;
-  const filePattern = /\[\[TB_FILE:(\d+):([^\]]+)\]\]/g;
+  const imagePattern = /\[\[TB_IMG:\s*(\d+)\s*\]\]/g;
+  const filePattern = /\[\[TB_FILE:\s*(\d+)\s*:\s*([^\]]+?)\s*\]\]/g;
 
   // --- Step 1: Scan text and register all unique attachments that need processing ---
   for (const match of notes.matchAll(imagePattern)) {
@@ -323,6 +337,11 @@ async function processNotesAttachments(notes, backlogDomain, settings, backlogIs
   // --- Step 2: Process each unique attachment from the registry ---
   for (const [attachmentId, info] of attachmentRegistry.entries()) {
     try {
+      if (processedAttachments && processedAttachments.has(attachmentId)) {
+        info.markup = processedAttachments.get(attachmentId);
+        continue;
+      }
+
       const { filename } = info;
 
       const blob = await downloadBacklogFile(
@@ -358,6 +377,11 @@ async function processNotesAttachments(notes, backlogDomain, settings, backlogIs
         } else {
           info.markup = `attachment:${filename}`;
         }
+
+        // Cache for subsequent calls in the same session
+        if (processedAttachments) {
+          processedAttachments.set(attachmentId, info.markup);
+        }
       } else {
         throw new Error("Upload token was not received.");
       }
@@ -372,8 +396,9 @@ async function processNotesAttachments(notes, backlogDomain, settings, backlogIs
   for (const [attachmentId, info] of attachmentRegistry.entries()) {
     if (info.markup) {
       // Regex to find all markers for the current ID and replace them.
-      const imageMarkerPattern = new RegExp(`\\[\\[TB_IMG:${attachmentId}\\]\\]`, "g");
-      const fileMarkerPattern = new RegExp(`\\[\\[TB_FILE:${attachmentId}:[^\\]]+\\]\\]`, "g");
+      // Space-tolerant to catch AI variations
+      const imageMarkerPattern = new RegExp(`\\[\\[TB_IMG:\\s*${attachmentId}\\s*\\]\\]`, "gi");
+      const fileMarkerPattern = new RegExp(`\\[\\[TB_FILE:\\s*${attachmentId}\\s*:\\s*[^\\]]+\\s*\\]\\]`, "gi");
 
       finalNotes = finalNotes.replace(imageMarkerPattern, info.markup);
       finalNotes = finalNotes.replace(fileMarkerPattern, info.markup);

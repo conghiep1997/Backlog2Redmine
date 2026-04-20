@@ -155,6 +155,39 @@ function injectStyles() {
     .tb-batch-option label { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #1e40af; cursor: pointer; font-weight: 600; }
     .tb-batch-option input { margin: 0; }
     .tb-required { color: #ef4444; margin-left: 2px; font-weight: bold; }
+
+    /* Modal Loading Overlay */
+    .tb-modal-loading {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(2px);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      border-radius: 20px;
+    }
+    .tb-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3b82f6;
+      border-radius: 50%;
+      animation: tb-spin 1s linear infinite;
+    }
+    @keyframes tb-spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .tb-loading-text {
+      color: #1e40af;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .tb-modal-container { position: relative; }
   `;
   document.head.appendChild(style);
 }

@@ -10,7 +10,7 @@ QUY TẮC BẮT BUỘC:
 1. GIỮ NGUYÊN các thẻ @username (ví dụ: @Splus.HiepNC). KHÔNG thêm liên kết Markdown/HTML.
 2. Bảo toàn định dạng Markdown (Danh sách, Tiêu đề, Trích dẫn >).
 3. Giữ nguyên các thuật ngữ kỹ thuật nếu chúng thông dụng trong tiếng Anh.
-4. TUYỆT ĐỐI KHÔNG dịch hoặc thay đổi các ký hiệu như [[TB_IMG:id]] và !image.png!.
+4. TUYỆT ĐỐI KHÔNG dịch, KHÔNG thay đổi và KHÔNG chuyển đổi các ký hiệu như [[TB_IMG:id]] và !image.png! sang định dạng Markdown chuẩn ![image](id). Giữ nguyên bản 100%.
 5. KHÔNG lặp lại các quy tắc, KHÔNG giải thích, KHÔNG chào hỏi.
 6. GIỮ NGUYÊN tất cả các liên kết (URL), con số và ký tự đặc biệt.
 7. GIỮ NGUYÊN các khối mã trong dấu ngoặc ( \`\`\` hoặc \` ).
