@@ -56,14 +56,6 @@ function ensureModalShell() {
             </div>
             <div class="tb-field-row">
               <div class="tb-field-group">
-                <label for="tb-migrate-tracker">${TB.MESSAGES.MODAL.TRACKER_LABEL}<span class="tb-required">*</span></label>
-                <select id="tb-migrate-tracker"><option value="">-- Loader --</option></select>
-              </div>
-              <div class="tb-field-group">
-                <label for="tb-migrate-priority">${TB.MESSAGES.MODAL.PRIORITY_LABEL}<span class="tb-required">*</span></label>
-                <select id="tb-migrate-priority"><option value="">-- Loader --</option></select>
-              </div>
-              <div class="tb-field-group">
                 <label for="tb-migrate-version">Target Version (Milestone)</label>
                 <select id="tb-migrate-version"><option value="">-- Loader --</option></select>
               </div>
@@ -72,12 +64,28 @@ function ensureModalShell() {
                 <input type="date" id="tb-migrate-due-date">
               </div>
             </div>
+            <div class="tb-field-row">
+              <div class="tb-field-group">
+                <label for="tb-migrate-tracker">${TB.MESSAGES.MODAL.TRACKER_LABEL}<span class="tb-required">*</span></label>
+                <select id="tb-migrate-tracker"><option value="">-- Loader --</option></select>
+              </div>
+              <div class="tb-field-group">
+                <label for="tb-migrate-priority">${TB.MESSAGES.MODAL.PRIORITY_LABEL}<span class="tb-required">*</span></label>
+                <select id="tb-migrate-priority"><option value="">-- Loader --</option></select>
+              </div>
+            </div>
             <!-- Dynamic Custom Fields Container -->
             <div id="tb-dynamic-fields" class="tb-field-grid"></div>
           </div>
           <div class="tb-field-group">
-            <label id="tb-preview-label" for="tb-redmine-preview">${TB.MESSAGES.MODAL.PREVIEW_LABEL}</label>
-            <textarea id="tb-redmine-preview" rows="10"></textarea>
+            <div class="tb-preview-header">
+              <label id="tb-preview-label" for="tb-redmine-preview">${TB.MESSAGES.MODAL.PREVIEW_LABEL}</label>
+              <button type="button" id="tb-preview-toggle" class="tb-preview-toggle" title="Toggle preview">👁</button>
+            </div>
+            <div class="tb-preview-container">
+              <textarea id="tb-redmine-preview" rows="10"></textarea>
+              <div id="tb-redmine-preview-html" class="tb-preview-html" hidden></div>
+            </div>
           </div>
           <div id="tb-comments-preview-group" class="tb-field-group" hidden>
             <label for="tb-redmine-comments-preview">Xem trước bình luận</label>
@@ -226,6 +234,8 @@ function openConfirmModal(options) {
     commentsPreviewTextarea,
     previewLabel,
   } = modalElements;
+  const previewHtmlEl = overlay.querySelector("#tb-redmine-preview-html");
+  const previewToggleBtn = overlay.querySelector("#tb-preview-toggle");
 
   let currentMode = false;
   let currentNotesList = [previewText];
@@ -363,6 +373,59 @@ function openConfirmModal(options) {
       validateMigrationForm();
     };
     migrateSubjectInput.oninput = validateMigrationForm;
+  }
+
+  // Preview toggle logic
+  if (previewToggleBtn && previewHtmlEl) {
+    let isHtmlMode = false;
+    const escapeHtml = (str) => {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    };
+    const renderMarkdownHtml = (text) => {
+      let html = escapeHtml(text);
+      // Fix lists: wrap consecutive <li> in <ul>
+      html = html.replace(/(<li>.*<\/li>)(\s*<li>.*<\/li>)*/g, "<ul>$&</ul>");
+      html = html
+        .replace(/^#{1,6}\s+(.+)$/gm, "<h$1>$1</h$1>")
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*(.+?)\*/g, "<em>$1</em>")
+        .replace(/`{3}(\w*)\n?([\s\S]*?)`{3}/g, "<pre>$2</pre>")
+        .replace(/`(.+?)`/g, "<code>$1</code>")
+        .replace(/^>\s+(.+)$/gm, "<blockquote>$1</blockquote>")
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "<a href=\"$2\" target=\"_blank\">$1</a>")
+        .replace(/\n/g, "<br>");
+      return html;
+    };
+
+    const updatePreviewMode = () => {
+      if (isHtmlMode) {
+        const currentText = previewTextarea.value;
+        previewHtmlEl.innerHTML = renderMarkdownHtml(currentText);
+        previewTextarea.hidden = true;
+        previewHtmlEl.hidden = false;
+        previewToggleBtn.textContent = "📝";
+      } else {
+        previewTextarea.hidden = false;
+        previewHtmlEl.hidden = true;
+        previewToggleBtn.textContent = "👁";
+      }
+    };
+
+    previewToggleBtn.onclick = () => {
+      isHtmlMode = !isHtmlMode;
+      updatePreviewMode();
+    };
+
+    previewTextarea.oninput = () => {
+      if (isHtmlMode) {
+        updatePreviewMode();
+      }
+    };
   }
 
   if (hasBatchOption || (isMigration && commentsCount > 0)) {

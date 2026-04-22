@@ -1,5 +1,20 @@
 # Nhật ký thay đổi (Changelog)
 
+## [1.7.0] - 2026-04-22
+- **🤖 AI Providers & API Keys**:
+  - Thêm **Groq** làm lựa chọn cho cả AI chính và AI dự phòng.
+  - Bổ sung cấu hình **Multiple Gemini Keys** trong trang Options, hỗ trợ nhập tối đa 10 key và random chọn key để giảm khả năng bị rate limit.
+  - Mở rộng validate cấu hình và luồng đọc settings để hỗ trợ đầy đủ `geminiApiKeys` và `groqApiKey`.
+- **🪟 Modal & Preview**:
+  - Thêm chế độ **toggle preview** trong modal để chuyển nhanh giữa dạng text editor và HTML preview.
+  - Điều chỉnh lại bố cục form migrate: đưa `Target Version` và `Due Date` lên cùng một hàng, tách `Tracker` và `Priority` sang hàng riêng để dễ thao tác hơn.
+- **📎 Nội dung & đính kèm**:
+  - Cải thiện logic quét attachment từ comment/changelog của Backlog để nhận diện file ổn định hơn.
+  - Nới giới hạn chuẩn hóa xuống còn tối đa 2 dòng trống liên tiếp, giúp giữ khoảng cách đoạn văn tốt hơn trong Markdown preview/gửi sang Redmine.
+- **⚙️ Options UI**:
+  - Thêm khối nhập **Groq API Key** cho cả primary và fallback provider.
+  - Bổ sung nút `+ Thêm Key` để nhập nhanh danh sách Gemini API keys nhiều dòng.
+
 ## [1.6.1] - 2026-04-21
 - **🎨 Giao diện & Cấu hình (Options)**:
   - **Thay đổi AI mặc định**: Chuyển Gemini sang làm AI chính (Primary) và Cerebras làm AI dự phòng (Fallback) để tối ưu chất lượng dịch thuật ban đầu.

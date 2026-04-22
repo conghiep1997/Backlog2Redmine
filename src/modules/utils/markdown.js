@@ -127,7 +127,7 @@ function extractBacklogContent(element) {
             result = textBefore + `[${linkText}](${href})`;
           }
         } else if (href) {
-            result = textBefore + `[${href}](${href})`;
+          result = textBefore + `[${href}](${href})`;
         }
         return;
       }
@@ -341,7 +341,7 @@ function extractBacklogContent(element) {
     .split("\n")
     .map((line) => line.trimEnd())
     .join("\n")
-    .replace(/\n{3,}/g, "\n\n") // Keep max 2 consecutive newlines (1 blank line)
+    .replace(/\n{4,}/g, "\n\n\n") // Keep max 3 consecutive newlines (2 blank lines)
     .replace(/\*\*\*\*/g, "**")
     .replace(/``+/g, "`")
     .trim();

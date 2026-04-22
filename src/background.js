@@ -85,8 +85,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const translated = await translateText(message.commentText, settings, message.commentUrl);
 
       // Prepend user info to the final preview if provided
-      const finalPreview = message.userInfo 
-        ? `${message.userInfo}\n${translated}` 
+      const finalPreview = message.userInfo
+        ? `${message.userInfo}\n${translated}`
         : translated;
 
       return {
@@ -207,14 +207,24 @@ async function getSettings() {
         "backlogDomain",
         "backlogApiKey",
         "geminiApiKey",
+        "geminiApiKeys",
         "cerebrasApiKey",
+        "groqApiKey",
         "aiProvider",
         "geminiModel",
         "geminiFallbackModel",
         "cerebrasModel",
+        "groqModel",
         "defaultProjectId",
       ],
       async (items) => {
+        const geminiApiKeysStr = items.geminiApiKeys
+          ? await decryptData(items.geminiApiKeys)
+          : "";
+        const geminiApiKeys = geminiApiKeysStr
+          ? geminiApiKeysStr.split("\n").filter((k) => k.trim())
+          : [];
+
         resolve({
           redmineDomain: TB.REDMINE_DOMAIN,
           redmineApiKey: await decryptData(items.redmineApiKey ?? ""),
@@ -222,10 +232,13 @@ async function getSettings() {
           backlogApiKey: await decryptData(items.backlogApiKey ?? ""),
           aiProvider: items.aiProvider || TB.DEFAULT_PROVIDER,
           geminiApiKey: await decryptData(items.geminiApiKey ?? ""),
+          geminiApiKeys: geminiApiKeys,
           geminiModel: items.geminiModel ?? TB.GEMINI_MODEL,
           geminiFallbackModel: items.geminiFallbackModel ?? TB.GEMINI_FALLBACK_MODEL,
           cerebrasApiKey: await decryptData(items.cerebrasApiKey ?? ""),
           cerebrasModel: items.cerebrasModel ?? TB.CEREBRAS_MODEL,
+          groqApiKey: await decryptData(items.groqApiKey ?? ""),
+          groqModel: items.groqModel ?? TB.GROQ_MODEL,
           defaultProjectId: items.defaultProjectId || "",
         });
       }
@@ -246,7 +259,11 @@ function assertSettings(settings) {
     if (!settings.cerebrasApiKey) {
       throw new Error("Missing Cerebras API Key.");
     }
-  } else if (!settings.geminiApiKey) {
+  } else if (settings.aiProvider === TB.PROVIDERS.GROQ) {
+    if (!settings.groqApiKey) {
+      throw new Error("Missing Groq API Key.");
+    }
+  } else if (!settings.geminiApiKey && settings.geminiApiKeys?.length === 0) {
     throw new Error(TB.MESSAGES.SETTINGS.GEMINI_API_KEY_REQUIRED);
   }
 }

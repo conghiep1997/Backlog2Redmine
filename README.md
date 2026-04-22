@@ -1,8 +1,8 @@
-# B2R - Backlog to Redmine (v1.6.1)
+# B2R - Backlog to Redmine (v1.7.0)
 
 Chrome extension dịch comment từ Backlog sang tiếng Việt và đồng bộ dữ liệu thông minh sang Redmine. Tên mới: **B2R**.
 
-**Latest Update:** v1.6.1 - Switched Primary AI to Gemini, updated default models, and fixed API key status display.
+**Latest Update:** Added Groq provider support, multiple Gemini API keys, smarter preview mode, and improved attachment detection.
 
 ---
 
@@ -46,13 +46,20 @@ B2R/
 
 ## 🤖 Hệ thống AI hỗ trợ
 
-Phiên bản 1.6.1 tối ưu hóa cho tài khoản Free Tier:
+Phiên bản hiện tại hỗ trợ nhiều nhà cung cấp AI free-tier và cho phép cấu hình primary/fallback linh hoạt:
 
-| Provider | Model | Rate Limit | Best For |
-|----------|-------|------------|----------|
-| **Primary** | Gemini 3.1 Flash Lite | 15 RPM / 31 RPD | Balanced quality & speed |
-| **Options** | Gemma 3 27B IT | Medium quota | High quality backup |
-| **Fallback** | GPT OSS 120B (Cerebras) | High quota | Fast & high-capacity backup |
+| Provider | Model mặc định | Vai trò | Ghi chú |
+|----------|----------------|---------|---------|
+| **Gemini** | Gemini 3.1 Flash Lite | Primary / Fallback | Hỗ trợ thêm danh sách nhiều API key để chia tải |
+| **Groq** | Llama 3.3 70B Versatile | Primary / Fallback | Tốc độ phản hồi nhanh, phù hợp dịch comment ngắn |
+| **Cerebras** | GPT OSS 120B | Primary / Fallback | Free tier ổn định, phù hợp làm backup |
+
+### AI Configuration Highlights
+
+- ✅ **Groq Support**: Có thể chọn Groq cho cả AI chính và AI dự phòng
+- ✅ **Multiple Gemini Keys**: Nhập tối đa 10 Gemini API keys, mỗi dòng một key
+- ✅ **Random Key Rotation**: Tự động random Gemini key khi gọi API để giảm lỗi rate limit
+- ✅ **Encrypted Storage**: Toàn bộ API keys vẫn được mã hóa trước khi lưu cục bộ
 
 ---
 
@@ -66,6 +73,7 @@ Phiên bản 1.6.1 tối ưu hóa cho tài khoản Free Tier:
 - ✅ **Batch Translate**: Dịch và gửi hàng loạt comments liên tiếp
 - ✅ **Image & Video Handling**: Tự động download/upload ảnh và video (.mp4, .mov...). Video có trình phát ngay trên Redmine.
 - ✅ **Markdown Preservation**: Giữ nguyên format (bold, italic, lists, tables, code blocks)
+- ✅ **Smarter Attachment Detection**: Quét attachment tốt hơn từ changelog/comment links để gom nội dung đầy đủ hơn
 
 ### UI/UX
 
@@ -73,6 +81,7 @@ Phiên bản 1.6.1 tối ưu hóa cho tài khoản Free Tier:
 - 🔔 **Smart Error Handling**: Tự động hiển thị link tới trang cấu hình khi có lỗi API key.
 - ⚡ **Quick Settings Access**: Click vào biểu tượng extension để mở nhanh trang Options.
 - 📦 **Confirm Modal**: Preview và edit trước khi gửi
+- 👁 **Toggle Preview Mode**: Chuyển nhanh giữa textarea và chế độ xem trước HTML trong modal
 - 🏃 **Loading States**: Spinner and disabled states rõ ràng
 
 ### Security
@@ -111,6 +120,16 @@ npm run build
    - Priority
    - Subject
 4. Preview nội dung dịch → Click **Tạo & Di cư toàn bộ**
+
+### 0. Cấu hình AI
+
+1. Mở trang Options của extension
+2. Chọn `Primary Provider` và `Fallback Provider`
+3. Nếu dùng Gemini:
+   - Có thể nhập 1 key ở ô thông thường, hoặc
+   - Mở phần **Multiple Gemini Keys** để nhập nhiều key, mỗi dòng một key
+4. Nếu dùng Groq hoặc Cerebras: nhập API key tương ứng
+5. Click **Lưu cấu hình**
 
 ### 2. Dịch và Gửi Comment
 
@@ -171,7 +190,10 @@ npm run build:zip
 - [ ] Hình ảnh được upload đúng
 - [ ] Markdown format được giữ nguyên (bold, lists, tables, code)
 - [ ] Settings lưu và load đúng
+- [ ] Preview toggle hoạt động đúng ở modal
 - [ ] Fallback AI hoạt động khi rate limit
+- [ ] Multiple Gemini keys được load và lưu đúng
+- [ ] Groq hoạt động khi được chọn làm provider
 - [ ] **Lỗi cấu hình hiển thị link tới Options**
 - [ ] **Click icon mở Options**
 
@@ -213,4 +235,4 @@ Chi tiết các thay đổi qua từng phiên bản có thể được xem tại
 
 ---
 
-**Developed by Hipppo** 🦛 | Version **1.6.1** (April 2026)
+**Developed by Hipppo** 🦛 | Version **1.7.0** (April 2026)

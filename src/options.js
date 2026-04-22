@@ -30,18 +30,24 @@ document.addEventListener("DOMContentLoaded", () => {
   // Credentials elements (Primary)
   const primaryGeminiKeyContainer = document.getElementById("primaryGeminiKeyContainer");
   const primaryCerebrasKeyContainer = document.getElementById("primaryCerebrasKeyContainer");
+  const primaryGroqKeyContainer = document.getElementById("primaryGroqKeyContainer");
   const primaryGeminiApiKeyInput = document.getElementById("primaryGeminiApiKey");
   const primaryCerebrasApiKeyInput = document.getElementById("primaryCerebrasApiKey");
+  const primaryGroqApiKeyInput = document.getElementById("primaryGroqApiKey");
 
   // Credentials elements (Fallback)
   const fallbackGeminiKeyContainer = document.getElementById("fallbackGeminiKeyContainer");
   const fallbackCerebrasKeyContainer = document.getElementById("fallbackCerebrasKeyContainer");
+  const fallbackGroqKeyContainer = document.getElementById("fallbackGroqKeyContainer");
   const fallbackGeminiApiKeyInput = document.getElementById("fallbackGeminiApiKey");
   const fallbackCerebrasApiKeyInput = document.getElementById("fallbackCerebrasApiKey");
+  const fallbackGroqApiKeyInput = document.getElementById("fallbackGroqApiKey");
 
   const defaultProjectIdSelect = document.getElementById("defaultProjectId");
   const manualFieldsInput = document.getElementById("manualFields");
   const statusEl = document.getElementById("status");
+  const geminiApiKeysTextarea = document.getElementById("geminiApiKeys");
+  const addGeminiKeyBtn = document.getElementById("addGeminiKeyBtn");
 
   if (!form || !primaryProviderSelect || !fallbackProviderSelect || !statusEl) {
     console.error("[OPTIONS] Missing DOM elements");
@@ -99,6 +105,15 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   syncFields("gemini-key-sync");
   syncFields("cerebras-key-sync");
+
+  // Add Gemini Key button - append new line to textarea
+  if (addGeminiKeyBtn) {
+    addGeminiKeyBtn.addEventListener("click", () => {
+      const currentValue = geminiApiKeysTextarea.value.trim();
+      geminiApiKeysTextarea.value = currentValue ? currentValue + "\n" : "";
+      geminiApiKeysTextarea.focus();
+    });
+  }
 
   // Handle Export Logs
   const exportLogsBtn = document.getElementById("exportLogsBtn");
@@ -169,6 +184,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const needsCerebras =
       settings.primaryProvider === TB.PROVIDERS.CEREBRAS ||
       settings.fallbackProvider === TB.PROVIDERS.CEREBRAS;
+    const needsGroq =
+      settings.primaryProvider === TB.PROVIDERS.GROQ ||
+      settings.fallbackProvider === TB.PROVIDERS.GROQ;
 
     if (needsGemini) {
       const key = (primaryGeminiApiKeyInput.value || fallbackGeminiApiKeyInput.value).trim();
@@ -185,6 +203,19 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       if (key) {
         settings.geminiApiKey = await encryptData(key);
+      }
+
+      // Save multiple Gemini keys
+      const multiKeys = geminiApiKeysTextarea.value.trim();
+      if (multiKeys) {
+        const keysArray = multiKeys.split("\n").filter((k) => k.trim());
+        if (keysArray.length > 0 && keysArray.length <= 10) {
+          settings.geminiApiKeys = await encryptData(multiKeys);
+        } else if (keysArray.length > 10) {
+          setStatus("Chỉ được tối đa 10 keys! Đã lưu 10 key đầu tiên.");
+          const limitedKeys = keysArray.slice(0, 10).join("\n");
+          settings.geminiApiKeys = await encryptData(limitedKeys);
+        }
       }
     }
 
@@ -203,6 +234,24 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       if (key) {
         settings.cerebrasApiKey = await encryptData(key);
+      }
+    }
+
+    if (needsGroq) {
+      const key = (primaryGroqApiKeyInput.value || fallbackGroqApiKeyInput.value).trim();
+      const placeholder =
+        primaryGroqApiKeyInput.placeholder || fallbackGroqApiKeyInput.placeholder;
+      if (
+        !key &&
+        !placeholder.includes(
+          TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER.replace("********** ", "")
+        )
+      ) {
+        setStatus("Groq API Key is required.");
+        return;
+      }
+      if (key) {
+        settings.groqApiKey = await encryptData(key);
       }
     }
 
@@ -233,7 +282,9 @@ document.addEventListener("DOMContentLoaded", () => {
         "backlogDomain",
         "backlogApiKey",
         "geminiApiKey",
+        "geminiApiKeys",
         "cerebrasApiKey",
+        "groqApiKey",
         "primaryProvider",
         "primaryModel",
         "fallbackProvider",
@@ -274,9 +325,23 @@ document.addEventListener("DOMContentLoaded", () => {
           fallbackGeminiApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
         }
 
+        if (items.geminiApiKeys) {
+          try {
+            const keys = await decryptData(items.geminiApiKeys);
+            geminiApiKeysTextarea.value = keys;
+          } catch (e) {
+            geminiApiKeysTextarea.value = items.geminiApiKeys || "";
+          }
+        }
+
         if (items.cerebrasApiKey) {
           primaryCerebrasApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
           fallbackCerebrasApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
+        }
+
+        if (items.groqApiKey) {
+          primaryGroqApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
+          fallbackGroqApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
         }
 
         if (items.manualFields) {
@@ -360,9 +425,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     primaryGeminiKeyContainer.style.display = p === TB.PROVIDERS.GEMINI ? "block" : "none";
     primaryCerebrasKeyContainer.style.display = p === TB.PROVIDERS.CEREBRAS ? "block" : "none";
+    primaryGroqKeyContainer.style.display = p === TB.PROVIDERS.GROQ ? "block" : "none";
 
     fallbackGeminiKeyContainer.style.display = f === TB.PROVIDERS.GEMINI ? "block" : "none";
     fallbackCerebrasKeyContainer.style.display = f === TB.PROVIDERS.CEREBRAS ? "block" : "none";
+    fallbackGroqKeyContainer.style.display = f === TB.PROVIDERS.GROQ ? "block" : "none";
   }
 
   function setStatus(message) {

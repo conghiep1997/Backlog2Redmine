@@ -174,7 +174,7 @@ function injectButtonIfNeeded(actionsEl) {
 }
 
 async function handleTranslateAndOpenModal(actionsEl, button) {
-  const commentItem = actionsHoz_closest(".comment-item") || actionsEl.parentElement;
+  const commentItem = actionsEl ? actionsEl.closest(".comment-item") : null || actionsEl.parentElement;
   const { issueKey, issueSummary } = getBacklogHeaderInfo();
   if (!issueKey) {
     showToast(TB.MESSAGES.TOAST.MISSING_ISSUE_KEY, "error");
@@ -335,7 +335,7 @@ async function handleIssueMigration(button) {
         const issueDataToSend = {
           ...issueData,
           backlogIssueKey: issueKey,
-        },
+        };
         const result = await sendRuntimeMessageWithResponse({
           type: "CREATE_REDMINE_ISSUE",
           issueData: issueDataToSend,
@@ -406,7 +406,7 @@ function showSettingsErrorLink(message) {
     e.preventDefault();
     chrome.runtime.sendMessage({ type: "OPEN_OPTIONS_PAGE" });
     container.remove();
-  }
+  };
 
   document.getElementById("tb-close-error-link").onclick = (e) => {
     e.preventDefault();
@@ -459,7 +459,7 @@ function getCommentFullText(itemEl) {
       nextComment.querySelector(".comment-item__body") ||
       nextComment.querySelector(".comment-content") ||
       nextComment.querySelector(".item-body");
-    
+
     const nextText = nextContentEl ? extractBacklogContent(nextContentEl).trim() : "";
     const nextAttachments = scrapeAttachments(nextComment);
 
@@ -491,6 +491,28 @@ function getCommentFullText(itemEl) {
   text += attachmentText;
 
   return { text: text.trim(), userInfo };
+}
+
+function scrapeAttachments(itemEl) {
+  const attachments = new Map();
+  const links = itemEl.querySelectorAll(
+    ".comment-changelog__item a[href*=\"attachmentId=\"], " +
+      ".upload-item-list li a[href*=\"attachmentId=\"], " +
+      ".comment-attachments a[href*=\"attachmentId=\"], " +
+      "a.attachment-file[href*=\"attachmentId=\"]"
+  );
+  links.forEach((link) => {
+    const href = link.getAttribute("href");
+    const match = href.match(/attachmentId=(\d+)/);
+    if (match) {
+      const id = match[1];
+      const filename = link.textContent.trim();
+      if (filename && filename.toLowerCase() !== "download") {
+        attachments.set(filename, id);
+      }
+    }
+  });
+  return attachments;
 }
 
 function getBacklogHeaderInfo() {

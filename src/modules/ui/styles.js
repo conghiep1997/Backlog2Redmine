@@ -117,7 +117,24 @@ function injectStyles() {
     }
     .tb-field-group input[readonly], .tb-field-group textarea[readonly] { background: #f1f5f9; color: #64748b; }
     .tb-multiline-input { resize: none; overflow-y: auto; line-height: 1.4; min-height: 48px; }
-    #tb-redmine-preview { min-height: 180px; font-family: inherit; line-height: 1.5; font-size: 13px; }
+    .tb-preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .tb-preview-header label { margin-bottom: 0; }
+    .tb-preview-toggle { background: none; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+    .tb-preview-toggle:hover { background: #f1f5f9; }
+    .tb-preview-container { position: relative; }
+    .tb-preview-container textarea, .tb-preview-container .tb-preview-html { width: 100%; min-height: 180px; font-family: inherit; line-height: 1.5; font-size: 13px; box-sizing: border-box; }
+    .tb-preview-html { padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa; overflow-y: auto; display: block; }
+    .tb-preview-html h1 { font-size: 1.5em; margin: 0.5em 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25em; }
+    .tb-preview-html h2 { font-size: 1.3em; margin: 0.5em 0; }
+    .tb-preview-html h3 { font-size: 1.1em; margin: 0.5em 0; }
+    .tb-preview-html strong { font-weight: 700; }
+    .tb-preview-html em { font-style: italic; }
+    .tb-preview-html code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+    .tb-preview-html pre { background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 8px; overflow-x: auto; font-family: monospace; white-space: pre-wrap; }
+    .tb-preview-html li { margin-left: 20px; list-style: disc; }
+    .tb-preview-html blockquote { border-left: 3px solid #3b82f6; margin-left: 0; padding-left: 12px; color: #475569; }
+    .tb-preview-html a { color: #2563eb; text-decoration: underline; }
+    #tb-redmine-preview { min-height: 180px; }
     #tb-redmine-comments-preview { min-height: 180px; font-family: inherit; line-height: 1.5; font-size: 13px; background: #f8fafc; border-left: 3px solid #3b82f6; }
 
     /* Footer */

@@ -62,11 +62,25 @@ async function translateText(commentText, settings, commentUrl = null, promptFn 
  * @param {function} promptFn - Prompt builder function
  * @returns {Promise<string>} Translated text
  */
+function getRandomGeminiKey(apiKeys) {
+  if (!apiKeys || apiKeys.length === 0) return null;
+  const idx = Math.floor(Math.random() * apiKeys.length);
+  return apiKeys[idx].trim();
+}
+
 async function callAIsByProvider(provider, model, settings, text, url, promptFn) {
   if (provider === TB.PROVIDERS.GEMINI) {
-    return await callGeminiAPI(settings.geminiApiKey, text, model, null, promptFn, url);
+    const apiKey = settings.geminiApiKeys?.length > 0
+      ? getRandomGeminiKey(settings.geminiApiKeys)
+      : settings.geminiApiKey;
+    if (!apiKey) {
+      throw new Error("No Gemini API key available");
+    }
+    return await callGeminiAPI(apiKey, text, model, null, promptFn, url);
   } else if (provider === TB.PROVIDERS.CEREBRAS) {
     return await callCerebrasAPI(settings.cerebrasApiKey, text, model, promptFn, url);
+  } else if (provider === TB.PROVIDERS.GROQ) {
+    return await callGroqAPI(settings.groqApiKey, text, model, promptFn);
   }
   throw new Error(`Unknown provider: ${provider}`);
 }
@@ -195,6 +209,52 @@ async function callCerebrasAPI(
   const cleaned = normalizeTranslationOutput(rawText);
   if (promptFn === TB.PROMPTS.USER) {
     return formatTranslation(commentText, cleaned, commentUrl);
+  }
+  return cleaned;
+}
+
+async function callGroqAPI(
+  apiKey,
+  commentText,
+  model,
+  promptFn = TB.PROMPTS.USER
+) {
+  // Call Groq API with timeout
+  const response = await timeoutFetch(
+    "https://api.groq.com/openai/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: model || "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: TB.PROMPTS.SYSTEM },
+          { role: "user", content: promptFn(commentText) },
+        ],
+        temperature: 0.2,
+        max_tokens: 2048,
+      }),
+    },
+    15000
+  );
+
+  if (!response.ok) {
+    const errorMsg = await readErrorMessage(response);
+    throw new Error(`Groq (${model}): ${sanitizeErrorMessage(errorMsg, response.status)}`);
+  }
+
+  const data = await safeReadJson(response);
+  const rawText = data?.choices?.[0]?.message?.content?.trim();
+  if (!rawText) {
+    throw new Error("AI returned no content.");
+  }
+
+  const cleaned = normalizeTranslationOutput(rawText);
+  if (promptFn === TB.PROMPTS.USER) {
+    return formatTranslation(commentText, cleaned, null);
   }
   return cleaned;
 }

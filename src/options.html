@@ -346,7 +346,8 @@
                   "
                 >
                   <option value="gemini">Google Gemini AI Studio (Miễn phí)</option>
-                  <option value="cerebras">Cerebras Cloud (Hạn mức cực lớn - Free)</option>
+                  <option value="groq">Groq (Free - Rất nhanh)</option>
+                  <option value="cerebras">Cerebras Cloud (Free)</option>
                 </select>
               </div>
               <div id="primaryModelField" class="field">
@@ -367,7 +368,7 @@
                 </select>
               </div>
 
-              <!-- Primary Provider API Keys -->
+              <!-- Primary Provider API Keys (Single Key - Legacy) -->
               <div id="primaryGeminiKeyContainer" style="display: none; margin-top: 12px">
                 <div class="field">
                   <label for="primaryGeminiApiKey">Gemini API Key</label>
@@ -408,8 +409,69 @@
                   </p>
                 </div>
               </div>
+
+              <!-- Groq API Key -->
+              <div id="primaryGroqKeyContainer" style="display: none; margin-top: 12px">
+                <div class="field">
+                  <label for="primaryGroqApiKey">Groq API Key</label>
+                  <input
+                    id="primaryGroqApiKey"
+                    class="groq-key-sync"
+                    type="text"
+                    placeholder="Nhập Groq API key"
+                  />
+                  <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                    💡 Lấy Key tại
+                    <a
+                      href="https://console.groq.com"
+                      target="_blank"
+                      style="color: var(--primary)"
+                      >console.groq.com</a
+                    >.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
+
+          <!-- Multiple Gemini Keys (Advanced) -->
+          <details
+            style="
+              border: 1px solid #bfdbfe;
+              border-radius: 12px;
+              background: white;
+              padding: 0 16px;
+              margin-bottom: 16px;
+            "
+          >
+            <summary style="padding: 12px 0; font-weight: 600; cursor: pointer; color: #1e40af">
+              🔑 Multiple Gemini Keys (Nâng cao - Tối đa 10 keys)
+            </summary>
+            <div class="field" style="padding-bottom: 16px">
+              <p style="margin: 0 0 12px; font-size: 12px; color: var(--muted)">
+                Nhập nhiều API keys (mỗi dòng một key). Hệ thống sẽ random chọn key để sử dụng, giúp tránh bị rate limit.
+              </p>
+              <textarea
+                id="geminiApiKeys"
+                placeholder="API_KEY_1&#10;API_KEY_2&#10;API_KEY_3"
+                style="
+                  width: 100%;
+                  height: 120px;
+                  box-sizing: border-box;
+                  border: 1px solid var(--border);
+                  border-radius: 12px;
+                  padding: 12px 14px;
+                  font-family: monospace;
+                  font-size: 13px;
+                  background: white;
+                  resize: vertical;
+                "
+              ></textarea>
+              <button type="button" id="addGeminiKeyBtn" class="secondary" style="margin-top: 8px; font-size: 12px; padding: 8px 12px;">
+                + Thêm Key
+              </button>
+            </div>
+          </details>
 
           <!-- Fallback AI Configuration -->
           <div
@@ -440,7 +502,8 @@
                   "
                 >
                   <option value="none">Không sử dụng dự phòng</option>
-                  <option value="cerebras">Cerebras Cloud (Hạn mức cực lớn - Free)</option>
+                  <option value="groq">Groq (Free - Rất nhanh)</option>
+                  <option value="cerebras">Cerebras Cloud (Free)</option>
                   <option value="gemini">Google Gemini AI Studio (Miễn phí)</option>
                 </select>
               </div>
@@ -499,6 +562,28 @@
                       target="_blank"
                       style="color: var(--primary)"
                       >cloud.cerebras.ai</a
+                    >.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Fallback Groq API Key -->
+              <div id="fallbackGroqKeyContainer" style="display: none; margin-top: 12px">
+                <div class="field">
+                  <label for="fallbackGroqApiKey">Groq API Key</label>
+                  <input
+                    id="fallbackGroqApiKey"
+                    class="groq-key-sync"
+                    type="text"
+                    placeholder="Nhập Groq API key"
+                  />
+                  <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                    💡 Lấy Key tại
+                    <a
+                      href="https://console.groq.com"
+                      target="_blank"
+                      style="color: var(--primary)"
+                      >console.groq.com</a
                     >.
                   </p>
                 </div>
