@@ -1,5 +1,12 @@
 # Nhật ký thay đổi (Changelog)
 
+## [1.7.1] - 2026-04-22
+- **🤖 Model Lists & Translation Quality**:
+  - Curate lại danh sách model của **Groq** và **Cerebras** theo hướng ưu tiên chất lượng dịch Nhật -> Việt.
+  - Loại bỏ các model `8B` khỏi dropdown để tránh chọn các model cho chất lượng dịch không ổn định.
+  - Thêm `qwen/qwen3-32b` vào danh sách **Groq** dưới dạng lựa chọn preview cho tác vụ đa ngôn ngữ.
+  - Sửa model ID của **Cerebras Qwen** theo docs mới thành `qwen-3-235b-a22b-instruct-2507` để tránh lỗi gọi API sai model.
+
 ## [1.7.0] - 2026-04-22
 - **🤖 AI Providers & API Keys**:
   - Thêm **Groq** làm lựa chọn cho cả AI chính và AI dự phòng.
@@ -14,6 +21,9 @@
 - **⚙️ Options UI**:
   - Thêm khối nhập **Groq API Key** cho cả primary và fallback provider.
   - Bổ sung nút `+ Thêm Key` để nhập nhanh danh sách Gemini API keys nhiều dòng.
+  - Hoàn thiện dropdown model cho **Groq** với danh sách model được curate theo ưu tiên dịch Nhật -> Việt.
+  - Cập nhật lại danh sách **Cerebras** theo docs mới, bao gồm sửa đúng model ID của Qwen preview.
+  - Loại bỏ các model `8B` khỏi danh sách Groq/Cerebras để tránh chọn các model dịch kém ổn định.
 
 ## [1.6.1] - 2026-04-21
 - **🎨 Giao diện & Cấu hình (Options)**:

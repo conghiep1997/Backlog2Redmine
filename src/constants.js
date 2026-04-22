@@ -91,6 +91,7 @@
 
     GEMINI_MODELS: global.TB_MODELS?.GEMINI_MODELS || [],
     CEREBRAS_MODELS: global.TB_MODELS?.CEREBRAS_MODELS || [],
+    GROQ_MODELS: global.TB_MODELS?.GROQ_MODELS || [],
 
     ICONS: global.TB_ICONS || {},
 

@@ -1,4 +1,4 @@
-# B2R - Backlog to Redmine (v1.7.0)
+# B2R - Backlog to Redmine (v1.7.1)
 
 Chrome extension dịch comment từ Backlog sang tiếng Việt và đồng bộ dữ liệu thông minh sang Redmine. Tên mới: **B2R**.
 
@@ -60,6 +60,12 @@ Phiên bản hiện tại hỗ trợ nhiều nhà cung cấp AI free-tier và ch
 - ✅ **Multiple Gemini Keys**: Nhập tối đa 10 Gemini API keys, mỗi dòng một key
 - ✅ **Random Key Rotation**: Tự động random Gemini key khi gọi API để giảm lỗi rate limit
 - ✅ **Encrypted Storage**: Toàn bộ API keys vẫn được mã hóa trước khi lưu cục bộ
+- ✅ **Curated Translation Models**: Danh sách model của Groq/Cerebras đã được lọc theo hướng ưu tiên chất lượng dịch Nhật -> Việt, loại bỏ các model 8B
+
+### Suggested Translation Models
+
+- **Groq**: `llama-3.3-70b-versatile`, `openai/gpt-oss-120b`, `qwen/qwen3-32b`, `openai/gpt-oss-20b`
+- **Cerebras**: `gpt-oss-120b`, `qwen-3-235b-a22b-instruct-2507`, `zai-glm-4.7`
 
 ---
 
@@ -235,4 +241,4 @@ Chi tiết các thay đổi qua từng phiên bản có thể được xem tại
 
 ---
 
-**Developed by Hipppo** 🦛 | Version **1.7.0** (April 2026)
+**Developed by Hipppo** 🦛 | Version **1.7.1** (April 2026)

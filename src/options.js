@@ -408,7 +408,9 @@ document.addEventListener("DOMContentLoaded", () => {
         ? TB.GEMINI_MODELS
         : provider === TB.PROVIDERS.CEREBRAS
           ? TB.CEREBRAS_MODELS
-          : [];
+          : provider === TB.PROVIDERS.GROQ
+            ? TB.GROQ_MODELS
+            : [];
 
     selectElement.innerHTML = "";
     models.forEach((model) => {
