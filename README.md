@@ -1,8 +1,8 @@
-# B2R - Backlog to Redmine (v1.6.0)
+# B2R - Backlog to Redmine (v1.6.1)
 
 Chrome extension dịch comment từ Backlog sang tiếng Việt và đồng bộ dữ liệu thông minh sang Redmine. Tên mới: **B2R**.
 
-**Latest Update:** v1.6.0 - Enhanced AI Marker Recovery, Redundant Attachment Cache, and Improved Options UI.
+**Latest Update:** v1.6.1 - Switched Primary AI to Gemini, updated default models, and fixed API key status display.
 
 ---
 
@@ -46,13 +46,13 @@ B2R/
 
 ## 🤖 Hệ thống AI hỗ trợ
 
-Phiên bản 1.6.0 tối ưu hóa cho tài khoản Free Tier:
+Phiên bản 1.6.1 tối ưu hóa cho tài khoản Free Tier:
 
 | Provider | Model | Rate Limit | Best For |
 |----------|-------|------------|----------|
-| **Primary** | Llama 3.1 8B (Cerebras) | 1000 RPM / 100k RPD | Fast & stable |
-| **Options** | Qwen 3 235B (Cerebras) | High quota | Complex translation |
-| **Fallback** | Gemma 3 27B IT (Gemini) | 15 RPM / 31 RPD | Quality backup |
+| **Primary** | Gemini 3.1 Flash Lite | 15 RPM / 31 RPD | Balanced quality & speed |
+| **Options** | Gemma 3 27B IT | Medium quota | High quality backup |
+| **Fallback** | GPT OSS 120B (Cerebras) | High quota | Fast & high-capacity backup |
 
 ---
 
@@ -73,7 +73,7 @@ Phiên bản 1.6.0 tối ưu hóa cho tài khoản Free Tier:
 - 🔔 **Smart Error Handling**: Tự động hiển thị link tới trang cấu hình khi có lỗi API key.
 - ⚡ **Quick Settings Access**: Click vào biểu tượng extension để mở nhanh trang Options.
 - 📦 **Confirm Modal**: Preview và edit trước khi gửi
-- 🏃 **Loading States**: Spinner và disabled states rõ ràng
+- 🏃 **Loading States**: Spinner and disabled states rõ ràng
 
 ### Security
 
@@ -191,7 +191,7 @@ npm run build:zip
 ## 🔐 Security
 
 - API keys encrypted với **AES-GCM-256**
-- Per-user salt từ `chrome.storage` UUID
+- Per-User salt từ `chrome.storage` UUID
 - Timeout fetch: 10-15s cho mọi API calls
 - Không gửi keys ra ngoài extension
 
@@ -213,4 +213,4 @@ Chi tiết các thay đổi qua từng phiên bản có thể được xem tại
 
 ---
 
-**Developed by Hipppo** 🦛 | Version **1.6.0** (April 2026)
+**Developed by Hipppo** 🦛 | Version **1.6.1** (April 2026)

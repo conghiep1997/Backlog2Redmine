@@ -13,14 +13,6 @@
  *
  * @param {HTMLElement} element - DOM element containing comment content
  * @returns {string} Markdown-formatted content
- *
- * @example
- * // Backlog HTML: <strong>Bold</strong> text
- * // Returns: **Bold** text
- *
- * @example
- * // Backlog HTML: <ul><li>Item 1</li></ul>
- * // Returns: * Item 1
  */
 function extractBacklogContent(element) {
   if (!element) {
@@ -47,7 +39,8 @@ function extractBacklogContent(element) {
       let text = node.textContent;
       // Normalize whitespace (unless inside pre block)
       if (!isInsidePre) {
-        text = text.replace(/([^\n])\s+/g, "$1 ").replace(/^\s+/, " ");
+        // Keep original line breaks, but normalize multiple spaces on a single line
+        text = text.replace(/[^\n]\s{2,}/g, (match) => match[0] + " ");
       }
       // Process text inside blockquote
       if (isInsideBlockquote && result.endsWith("> ")) {
@@ -130,9 +123,11 @@ function extractBacklogContent(element) {
           ) {
             result = textBefore + linkText;
           } else {
-            // External/other links: create markdown link
+            // External/other links: create markdown link [text](url)
             result = textBefore + `[${linkText}](${href})`;
           }
+        } else if (href) {
+            result = textBefore + `[${href}](${href})`;
         }
         return;
       }
@@ -148,7 +143,6 @@ function extractBacklogContent(element) {
         let language = "";
 
         if (codeEl) {
-          // Extract language from class (e.g., "language-javascript")
           const langClass = Array.from(codeEl.classList).find((c) => c.startsWith("language-"));
           if (langClass) {
             language = langClass.replace("language-", "");
@@ -186,14 +180,12 @@ function extractBacklogContent(element) {
         const src = node.getAttribute("src") || "";
         const alt = node.getAttribute("alt") || "";
 
-        // Backlog attachment image: keep marker for later processing
         if (node.classList.contains("loom-internal-image") || src.includes("ViewAttachmentImage")) {
           const match = src.match(/attachmentId=(\d+)/);
           if (match) {
             result += ` [[TB_IMG:${match[1]}]] `;
           }
         } else {
-          // External image: create markdown image
           result += `![${alt}](${src}) `;
         }
         return;
@@ -208,7 +200,6 @@ function extractBacklogContent(element) {
         for (const child of node.childNodes) {
           walk(child, { ...options, isInsideBlockquote: true });
         }
-        // Add "> " to the start of each line
         const quoteText = result.slice(quoteStart);
         result =
           result.slice(0, quoteStart) +
@@ -237,7 +228,6 @@ function extractBacklogContent(element) {
 
       // List items: <li> -> * item or 1. item
       if (tag === "li") {
-        // Calculate indentation based on list stack depth
         const indent = "  ".repeat(Math.max(0, listStack.length - 1));
         const listInfo = listStack[listStack.length - 1];
 
@@ -267,24 +257,17 @@ function extractBacklogContent(element) {
         }
         isInsideTable = false;
 
-        // Convert table rows to Markdown table format
         if (tableRows.length > 0) {
           if (result.length > 0 && !result.endsWith("\n")) {
             result += "\n";
           }
           const maxCols = Math.max(...tableRows.map((r) => r.length));
-
-          // Header row
           const headerRow = tableRows[0] || [];
           while (headerRow.length < maxCols) {
             headerRow.push("");
           }
           result += "| " + headerRow.join(" | ") + " |\n";
-
-          // Separator row
           result += "|" + " --- |".repeat(maxCols) + "\n";
-
-          // Data rows
           for (let i = 1; i < tableRows.length; i++) {
             const row = tableRows[i];
             while (row.length < maxCols) {
@@ -322,8 +305,9 @@ function extractBacklogContent(element) {
           walk(child, options);
         }
         const textAfter = result.slice(textBefore.length);
-        if (textAfter.trim() && !result.endsWith("\n")) {
-          result += "\n";
+        // Only add double newline if there's actual content and not already present
+        if (textAfter.trim() && !result.endsWith("\n\n")) {
+          result += "\n\n";
         }
         return;
       }
@@ -350,16 +334,15 @@ function extractBacklogContent(element) {
     }
   }
 
-  // Start walking from root element
   walk(element);
 
-  // Cleanup: Remove redundant formatting
+  // Cleanup: remove redundant formatting while preserving meaningful line breaks
   return result
     .split("\n")
     .map((line) => line.trimEnd())
     .join("\n")
-    .replace(/\n{3,}/g, "\n\n") // Max 2 consecutive newlines
-    .replace(/\*\*\*\*/g, "**") // Fix nested bold markers
-    .replace(/``+/g, "`") // Fix multiple backticks
+    .replace(/\n{3,}/g, "\n\n") // Keep max 2 consecutive newlines (1 blank line)
+    .replace(/\*\*\*\*/g, "**")
+    .replace(/``+/g, "`")
     .trim();
 }

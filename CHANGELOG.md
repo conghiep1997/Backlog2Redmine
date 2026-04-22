@@ -1,5 +1,28 @@
 # Nhật ký thay đổi (Changelog)
 
+## [1.6.1] - 2026-04-21
+- **🎨 Giao diện & Cấu hình (Options)**:
+  - **Thay đổi AI mặc định**: Chuyển Gemini sang làm AI chính (Primary) và Cerebras làm AI dự phòng (Fallback) để tối ưu chất lượng dịch thuật ban đầu.
+  - **Cập nhật Model mặc định**:
+    - Gemini: Gemini 3.1 Flash Lite (RPM 17).
+    - Cerebras: GPT 120B.
+  - **Sửa lỗi hiển thị**: Khắc phục lỗi không hiển thị trạng thái "Saved" khi nhập Cerebras API Key.
+- **🚀 Tính năng nâng cao (Advanced Features)**:
+  - **Thông tin người gửi**: Thêm Tên người tạo và Thời gian tạo comment vào đầu mỗi bản ghi gửi sang Redmine.
+  - **Migrate Target Version**: Tích hợp trường Target Version trong Modal Migrate, tự động map từ Milestone của Backlog.
+  - **Thông minh hóa đính kèm**: Triển khai cơ chế "Look-Ahead" để gộp các file media được upload ở các comment tiếp theo (comment chỉ chứa media) vào comment chính.
+  - **Khớp tên file**: Tự động tìm và gộp file đính kèm từ comment sau nếu tên file được nhắc đến trong văn bản comment trước.
+  - **Tối ưu Due Date**: Giá trị mặc định cho Due Date được tính là 3 ngày làm việc tiếp theo (bỏ qua T7, CN).
+- **⚙️ Tối ưu hóa Markdown & Format**:
+  - **Bảo toàn định dạng**: Sửa lỗi mất dòng trống trong comment, đảm bảo giữ lại khoảng trắng hợp lý giữa các đoạn văn.
+  - **Chuẩn hóa danh sách**: Fix lỗi hiển thị Ordered List (1, 2, 3...) và Blockquotes (>) để khớp hoàn toàn với hiển thị của Redmine.
+  - **Sửa lỗi Link**: Đảm bảo mọi đường dẫn tài liệu đều được render dạng link click được thay vì chỉ hiển thị text.
+- **🧠 Cải thiện AI Prompt**:
+  - **Hỗ trợ Song ngữ**: AI tự động nhận diện và trả về định dạng 「Nội dung gốc」 (Bản dịch) cho các thuật ngữ quan trọng hoặc nội dung trong ngoặc vuông Nhật Bản.
+- **🔧 Chuẩn hóa mã nguồn**:
+  - Fix toàn bộ lỗi Linting và Parsing error trong `src/redmine_content.js` và `src/modules/services/report-log-time.js`.
+  - Tối ưu hóa khai báo Global variables để tương thích với ESLint.
+
 ## [1.6.0] - 2026-04-20
 - **✨ Trải nghiệm người dùng (UX)**:
   - **Màn hình chờ (Loading Overlay)**: Thêm hiệu ứng làm mờ và vòng xoay (Spinner) khi đang di chuyển dữ liệu để tránh thao tác nhầm và cung cấp phản hồi trực quan.

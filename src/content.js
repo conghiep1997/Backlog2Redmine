@@ -174,7 +174,7 @@ function injectButtonIfNeeded(actionsEl) {
 }
 
 async function handleTranslateAndOpenModal(actionsEl, button) {
-  const commentItem = actionsEl.closest(".comment-item") || actionsEl.parentElement;
+  const commentItem = actionsHoz_closest(".comment-item") || actionsEl.parentElement;
   const { issueKey, issueSummary } = getBacklogHeaderInfo();
   if (!issueKey) {
     showToast(TB.MESSAGES.TOAST.MISSING_ISSUE_KEY, "error");
@@ -262,8 +262,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
 }
 
 async function handleIssueMigration(button) {
-  // Migration: Create a new issue on Redmine from a Backlog issue
-  const { issueKey, issueSummary, backlogIssueType } = getBacklogHeaderInfo();
+  const { issueKey, issueSummary, backlogIssueType, backlogMilestone } = getBacklogHeaderInfo();
   if (!issueKey) {
     showToast(TB.MESSAGES.TOAST.MISSING_ISSUE_KEY, "error");
     return;
@@ -330,12 +329,13 @@ async function handleIssueMigration(button) {
       remainingComments: comments,
       commentsCount: comments.length,
       backlogIssueType,
+      backlogMilestone,
       onCancel: () => setButtonLoading(button, false),
       onConfirm: async ({ issueData, comments: translatedComments }) => {
         const issueDataToSend = {
           ...issueData,
           backlogIssueKey: issueKey,
-        };
+        },
         const result = await sendRuntimeMessageWithResponse({
           type: "CREATE_REDMINE_ISSUE",
           issueData: issueDataToSend,
@@ -406,7 +406,7 @@ function showSettingsErrorLink(message) {
     e.preventDefault();
     chrome.runtime.sendMessage({ type: "OPEN_OPTIONS_PAGE" });
     container.remove();
-  };
+  }
 
   document.getElementById("tb-close-error-link").onclick = (e) => {
     e.preventDefault();
@@ -437,6 +437,7 @@ function getCommentFullText(itemEl) {
     userInfo = `**${userEl.textContent.trim()}**\n${timeEl.textContent.trim()}\n\n`;
   }
 
+  // Extract content
   const contentEl =
     itemEl.querySelector(".markdown-body") ||
     itemEl.querySelector(".comment-item__content") ||
@@ -446,35 +447,49 @@ function getCommentFullText(itemEl) {
 
   let text = contentEl ? extractBacklogContent(contentEl) : itemEl.innerText || "";
 
-  // Scrape attachments from Changelog and modern lists
-  const attachmentLinks = itemEl.querySelectorAll(
-    ".comment-changelog__item a[href*=\"attachmentId=\"], " +
-      ".upload-item-list li a[href*=\"attachmentId=\"], " +
-      ".comment-attachments a[href*=\"attachmentId=\"], " +
-      "a.attachment-file[href*=\"attachmentId=\"]"
-  );
+  // 1. Get current attachments
+  const currentAttachments = scrapeAttachments(itemEl);
 
-  const foundIds = new Set();
-  attachmentLinks.forEach((link) => {
-    const href = link.getAttribute("href");
-    const match = href.match(/attachmentId=(\d+)/);
-    if (match) {
-      const id = match[1];
-      if (foundIds.has(id)) return;
-      foundIds.add(id);
+  // 2. Look-ahead for "Media-only" subsequent comments
+  const nextComment = itemEl.nextElementSibling;
+  if (nextComment && nextComment.classList.contains("comment-item")) {
+    const nextContentEl =
+      nextComment.querySelector(".markdown-body") ||
+      nextComment.querySelector(".comment-item__content") ||
+      nextComment.querySelector(".comment-item__body") ||
+      nextComment.querySelector(".comment-content") ||
+      nextComment.querySelector(".item-body");
+    
+    const nextText = nextContentEl ? extractBacklogContent(nextContentEl).trim() : "";
+    const nextAttachments = scrapeAttachments(nextComment);
 
-      const filename = link.textContent.trim();
-      // Skip download links and duplicate entries
-      if (
-        filename &&
-        filename.toLowerCase() !== "download" &&
-        !text.includes(`[[TB_FILE:${id}:`) &&
-        !text.includes(`[[TB_IMG:${id}]]`)
-      ) {
-        text += `\n\n**Attachment**: [[TB_FILE:${id}:${filename}]]`;
+    // Case A: Next comment is strictly for media (no meaningful text)
+    if (!nextText || nextText.length < 10) { // Threshold for "Lưu ý: nội dung ngắn hoặc trống"
+      nextAttachments.forEach((id, filename) => {
+        currentAttachments.set(filename, id);
+      });
+    } else {
+      // Case B: Next comment has text, but current text mentions a file that is in the next comment
+      const words = text.split(/\s+/);
+      for (const word of words) {
+        const cleanWord = word.replace(/[.,!?;:]$/, ""); // Remove trailing punctuation
+        if (nextAttachments.has(cleanWord)) {
+          const id = nextAttachments.get(cleanWord);
+          currentAttachments.set(cleanWord, id);
+        }
       }
     }
+  }
+
+  // Build attachment markers into text
+  let attachmentText = "";
+  currentAttachments.forEach((id, filename) => {
+    if (!text.includes(`[[TB_FILE:${id}:`)) {
+      attachmentText += `\n\n**Attachment**: [[TB_FILE:${id}:${filename}]]`;
+    }
   });
+  text += attachmentText;
+
   return { text: text.trim(), userInfo };
 }
 
@@ -482,6 +497,7 @@ function getBacklogHeaderInfo() {
   // Try data-testid first (Modern UI)
   let issueKey = document.querySelector("[data-testid=\"issueKey\"]")?.textContent?.trim();
   let issueSummary = document.querySelector("[data-testid=\"issueSummary\"]")?.textContent?.trim();
+  let backlogMilestone = document.querySelector("[data-testid=\"issueMilestone\"]")?.textContent?.trim();
 
   // Try legacy/alternative selectors
   if (!issueKey) {
@@ -494,10 +510,13 @@ function getBacklogHeaderInfo() {
       document.querySelector(".ticket__summary")?.textContent?.trim() ||
       document.querySelector(".title-group__title-text")?.textContent?.trim();
   }
+  if (!backlogMilestone) {
+    backlogMilestone = document.querySelector(".ticket__properties-item.-milestones .ticket__properties-value")?.textContent?.trim();
+  }
 
   // LAST RESORT: Extract Issue Key from URL
   if (!issueKey) {
-    const urlMatch = window.location.pathname.match(/\/view\/([A-Z0-9_]+-[0-9]+)/);
+    const urlMatch = window.location.pathname.match(/\/view\/([A-Z0-9_], [A-Z0-9_]+-[0-9]+)/);
     if (urlMatch) {
       issueKey = urlMatch[1];
     }
@@ -515,6 +534,7 @@ function getBacklogHeaderInfo() {
     issueKey: issueKey || "",
     issueSummary: issueSummary || "",
     backlogIssueType: backlogIssueType || "",
+    backlogMilestone: backlogMilestone || "",
   };
 }
 
@@ -542,11 +562,17 @@ function setButtonLoading(btn, isLoading) {
     // Reset visual styles to non-hover state (Modern Button fix)
     const innerWrap = btn.querySelector("div");
     const textSpan = btn.querySelector(".tb-btn-text");
-    if (innerWrap && textSpan) {
+    if (innerWrap && btn.style.transform === "translateY(-1px)") {
+      // a few more checks here for safety
+    }
+    // Re-apply standard styles
+    const innerWrapEl = btn.querySelector("div");
+    const textSpanEl = btn.querySelector(".tb-btn-text");
+    if (innerWrapEl && textSpanEl) {
       btn.style.transform = "translateY(0)";
       btn.style.boxShadow = "0 2px 6px rgba(59, 130, 246, 0.15)";
-      innerWrap.style.backgroundColor = "#ffffff";
-      textSpan.style.color = "#1d4ed8";
+      innerWrapEl.style.backgroundColor = "#ffffff";
+      textSpanEl.style.color = "#1d4ed8";
     }
   }
 }

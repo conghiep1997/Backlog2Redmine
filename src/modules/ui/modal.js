@@ -63,6 +63,10 @@ function ensureModalShell() {
                 <label for="tb-migrate-priority">${TB.MESSAGES.MODAL.PRIORITY_LABEL}<span class="tb-required">*</span></label>
                 <select id="tb-migrate-priority"><option value="">-- Loader --</option></select>
               </div>
+              <div class="tb-field-group">
+                <label for="tb-migrate-version">Target Version (Milestone)</label>
+                <select id="tb-migrate-version"><option value="">-- Loader --</option></select>
+              </div>
               <div id="tb-migrate-due-date-group" class="tb-field-group">
                 <label id="tb-migrate-due-date-label" for="tb-migrate-due-date">Due Date</label>
                 <input type="date" id="tb-migrate-due-date">
@@ -142,6 +146,7 @@ function ensureModalShell() {
     projectSelect: overlay.querySelector("#tb-migrate-project"),
     trackerSelect: overlay.querySelector("#tb-migrate-tracker"),
     prioritySelect: overlay.querySelector("#tb-migrate-priority"),
+    versionSelect: overlay.querySelector("#tb-migrate-version"),
     migrateSubjectInput: overlay.querySelector("#tb-migrate-subject"),
     migrateDueDateInput: overlay.querySelector("#tb-migrate-due-date"),
     migrateDueDateLabel: overlay.querySelector("#tb-migrate-due-date-label"),
@@ -193,6 +198,7 @@ function openConfirmModal(options) {
     onConfirm,
     translateBatch,
     backlogIssueType = "",
+    backlogMilestone = "",
   } = options;
   ensureModalShell();
   const {
@@ -213,6 +219,7 @@ function openConfirmModal(options) {
     projectSelect,
     trackerSelect,
     prioritySelect,
+    versionSelect,
     migrateSubjectInput,
     migrateDueDateInput,
     commentsPreviewGroup,
@@ -331,7 +338,7 @@ function openConfirmModal(options) {
 
     migrateDueDateInput.onchange = validateMigrationForm;
 
-    fetchRedmineMetadataForModal(backlogIssueType).then(() => {
+    fetchRedmineMetadataForModal(backlogIssueType, backlogMilestone).then(() => {
       const initialTracker = trackerSelect.options[trackerSelect.selectedIndex]?.text;
 
       if (initialTracker === "Bug") {
@@ -348,7 +355,13 @@ function openConfirmModal(options) {
       validateMigrationForm();
     });
 
-    projectSelect.onchange = validateMigrationForm;
+    projectSelect.onchange = (e) => {
+      const newProjectId = e.target.value;
+      if (newProjectId) {
+        updateVersionsDropdown(newProjectId, backlogMilestone);
+      }
+      validateMigrationForm();
+    };
     migrateSubjectInput.oninput = validateMigrationForm;
   }
 
@@ -383,7 +396,6 @@ function openConfirmModal(options) {
   issueIdInput.value = redmineIssueId;
   issueTitleInput.value = issueTitle;
 
-  let isValidated = false;
   let lastCheckedId = "";
 
   const loadRedmineTitle = async (id) => {
@@ -391,7 +403,6 @@ function openConfirmModal(options) {
     if (!id || id === lastCheckedId) return;
 
     lastCheckedId = id;
-    isValidated = false;
     confirmButton.disabled = true;
 
     if (!/^\d+$/.test(id)) {
@@ -408,14 +419,12 @@ function openConfirmModal(options) {
       });
       if (res?.data?.issue?.subject) {
         issueTitleInput.value = res.data.issue.subject;
-        isValidated = true;
         confirmButton.disabled = false;
       } else {
         throw new Error("Invalid response");
       }
     } catch (err) {
       issueTitleInput.value = TB.MESSAGES.MODAL.ERROR_NOT_FOUND;
-      isValidated = false;
       confirmButton.disabled = true;
     }
   };
@@ -447,6 +456,7 @@ function openConfirmModal(options) {
           project_id: projectSelect.value,
           tracker_id: trackerSelect.value,
           priority_id: prioritySelect.value,
+          fixed_version_id: versionSelect.value, // Added Target Version
           subject: migrateSubjectInput.value.trim(),
           description: previewTextarea.value.trim(),
           due_date: migrateDueDateInput.value,
@@ -571,8 +581,8 @@ function openSuccessModal({ redmineUrl, commentCount = 1, onClose }) {
   document.body.classList.add("tb-modal-open");
 }
 
-async function fetchRedmineMetadataForModal(backlogIssueType) {
-  const { projectSelect, trackerSelect, prioritySelect } = modalElements;
+async function fetchRedmineMetadataForModal(backlogIssueType, backlogMilestone) {
+  const { projectSelect, trackerSelect, prioritySelect, versionSelect } = modalElements;
   try {
     const [settings, projectsRes, trackersRes, prioritiesRes] = await Promise.all([
       sendRuntimeMessage({ type: "GET_SETTINGS" }).catch(() => ({})),
@@ -596,6 +606,11 @@ async function fetchRedmineMetadataForModal(backlogIssueType) {
       .map((p) => `<option value="${p.id}">${p.name}</option>`)
       .join("");
     if (redmineSettings?.defaultProjectId) projectSelect.value = redmineSettings.defaultProjectId;
+
+    // Load versions for the default project
+    if (projectSelect.value) {
+      updateVersionsDropdown(projectSelect.value, backlogMilestone);
+    }
 
     const allowedTrackers = ["Task", "Bug", "Issue", "CR", "Q/A", "Q&A"];
     trackerSelect.innerHTML = (trackersRes.data?.trackers || [])
@@ -624,6 +639,31 @@ async function fetchRedmineMetadataForModal(backlogIssueType) {
       .join("");
   } catch (error) {
     showToast(`${TB.MESSAGES.MODAL.ERROR_METADATA}: ${error.message}`, "error");
+  }
+}
+
+async function updateVersionsDropdown(projectId, backlogMilestone) {
+  const { versionSelect } = modalElements;
+  versionSelect.innerHTML = "<option value=\"\">-- Tải version --</option>";
+  try {
+    const versionsRes = await sendRuntimeMessage({
+      type: "FETCH_REDMINE_METADATA",
+      endpoint: `/projects/${projectId}/versions.json`,
+    });
+    const versions = versionsRes.data?.versions || [];
+    versionSelect.innerHTML = "<option value=\"\">-- Trống --</option>";
+    versions.forEach((v) => {
+      const opt = document.createElement("option");
+      opt.value = v.id;
+      opt.textContent = v.name;
+      // Auto-select if version name matches Backlog milestone
+      if (backlogMilestone && v.name.toLowerCase().includes(backlogMilestone.toLowerCase())) {
+        opt.selected = true;
+      }
+      versionSelect.appendChild(opt);
+    });
+  } catch (err) {
+    versionSelect.innerHTML = "<option value=\"\">-- Lỗi tải version --</option>";
   }
 }
 

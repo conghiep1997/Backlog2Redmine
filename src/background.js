@@ -84,10 +84,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Translate comment to Vietnamese
       const translated = await translateText(message.commentText, settings, message.commentUrl);
 
+      // Prepend user info to the final preview if provided
+      const finalPreview = message.userInfo 
+        ? `${message.userInfo}\n${translated}` 
+        : translated;
+
       return {
         redmineIssueId: redmineIssue?.id || "",
         issueTitle: redmineIssue?.title || message.issueSummary,
-        previewText: translated,
+        previewText: finalPreview,
       };
     },
 
@@ -249,7 +254,7 @@ function assertSettings(settings) {
 /**
  * Fetches metadata from Redmine API endpoint.
  * @param {string} endpoint - API endpoint (e.g., "/projects.json")
- * @returns {Promise<object>} API response data
+ * @returns {Promise<object>} Decrypted settings object
  */
 async function handleFetchMetadata(endpoint) {
   const settings = await getSettings();

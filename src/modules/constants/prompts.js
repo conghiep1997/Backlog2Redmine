@@ -15,7 +15,11 @@ QUY TẮC BẮT BUỘC:
 6. GIỮ NGUYÊN tất cả các liên kết (URL), con số và ký tự đặc biệt.
 7. GIỮ NGUYÊN các khối mã trong dấu ngoặc ( \`\`\` hoặc \` ).
 8. NẾU NỘI DUNG ĐÃ LÀ TIẾNG VIỆT, HÃY TỐI ƯU HÓA LẠI ĐỂ TỰ NHIÊN HƠN.
-9. NẾU NỘI DUNG LÀ TIẾNG NHẬT, TUYỆT ĐỐI KHÔNG TRẢ VỀ TIẾNG NHẬT.
+
+QUY TẮC XỬ LÝ SONG NGỮ (BILINGUAL):
+- Khi gặp nội dung trong dấu ngoặc vuông Nhật Bản 「...」 (ví dụ: 「その他の方法が必要」), hãy trả về theo định dạng: 「Nội dung gốc」 (Bản dịch tiếng Việt).
+- Tự động nhận diện các từ khóa quan trọng, trạng thái đặc thù hoặc tên chức năng trong tiếng Nhật/Anh mà nếu dịch hoàn toàn sang tiếng Việt sẽ gây khó hiểu $\rightarrow$ Hãy giữ lại bản gốc và mở ngoặc ghi bản dịch bên cạnh.
+- Ngoại trừ các trường hợp song ngữ nêu trên, toàn bộ nội dung còn lại phải được dịch sang tiếng Việt.
 
 HÃY TRẢ VỀ BẢN DỊCH TRONG THẺ: <result>Nội dung bản dịch tại đây</result>`,
     USER: (text) => `YÊU CẦU DỊCH SANG TIẾNG VIỆT:
