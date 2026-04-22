@@ -184,14 +184,16 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
   const allItems = Array.from(document.querySelectorAll(".comment-item"));
   const idx = allItems.findIndex((item) => item === commentItem);
 
-  // Get content from the clicked comment with robust selector fallback
-  const clickedCommentText = getCommentFullText(commentItem);
+  // Get content and userInfo from the clicked comment
+  const { text: clickedCommentText, userInfo: clickedUserInfo } = getCommentFullText(commentItem);
 
   const remainingItems = allItems
     .slice(idx + 1)
     .map((i) => {
+      const { text, userInfo } = getCommentFullText(i);
       return {
-        text: getCommentFullText(i),
+        text,
+        userInfo,
         url: getCommentUrl(i),
       };
     })
@@ -205,6 +207,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
       issueKey,
       issueSummary,
       commentText: clickedCommentText,
+      userInfo: clickedUserInfo,
       commentUrl: getCommentUrl(commentItem),
     });
 
@@ -241,6 +244,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
               issueKey,
               issueSummary,
               commentText: c.text,
+              userInfo: c.userInfo,
               commentUrl: c.url,
             }).then((r) => r.data.previewText)
           )
@@ -268,8 +272,10 @@ async function handleIssueMigration(button) {
   // Collect all comments to migrate with the issue
   const comments = Array.from(document.querySelectorAll(".comment-item:not(.-dammy)"))
     .map((i) => {
+      const { text, userInfo } = getCommentFullText(i);
       return {
-        text: getCommentFullText(i),
+        text,
+        userInfo,
         url: getCommentUrl(i),
       };
     })
@@ -308,6 +314,7 @@ async function handleIssueMigration(button) {
         issueKey,
         issueSummary,
         commentText: fullDescription,
+        userInfo: "", // No userInfo for main description
         commentUrl: window.location.href,
       }),
       sendRuntimeMessageWithResponse({
@@ -348,6 +355,7 @@ async function handleIssueMigration(button) {
               issueKey,
               issueSummary,
               commentText: c.text,
+              userInfo: c.userInfo,
               commentUrl: c.url,
             }).then((r) => r.data.previewText)
           )
@@ -419,7 +427,16 @@ function sendRuntimeMessageWithResponse(message) {
 }
 
 function getCommentFullText(itemEl) {
-  if (!itemEl) return "";
+  if (!itemEl) return { text: "", userInfo: "" };
+
+  // --- Extract User & Time Information ---
+  let userInfo = "";
+  const userEl = itemEl.querySelector(".user-icon-set__name");
+  const timeEl = itemEl.querySelector(".user-icon-set__sub-line-anchor");
+  if (userEl && timeEl) {
+    userInfo = `**${userEl.textContent.trim()}**\n${timeEl.textContent.trim()}\n\n`;
+  }
+
   const contentEl =
     itemEl.querySelector(".markdown-body") ||
     itemEl.querySelector(".comment-item__content") ||
@@ -458,7 +475,7 @@ function getCommentFullText(itemEl) {
       }
     }
   });
-  return text.trim();
+  return { text: text.trim(), userInfo };
 }
 
 function getBacklogHeaderInfo() {

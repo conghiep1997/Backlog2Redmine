@@ -310,7 +310,7 @@ function fixMangledMarkers(text) {
 function formatTranslation(originalText, cleanedText, commentUrl = null) {
   // Format output: add comment URL (if exists) and translation
   const prefix = commentUrl ? `${commentUrl}\n\n` : "";
-  return `${prefix}${originalText.trim()}\n\n---\n\n${cleanedText}`;
+  return `${prefix}${originalText.trim()}\n\n---\n\n{{collapse(VN)\n\n${cleanedText}\n}}`;
 }
 
 function sanitizeErrorMessage(message, status) {

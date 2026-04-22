@@ -50,6 +50,8 @@
         "src/modules/ui/styles.js",
         "src/modules/ui/toast.js",
         "src/modules/ui/modal.js",
+        "src/modules/services/redmine.js",
+        "src/modules/services/report-log-time.js",
         "src/redmine_content.js"
       ],
       "run_at": "document_idle"

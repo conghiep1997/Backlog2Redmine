@@ -1,3 +1,4 @@
+
 /* global downloadBacklogFile, TB_LOGGER */
 /**
  * Redmine API Service for Backlog2Redmine Extension.
@@ -46,6 +47,33 @@ async function findRedmineIssue(redmineDomain, apiKey, issueKey, issueSummary = 
 
   // Fallback to API if HTML search failed
   return findRedmineIssueViaApi(redmineDomain, apiKey, issueKey, issueSummary);
+}
+
+/**
+ * Finds issues based on a set of criteria.
+ * @param {string} redmineDomain - The domain of the Redmine instance.
+ * @param {string} apiKey - The user's Redmine API key.
+ * @param {object} params - An object of query parameters (e.g., { project_id, tracker_id, subject }).
+ * @returns {Promise<Array<object>>} A promise that resolves to an array of issue objects.
+ */
+async function findIssues(redmineDomain, apiKey, params) {
+  const query = new URLSearchParams(params).toString();
+  const url = buildRedmineUrl(redmineDomain, `/issues.json?${query}`);
+
+  const response = await fetch(url, {
+    headers: {
+      "X-Redmine-API-Key": apiKey,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorMsg = await readErrorMessage(response);
+    throw new Error(`Failed to find issues: ${errorMsg}`);
+  }
+
+  const data = await response.json();
+  return data.issues || [];
 }
 
 /**
@@ -224,9 +252,9 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
   };
 }
 
-// ============================================================================
-// HELPERS FOR SEARCHING AND PROCESSING
-// ============================================================================
+// ============================================================================\
+// HELPERS FOR SEARCHING AND PROCESSING\
+// ============================================================================\
 
 /**
  * Fetch Redmine search page HTML.
@@ -290,7 +318,7 @@ function pickBestRedmineSearchResult(results, normalizedIssueKey, normalizedIssu
  *
  * @param {string} notes - The text containing attachment markers.
  * @param {string} backlogDomain - The Backlog domain for downloading files.
- * @param {object} settings - The extension\'s settings.
+ * @param {object} settings - The extension's settings.
  * @param {string} backlogIssueKey - The Backlog issue key.
  * @param {Map|null} processedAttachments - (Optional) Persistent map of [attachmentId -> markup] to reuse across calls.
  * @returns {Promise<{updatedNotes: string, uploads: Array}>}
@@ -424,4 +452,113 @@ async function uploadToRedmine(domain, apiKey, blob, filename) {
   }
   const data = await response.json();
   return data?.upload?.token;
+}
+
+// ============================================================================\
+// NEW FUNCTIONS FOR SPENT TIME LOGGING (ADDITION)
+// ============================================================================\
+
+/**
+ * Fetches details for a single Redmine issue.
+ * @param {string} redmineDomain - The domain of the Redmine instance.
+ * @param {string} apiKey - The user's Redmine API key.
+ * @param {string} issueId - The ID of the issue to fetch.
+ * @returns {Promise<object>} The issue object from the API.
+ */
+async function getIssueDetails(redmineDomain, apiKey, issueId) {
+  const url = buildRedmineUrl(redmineDomain, `/issues/${issueId}.json`);
+  const response = await fetch(url, {
+    headers: {
+      "X-Redmine-API-Key": apiKey,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorMsg = await readErrorMessage(response);
+    throw new Error(`Failed to fetch issue details for #${issueId}: ${errorMsg}`);
+  }
+
+  const data = await response.json();
+  return data.issue;
+}
+
+/**
+ * Logs a time entry (spent time) for a specific issue.
+ * @param {string} redmineDomain - The domain of the Redmine instance.
+ * @param {string} apiKey - The user's Redmine API key.
+ * @param {string} issueId - The ID of the issue to log time against.
+ * @param {number} hours - The number of hours to log.
+ * @param {string} [comments=""] - Optional comments for the time entry.
+ * @returns {Promise<object>} The created time entry object from the API.
+ */
+async function logTimeEntry(redmineDomain, apiKey, issueId, hours, comments = "") {
+  const url = buildRedmineUrl(redmineDomain, "/time_entries.json");
+  const payload = {
+    time_entry: {
+      issue_id: issueId,
+      hours: hours,
+      comments: comments,
+    },
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "X-Redmine-API-Key": apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorMsg = await readErrorMessage(response);
+    throw new Error(`Failed to log time for issue #${issueId}: ${errorMsg}`);
+  }
+
+  const data = await response.json();
+  return data.time_entry;
+}
+
+/**
+ * Fetches the current user's account information from Redmine.
+ * @param {string} redmineDomain - The domain of the Redmine instance.
+ * @param {string} apiKey - The user's Redmine API key.
+ * @returns {Promise<object>} The user object from the API.
+ */
+async function getCurrentUser(redmineDomain, apiKey) {
+  const url = buildRedmineUrl(redmineDomain, "/my/account.json");
+  const response = await fetch(url, {
+    headers: {
+      "X-Redmine-API-Key": apiKey,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorMsg = await readErrorMessage(response);
+    throw new Error(`Failed to fetch current user: ${errorMsg}`);
+  }
+
+  const data = await response.json();
+  return data.user;
+}
+
+/**
+ * Fetches all available trackers from Redmine.
+ * @param {string} redmineDomain - The domain of the Redmine instance.
+ * @param {string} apiKey - The user's Redmine API key.
+ * @returns {Promise<Array<object>>} A promise that resolves to an array of tracker objects.
+ */
+async function getTrackers(redmineDomain, apiKey) {
+  const url = buildRedmineUrl(redmineDomain, "/trackers.json");
+  const response = await fetch(url, {
+    headers: { "X-Redmine-API-Key": apiKey, "Content-Type": "application/json" }
+  });
+  if (!response.ok) {
+    const errorMsg = await readErrorMessage(response);
+    throw new Error(`Failed to fetch trackers: ${errorMsg}`);
+  }
+  const data = await response.json();
+  return data.trackers || [];
 }

@@ -68,10 +68,10 @@
     LOG_LEVEL: "debug",
 
     // Use values from modular constants if loaded, otherwise defaults
-    GEMINI_MODEL: global.TB_MODELS?.GEMINI || "gemma-3-27b-it",
+    GEMINI_MODEL: global.TB_MODELS?.GEMINI || "gemini-3.1-flash-lite-preview",
     GEMINI_FALLBACK_MODEL: global.TB_MODELS?.GEMINI_FALLBACK || "gemini-flash-lite-latest",
-    CEREBRAS_MODEL: global.TB_MODELS?.CEREBRAS || "llama3.1-8b",
-    DEFAULT_PROVIDER: "cerebras",
+    CEREBRAS_MODEL: global.TB_MODELS?.CEREBRAS || "gpt-oss-120b",
+    DEFAULT_PROVIDER: "gemini",
 
     PROVIDERS: {
       GEMINI: "gemini",
@@ -79,10 +79,10 @@
       NONE: "none",
     },
 
-    DEFAULT_PRIMARY_PROVIDER: "cerebras",
-    DEFAULT_PRIMARY_MODEL: "llama3.1-8b",
-    DEFAULT_FALLBACK_PROVIDER: "gemini",
-    DEFAULT_FALLBACK_MODEL: "gemma-3-27b-it",
+    DEFAULT_PRIMARY_PROVIDER: "gemini",
+    DEFAULT_PRIMARY_MODEL: "gemini-3.1-flash-lite-preview",
+    DEFAULT_FALLBACK_PROVIDER: "cerebras",
+    DEFAULT_FALLBACK_MODEL: "gpt-oss-120b",
 
     BACKLOG_DOMAIN: "https://shift7.backlog.com",
     REDMINE_DOMAIN: "https://redmine.splus-software.com",

@@ -11,6 +11,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const redmineDomainInput = document.getElementById("redmineDomain");
   const redmineApiKeyInput = document.getElementById("redmineApiKey");
 
+  // New field for Report Project ID
+  const reportProjectIdInput = document.getElementById("reportProjectId");
+
   // Backlog elements
   const backlogDomainInput = document.getElementById("backlogDomain");
   const backlogApiKeyInput = document.getElementById("backlogApiKey");
@@ -148,6 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const settings = {
       redmineApiKey: await encryptData(redmineApiKeyInput.value.trim()),
+      reportProjectId: reportProjectIdInput.value.trim(), // Save the new field
       backlogDomain: backlogDomainInput.value.trim() || TB.BACKLOG_DOMAIN,
       backlogApiKey: await encryptData(backlogApiKeyInput.value.trim()),
       primaryProvider: primaryProviderSelect.value,
@@ -225,6 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.storage.local.get(
       [
         "redmineApiKey",
+        "reportProjectId", // Load the new field
         "backlogDomain",
         "backlogApiKey",
         "geminiApiKey",
@@ -243,6 +248,8 @@ document.addEventListener("DOMContentLoaded", () => {
           redmineApiKeyInput.value = key;
           fetchProjects(key, items.defaultProjectId);
         }
+
+        reportProjectIdInput.value = items.reportProjectId || ""; // Restore the new field
 
         backlogDomainInput.value = items.backlogDomain || TB.BACKLOG_DOMAIN;
         if (items.backlogApiKey) {
@@ -265,6 +272,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (items.geminiApiKey) {
           primaryGeminiApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
           fallbackGeminiApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
+        }
+
+        if (items.cerebrasApiKey) {
+          primaryCerebrasApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
+          fallbackCerebrasApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
         }
 
         if (items.manualFields) {
