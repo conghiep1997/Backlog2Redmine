@@ -45,13 +45,13 @@ function injectStyles() {
       align-items: center;
       gap: 4px;
       margin-left: 10px !important;
-      color: #c93b2f !important;
+      color: #2563eb !important;
       font-weight: bold;
       vertical-align: middle;
       cursor: pointer;
       text-decoration: none !important;
     }
-    .tb-backlog-btn:hover { text-decoration: underline !important; }
+    .tb-backlog-btn:hover { color: #1d4ed8 !important; text-decoration: underline !important; }
     .tb-backlog-btn svg { width: 14px; height: 14px; fill: currentColor; }
 
     /* Modal Overlay */
@@ -147,6 +147,10 @@ function injectStyles() {
     .tb-btn-primary:disabled { background: #94a3b8; transform: none; box-shadow: none; cursor: not-allowed; }
     .tb-btn-secondary { background: #fff; color: #475569; border: 1px solid #e2e8f0; }
     .tb-btn-secondary:hover { background: #f1f5f9; }
+    .tb-success-link-container { margin-top: 8px; }
+    .tb-success-link { color: #2563eb !important; text-decoration: underline; word-break: break-all; }
+    .tb-success-link:visited { color: #1d4ed8 !important; }
+    .tb-success-link:hover { color: #1e40af !important; }
 
     /* Toast */
     .tb-toast {

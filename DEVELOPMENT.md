@@ -244,6 +244,17 @@ npm run format
 npm run build
 ```
 
+### Versioning Rules
+
+- `manifest.json` là **source of truth** cho version phát hành của extension.
+- Workflow release trong `.github/workflows/deploy.yml` đọc version từ `manifest.json`, không đọc từ `package.json`.
+- Tên file ZIP và bước upload Google Drive cũng dựa trên `manifest.json.version`.
+- Dùng `npm run bump` để tự tăng patch version, hoặc `npm run bump -- 1.7.2` để chỉ định version cụ thể. Lệnh này cập nhật đồng bộ `manifest.json`, `package.json` và tạo sẵn stub entry trong `CHANGELOG.md`.
+- Khi bump version để release, còn phải cập nhật:
+  - `CHANGELOG.md`
+  - `README.md` chỉ khi nội dung tài liệu thay đổi, không cần sửa version text thủ công nữa
+- Nếu chỉ tăng `package.json` mà quên `manifest.json`, CI/CD sẽ tiếp tục dùng tag cũ và có thể skip release/upload artifact.
+
 ### Debugging
 
 **Content Script:**

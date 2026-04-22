@@ -1,13 +1,15 @@
 {
   "name": "backlog2redmine",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "description": "Chrome extension to translate and sync comments between Backlog and Redmine",
   "scripts": {
+    "bump": "node scripts/bump-version.js",
+    "check:version-sync": "node scripts/check-version-sync.js",
     "lint": "eslint src/**/*.js",
     "lint:fix": "eslint src/**/*.js --fix",
     "format": "prettier --write \"src/**/*.{js,json,html,css}\"",
     "format:check": "prettier --check \"src/**/*.{js,json,html,css}\"",
-    "build": "npm run lint && npm run format && node scripts/build.js",
+    "build": "npm run check:version-sync && npm run lint && npm run format && node scripts/build.js",
     "build:zip": "node scripts/build-zip.js",
     "test": "echo \"Tests coming soon\" && exit 0",
     "dev": "echo \"Load unpacked extension from dist/ folder in chrome://extensions/\""

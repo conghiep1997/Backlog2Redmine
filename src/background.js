@@ -85,9 +85,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const translated = await translateText(message.commentText, settings, message.commentUrl);
 
       // Prepend user info to the final preview if provided
-      const finalPreview = message.userInfo
-        ? `${message.userInfo}\n${translated}`
-        : translated;
+      const finalPreview = message.userInfo ? `${message.userInfo}\n${translated}` : translated;
 
       return {
         redmineIssueId: redmineIssue?.id || "",
@@ -208,21 +206,24 @@ async function getSettings() {
         "backlogApiKey",
         "geminiApiKey",
         "geminiApiKeys",
+        "geminiModels",
         "cerebrasApiKey",
         "groqApiKey",
-        "aiProvider",
-        "geminiModel",
-        "geminiFallbackModel",
-        "cerebrasModel",
-        "groqModel",
+        "primaryProvider",
+        "primaryModel",
+        "fallbackProvider",
+        "fallbackModel",
         "defaultProjectId",
       ],
       async (items) => {
-        const geminiApiKeysStr = items.geminiApiKeys
-          ? await decryptData(items.geminiApiKeys)
-          : "";
+        const geminiApiKeysStr = items.geminiApiKeys ? await decryptData(items.geminiApiKeys) : "";
         const geminiApiKeys = geminiApiKeysStr
           ? geminiApiKeysStr.split("\n").filter((k) => k.trim())
+          : [];
+
+        const geminiModelsStr = items.geminiModels ? await decryptData(items.geminiModels) : "";
+        const geminiModels = geminiModelsStr
+          ? geminiModelsStr.split("\n").filter((m) => m.trim())
           : [];
 
         resolve({
@@ -230,15 +231,15 @@ async function getSettings() {
           redmineApiKey: await decryptData(items.redmineApiKey ?? ""),
           backlogDomain: items.backlogDomain || TB.BACKLOG_DOMAIN,
           backlogApiKey: await decryptData(items.backlogApiKey ?? ""),
-          aiProvider: items.aiProvider || TB.DEFAULT_PROVIDER,
+          primaryProvider: items.primaryProvider || TB.DEFAULT_PRIMARY_PROVIDER,
+          primaryModel: items.primaryModel ?? TB.DEFAULT_PRIMARY_MODEL,
+          fallbackProvider: items.fallbackProvider || TB.DEFAULT_FALLBACK_PROVIDER,
+          fallbackModel: items.fallbackModel ?? TB.DEFAULT_FALLBACK_MODEL,
           geminiApiKey: await decryptData(items.geminiApiKey ?? ""),
           geminiApiKeys: geminiApiKeys,
-          geminiModel: items.geminiModel ?? TB.GEMINI_MODEL,
-          geminiFallbackModel: items.geminiFallbackModel ?? TB.GEMINI_FALLBACK_MODEL,
+          geminiModels: geminiModels,
           cerebrasApiKey: await decryptData(items.cerebrasApiKey ?? ""),
-          cerebrasModel: items.cerebrasModel ?? TB.CEREBRAS_MODEL,
           groqApiKey: await decryptData(items.groqApiKey ?? ""),
-          groqModel: items.groqModel ?? TB.GROQ_MODEL,
           defaultProjectId: items.defaultProjectId || "",
         });
       }
@@ -255,16 +256,17 @@ function assertSettings(settings) {
   if (!settings.redmineApiKey) {
     throw new Error(TB.MESSAGES.SETTINGS.REDMINE_API_KEY_REQUIRED);
   }
-  if (settings.aiProvider === TB.PROVIDERS.CEREBRAS) {
-    if (!settings.cerebrasApiKey) {
-      throw new Error("Missing Cerebras API Key.");
-    }
-  } else if (settings.aiProvider === TB.PROVIDERS.GROQ) {
-    if (!settings.groqApiKey) {
-      throw new Error("Missing Groq API Key.");
-    }
-  } else if (!settings.geminiApiKey && settings.geminiApiKeys?.length === 0) {
+
+  if (!settings.geminiApiKey && settings.geminiApiKeys?.length === 0) {
     throw new Error(TB.MESSAGES.SETTINGS.GEMINI_API_KEY_REQUIRED);
+  }
+
+  if (settings.fallbackProvider === TB.PROVIDERS.CEREBRAS && !settings.cerebrasApiKey) {
+    throw new Error("Missing Cerebras API Key.");
+  }
+
+  if (settings.fallbackProvider === TB.PROVIDERS.GROQ && !settings.groqApiKey) {
+    throw new Error("Missing Groq API Key.");
   }
 }
 

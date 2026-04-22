@@ -50,7 +50,9 @@ async function logTimeFromReport(reportIssueId, isBatchOperation = false) {
     const todaysTasksMatch = description.match(todaysTasksRegex);
 
     if (!todaysTasksMatch || !todaysTasksMatch[1]) {
-      throw new Error("Could not find the '本日のタスク' (Today's Tasks) section in the description.");
+      throw new Error(
+        "Could not find the '本日のタスク' (Today's Tasks) section in the description."
+      );
     }
     const todaysTasksSection = todaysTasksMatch[1];
 
@@ -60,13 +62,15 @@ async function logTimeFromReport(reportIssueId, isBatchOperation = false) {
     const userRowMatch = todaysTasksSection.match(userRowRegex);
 
     if (!userRowMatch || !userRowMatch[1]) {
-      throw new Error(`Could not find a task row for user '${userLogin}' in the 'Today's Tasks' section.`);
+      throw new Error(
+        `Could not find a task row for user '${userLogin}' in the 'Today's Tasks' section.`
+      );
     }
     const tasksCell = userRowMatch[1];
 
     // 5. Extract all task IDs from the cell
     const taskIdsRegex = /#(\d+)/g;
-    const taskIds = [...tasksCell.matchAll(taskIdsRegex)].map(m => m[1]);
+    const taskIds = [...tasksCell.matchAll(taskIdsRegex)].map((m) => m[1]);
 
     if (taskIds.length === 0) {
       if (!isBatchOperation) {
@@ -79,7 +83,7 @@ async function logTimeFromReport(reportIssueId, isBatchOperation = false) {
     const totalHours = 8;
     const hoursPerTask = Math.round((totalHours / taskIds.length) * 100) / 100;
 
-    const promises = taskIds.map(taskId =>
+    const promises = taskIds.map((taskId) =>
       logTimeEntry(
         redmineDomain,
         redmineApiKey,
@@ -99,7 +103,6 @@ async function logTimeFromReport(reportIssueId, isBatchOperation = false) {
       console.log(successMessage);
       alert(successMessage); // Simple feedback for single mode
     }
-
   } catch (error) {
     console.error("Error during 'Log Time From Report' process:", error);
     if (!isBatchOperation) {

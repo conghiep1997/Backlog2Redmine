@@ -27,13 +27,18 @@ async function translateText(commentText, settings, commentUrl = null, promptFn 
       promptFn
     );
   } catch (error) {
-    // Check if we should fallback (429 or general failure)
-    const isRateLimit = error.message.includes("429") || error.message.includes("rate limit");
+    // Fallback on rate limit and temporary provider overloads such as Gemini 503 high demand.
+    const isRetryableProviderFailure =
+      error.message.includes("429") ||
+      error.message.includes("rate limit") ||
+      error.message.includes("503") ||
+      error.message.toLowerCase().includes("high demand") ||
+      error.message.toLowerCase().includes("try again later");
     const hasFallback = fallbackProvider && fallbackProvider !== TB.PROVIDERS.NONE;
 
-    if (isRateLimit && hasFallback) {
+    if (isRetryableProviderFailure && hasFallback) {
       console.warn(
-        `[TB-AI] Primary (${primaryProvider}) rate limited. Falling back to ${fallbackProvider}...`
+        `[TB-AI] Primary (${primaryProvider}) temporarily unavailable. Falling back to ${fallbackProvider}...`
       );
       try {
         return await callAIsByProvider(
@@ -45,7 +50,9 @@ async function translateText(commentText, settings, commentUrl = null, promptFn 
           promptFn
         );
       } catch (fallbackError) {
-        throw new Error(TB.MESSAGES.TOAST.RATE_LIMIT_FAILED);
+        throw new Error(
+          `${TB.MESSAGES.TOAST.RATE_LIMIT_FAILED} Primary: ${error.message} | Fallback: ${fallbackError.message}`
+        );
       }
     }
     throw error;
@@ -68,15 +75,40 @@ function getRandomGeminiKey(apiKeys) {
   return apiKeys[idx].trim();
 }
 
+function getRandomGeminiModel(models) {
+  if (!models || models.length === 0) return null;
+  const idx = Math.floor(Math.random() * models.length);
+  return models[idx].trim();
+}
+
 async function callAIsByProvider(provider, model, settings, text, url, promptFn) {
   if (provider === TB.PROVIDERS.GEMINI) {
-    const apiKey = settings.geminiApiKeys?.length > 0
-      ? getRandomGeminiKey(settings.geminiApiKeys)
-      : settings.geminiApiKey;
-    if (!apiKey) {
-      throw new Error("No Gemini API key available");
+    // Try multiple models with fallback chain
+    const models = settings.geminiModels?.length > 0 ? settings.geminiModels : [model];
+    const apiKeys =
+      settings.geminiApiKeys?.length > 0 ? settings.geminiApiKeys : [settings.geminiApiKey];
+
+    let lastError = null;
+    for (const m of models) {
+      for (const key of apiKeys) {
+        try {
+          return await callGeminiAPI(key, text, m, null, promptFn, url);
+        } catch (error) {
+          const isRetryable =
+            error.message.includes("429") ||
+            error.message.includes("rate limit") ||
+            error.message.includes("503") ||
+            error.message.toLowerCase().includes("high demand");
+          if (!isRetryable) {
+            throw error; // Non-retryable error, stop immediately
+          }
+          lastError = error;
+          console.warn(`[TB-AI] Gemini (${m}) failed with ${error.message}, trying next...`);
+        }
+      }
     }
-    return await callGeminiAPI(apiKey, text, model, null, promptFn, url);
+    // All models/keys exhausted
+    throw lastError || new Error("No Gemini API key available");
   } else if (provider === TB.PROVIDERS.CEREBRAS) {
     return await callCerebrasAPI(settings.cerebrasApiKey, text, model, promptFn, url);
   } else if (provider === TB.PROVIDERS.GROQ) {
@@ -213,12 +245,7 @@ async function callCerebrasAPI(
   return cleaned;
 }
 
-async function callGroqAPI(
-  apiKey,
-  commentText,
-  model,
-  promptFn = TB.PROMPTS.USER
-) {
+async function callGroqAPI(apiKey, commentText, model, promptFn = TB.PROMPTS.USER) {
   // Call Groq API with timeout
   const response = await timeoutFetch(
     "https://api.groq.com/openai/v1/chat/completions",
@@ -362,7 +389,10 @@ function fixMangledMarkers(text) {
   result = result.replace(/\[\[TB_IMG:\[(\d+)\]\]\]/gi, "[[TB_IMG:$1]]");
 
   // 6. Inline link mangling: [image_12345.png]([[TB_IMG:12345]])
-  result = result.replace(/\[[^\]]+\.(png|jpg|jpeg|gif)\]\(\[\[TB_IMG:\s*(\d+)\s*\]\]\)/gi, "[[TB_IMG:$2]]");
+  result = result.replace(
+    /\[[^\]]+\.(png|jpg|jpeg|gif)\]\(\[\[TB_IMG:\s*(\d+)\s*\]\]\)/gi,
+    "[[TB_IMG:$2]]"
+  );
 
   return result;
 }

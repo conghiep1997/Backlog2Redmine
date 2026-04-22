@@ -49,6 +49,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const geminiApiKeysTextarea = document.getElementById("geminiApiKeys");
   const addGeminiKeyBtn = document.getElementById("addGeminiKeyBtn");
 
+  // Multiple Models/Keys elements
+  const geminiModelsList = document.getElementById("geminiModelsList");
+  const geminiKeysList = document.getElementById("geminiKeysList");
+  const geminiApiKeysInput = document.getElementById("geminiApiKeys");
+
+  // Store selected items
+  let selectedGeminiModels = [];
+  const selectedGeminiKeys = [];
+
   if (!form || !primaryProviderSelect || !fallbackProviderSelect || !statusEl) {
     console.error("[OPTIONS] Missing DOM elements");
     return;
@@ -441,6 +450,107 @@ document.addEventListener("DOMContentLoaded", () => {
         statusEl.textContent = "";
       }
     }, 2500);
+  }
+
+  // Render Multiple Models as clickable buttons
+  function renderGeminiModelsTags() {
+    if (!geminiModelsList || !TB.GEMINI_MODELS) return;
+    geminiModelsList.innerHTML = "";
+
+    TB.GEMINI_MODELS.forEach((model) => {
+      const isSelected = selectedGeminiModels.includes(model.value);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.style.cssText = `
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 12px;
+        background: ${isSelected ? "#10b981" : "#f3f4f6"};
+        border: 1px solid ${isSelected ? "#10b981" : "#d1d5db"};
+        border-radius: 8px;
+        font-size: 12px;
+        color: ${isSelected ? "white" : "#374151"};
+        cursor: pointer;
+      `;
+      btn.textContent = model.label;
+      btn.addEventListener("click", () => {
+        if (isSelected) {
+          selectedGeminiModels = selectedGeminiModels.filter((m) => m !== model.value);
+        } else {
+          if (selectedGeminiModels.length < 5) {
+            selectedGeminiModels.push(model.value);
+          }
+        }
+        renderGeminiModelsTags();
+      });
+      geminiModelsList.appendChild(btn);
+    });
+
+    // Update count display
+    const countEl = document.getElementById("selectedModelCount");
+    if (countEl) countEl.textContent = selectedGeminiModels.length;
+  }
+
+  // Render Multiple Keys as clickable buttons
+  function renderGeminiKeysButtons() {
+    if (!geminiKeysList) return;
+    geminiKeysList.innerHTML = "";
+
+    selectedGeminiKeys.forEach((key, index) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.style.cssText = `
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        background: #bfdbfe;
+        border: 1px solid #3b82f6;
+        border-radius: 6px;
+        font-size: 11px;
+        font-family: monospace;
+        color: #1e40af;
+        cursor: pointer;
+      `;
+      btn.textContent = key.slice(0, 8) + "...";
+      btn.title = key;
+      btn.addEventListener("click", () => {
+        selectedGeminiKeys.splice(index, 1);
+        renderGeminiKeysButtons();
+      });
+      geminiKeysList.appendChild(btn);
+    });
+
+    // Update count display
+    const countEl = document.getElementById("selectedKeyCount");
+    if (countEl) countEl.textContent = selectedGeminiKeys.length;
+  }
+
+  // Handle Enter key in keys input
+  geminiApiKeysInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const key = geminiApiKeysInput.value.trim();
+      if (key && !selectedGeminiKeys.includes(key)) {
+        if (selectedGeminiKeys.length < 10) {
+          selectedGeminiKeys.push(key);
+          renderGeminiKeysButtons();
+        }
+      }
+      geminiApiKeysInput.value = "";
+    }
+  });
+
+  // Initialize default models if none selected
+  if (selectedGeminiModels.length === 0 && TB.GEMINI_MODELS) {
+    selectedGeminiModels = TB.GEMINI_MODELS.slice(0, 5).map((m) => m.value);
+  }
+
+  // Render on load
+  if (geminiModelsList) {
+    renderGeminiModelsTags();
+    renderGeminiKeysButtons();
   }
 
   // --- Donate Modal Logic ---

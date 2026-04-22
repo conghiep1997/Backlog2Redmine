@@ -484,7 +484,7 @@ function openConfirmModal(options) {
         issueTitleInput.value = res.data.issue.subject;
         confirmButton.disabled = false;
       } else {
-        throw new Error("Invalid response");
+        throw new Error("Phản hồi không hợp lệ");
       }
     } catch (err) {
       issueTitleInput.value = TB.MESSAGES.MODAL.ERROR_NOT_FOUND;
@@ -545,7 +545,7 @@ function openConfirmModal(options) {
       }
     } catch (err) {
       console.error("[TB-MODAL] Confirm error:", err);
-      showToast(err.message || "An error occurred during migration", "error");
+      showToast(err.message || "Đã xảy ra lỗi khi di chuyển", "error");
       confirmButton.disabled = false;
       setModalLoading(false);
     }

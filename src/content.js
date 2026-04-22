@@ -174,7 +174,9 @@ function injectButtonIfNeeded(actionsEl) {
 }
 
 async function handleTranslateAndOpenModal(actionsEl, button) {
-  const commentItem = actionsEl ? actionsEl.closest(".comment-item") : null || actionsEl.parentElement;
+  const commentItem = actionsEl
+    ? actionsEl.closest(".comment-item")
+    : null || actionsEl.parentElement;
   const { issueKey, issueSummary } = getBacklogHeaderInfo();
   if (!issueKey) {
     showToast(TB.MESSAGES.TOAST.MISSING_ISSUE_KEY, "error");
@@ -464,7 +466,8 @@ function getCommentFullText(itemEl) {
     const nextAttachments = scrapeAttachments(nextComment);
 
     // Case A: Next comment is strictly for media (no meaningful text)
-    if (!nextText || nextText.length < 10) { // Threshold for "Lưu ý: nội dung ngắn hoặc trống"
+    if (!nextText || nextText.length < 10) {
+      // Threshold for "Lưu ý: nội dung ngắn hoặc trống"
       nextAttachments.forEach((id, filename) => {
         currentAttachments.set(filename, id);
       });
@@ -519,7 +522,9 @@ function getBacklogHeaderInfo() {
   // Try data-testid first (Modern UI)
   let issueKey = document.querySelector("[data-testid=\"issueKey\"]")?.textContent?.trim();
   let issueSummary = document.querySelector("[data-testid=\"issueSummary\"]")?.textContent?.trim();
-  let backlogMilestone = document.querySelector("[data-testid=\"issueMilestone\"]")?.textContent?.trim();
+  let backlogMilestone = document
+    .querySelector("[data-testid=\"issueMilestone\"]")
+    ?.textContent?.trim();
 
   // Try legacy/alternative selectors
   if (!issueKey) {
@@ -533,7 +538,9 @@ function getBacklogHeaderInfo() {
       document.querySelector(".title-group__title-text")?.textContent?.trim();
   }
   if (!backlogMilestone) {
-    backlogMilestone = document.querySelector(".ticket__properties-item.-milestones .ticket__properties-value")?.textContent?.trim();
+    backlogMilestone = document
+      .querySelector(".ticket__properties-item.-milestones .ticket__properties-value")
+      ?.textContent?.trim();
   }
 
   // LAST RESORT: Extract Issue Key from URL

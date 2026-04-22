@@ -12,7 +12,17 @@
         --text: #1f2937;
         --muted: #6b7280;
         --border: #d7dde7;
-        --primary: #c93b2f;
+        --primary: #2563eb;
+        --primary-strong: #1d4ed8;
+        --success-bg: #ecfdf3;
+        --success-border: #86efac;
+        --success-text: #166534;
+        --danger-bg: #fef2f2;
+        --danger-border: #fecaca;
+        --danger-text: #991b1b;
+        --warning-bg: #fff7ed;
+        --warning-border: #fed7aa;
+        --warning-text: #9a3412;
       }
 
       body {
@@ -24,7 +34,7 @@
           BlinkMacSystemFont,
           "Segoe UI",
           sans-serif;
-        background: radial-gradient(circle at top, #fff7f6 0, var(--bg) 42%, #eef2ff 100%);
+        background: #f8fafc;
         color: var(--text);
       }
 
@@ -53,12 +63,12 @@
         border: 1px solid rgba(215, 221, 231, 0.85);
         border-radius: 18px;
         padding: 20px;
-        box-shadow: 0 18px 40px rgba(31, 41, 55, 0.08);
+        box-shadow: 0 4px 12px rgba(31, 41, 55, 0.08);
       }
 
       .grid {
         display: grid;
-        gap: 16px;
+        gap: 0;
       }
 
       .field label {
@@ -79,7 +89,7 @@
       .field input:focus {
         outline: none;
         border-color: var(--primary);
-        box-shadow: 0 0 0 4px rgba(201, 59, 47, 0.12);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
       }
 
       .actions {
@@ -99,8 +109,13 @@
       }
 
       .primary {
-        background: linear-gradient(180deg, #dc4c3f, #c93b2f);
+        background: linear-gradient(180deg, #3b82f6, var(--primary));
         color: white;
+        box-shadow: 0 10px 20px rgba(37, 99, 235, 0.18);
+      }
+
+      .primary:hover {
+        background: linear-gradient(180deg, #2563eb, var(--primary-strong));
       }
 
       .secondary {
@@ -115,20 +130,45 @@
       }
 
       .btn-sync {
-        background: #fdf2f2;
-        color: #b91c1c;
-        border: 1px solid #fecaca;
+        background: #eff6ff;
+        color: var(--primary-strong);
+        border: 1px solid #bfdbfe;
         font-size: 13px;
         padding: 8px 12px;
         white-space: nowrap;
       }
       .btn-sync:hover {
-        background: #fee2e2;
+        background: #dbeafe;
       }
 
       .status {
+        display: inline-flex;
+        align-items: center;
+        min-height: 20px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        background: #f8fafc;
         color: var(--muted);
         font-size: 14px;
+      }
+
+      .status-success {
+        background: var(--success-bg);
+        border-color: var(--success-border);
+        color: var(--success-text);
+      }
+
+      .status-error {
+        background: var(--danger-bg);
+        border-color: var(--danger-border);
+        color: var(--danger-text);
+      }
+
+      .status-warning {
+        background: var(--warning-bg);
+        border-color: var(--warning-border);
+        color: var(--warning-text);
       }
 
       .note {
@@ -175,71 +215,84 @@
       </div>
 
       <div class="card">
-        <form id="optionsForm" class="grid">
-          <!-- Nhóm cấu hình Redmine -->
-          <div
-            style="
-              padding: 16px;
-              background: #fef2f2;
-              border: 1px solid #fee2e2;
-              border-radius: 12px;
-              margin-bottom: 24px;
-            "
-          >
-            <h3 style="margin: 0 0 12px; color: #b91c1c; font-size: 16px">Cấu hình Redmine</h3>
+          <form id="optionsForm" class="grid">
+            <!-- Nhóm cấu hình Redmine -->
+            <details open
+              style="
+                padding: 16px;
+                background: #dbeafe;
+                border: 1px solid #3b82f6;
+                border-radius: 12px;
+                margin-bottom: 16px;
+                display: block;
+              "
+            >
+              <summary style="padding: 4px 0; font-weight: 600; color: #1e40af; cursor: pointer">
+                💎 Cấu hình Redmine - Click để thu gọn/mở rộng
+              </summary>
+              <div style="padding-top: 12px">
+                <div class="field" style="margin-bottom: 0">
+                <label for="redmineDomain">Redmine Domain</label>
+                <input
+                  id="redmineDomain"
+                  type="url"
+                  value="https://redmine.splus-software.com"
+                  readonly
+                  style="background: #f3f4f6; color: #6b7280; cursor: not-allowed"
+                />
+                <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                  💡 Redmine Domain được cấu hình sẵn.
+                </p>
+              </div>
 
-            <div class="field" style="margin-bottom: 16px">
-              <label for="redmineDomain">Redmine Domain</label>
-              <input
-                id="redmineDomain"
-                type="url"
-                value="https://redmine.splus-software.com"
-                readonly
-                style="background: #f3f4f6; color: #6b7280; cursor: not-allowed"
-              />
-              <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
-                💡 Redmine Domain được cấu hình sẵn.
-              </p>
-            </div>
+              <div class="field" style="margin-bottom: 0">
+                <label for="redmineApiKey">Redmine API Key</label>
+                <input id="redmineApiKey" type="text" placeholder="Nhập API key" />
+                <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                  🔑 Lấy API Key tại:
+                  <a
+                    href="https://redmine.splus-software.com/my/account"
+                    target="_blank"
+                    style="color: var(--primary)"
+                    >Tài khoản cá nhân</a
+                  >
+                  (Bấm vào "Hiện" tại mục "Mã truy cập API").
+                </p>
+              </div>
 
-            <div class="field" style="margin-bottom: 16px">
-              <label for="redmineApiKey">Redmine API Key</label>
-              <input id="redmineApiKey" type="text" placeholder="Nhập API key" />
-              <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
-                🔑 Lấy API Key tại:
-                <a
-                  href="https://redmine.splus-software.com/my/account"
-                  target="_blank"
-                  style="color: var(--primary)"
-                  >Tài khoản cá nhân</a
+              <div class="field" style="margin-bottom: 0">
+                <label for="defaultProjectId"
+                  >Project mặc định (Dùng cho Migrate)
+                  <button
+                    type="button"
+                    id="syncProjectsBtn"
+                    class="secondary btn-sync"
+                    style="float: right; margin-top: -8px"
+                  >
+                    🔄 Đồng bộ Project
+                  </button>
+                </label>
+                <select
+                  id="defaultProjectId"
+                  style="
+                    width: 100%;
+                    box-sizing: border-box;
+                    border: 1px solid var(--border);
+                    border-radius: 12px;
+                    padding: 12px 14px;
+                    font: inherit;
+                    background: white;
+                  "
                 >
-                (Bấm vào "Hiện" tại mục "Mã truy cập API").
-              </p>
+                  <option value="">-- Trước tiên cần lưu API Key --</option>
+              </select>
             </div>
 
-            <!-- NEW FIELD FOR REPORT PROJECT ID -->
-            <div class="field" style="margin-bottom: 16px">
-              <label for="reportProjectId">Report Project ID</label>
-              <input id="reportProjectId" type="text" placeholder="Nhập Project ID cho chức năng Log Time Tháng" />
-              <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
-                💡 Điền ID của project chứa các issue Report (ví dụ: 'd3-timesheet'). Cần thiết cho chức năng "Log Time Tháng".
-              </p>
-            </div>
-
-            <div class="field" style="margin-bottom: 16px">
-              <label for="defaultProjectId"
-                >Project mặc định (Dùng cho Migrate)
-                <button
-                  type="button"
-                  id="syncProjectsBtn"
-                  class="secondary btn-sync"
-                  style="float: right; margin-top: -8px"
-                >
-                  🔄 Đồng bộ Project
-                </button>
-              </label>
+            <!-- REPORT PROJECT ID -->
+            <div class="field" style="margin-bottom: 0">
+              <label for="reportProjectId">Project cho Report (Log Time Tháng)</label>
               <select
-                id="defaultProjectId"
+                id="reportProjectId"
                 style="
                   width: 100%;
                   box-sizing: border-box;
@@ -250,20 +303,24 @@
                   background: white;
                 "
               >
-                <option value="">-- Trước tiên cần lưu API Key --</option>
+<option value="">-- Cần lưu API Key trước --</option>
               </select>
+              <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                💡 Project chứa các issue Report (dùng cho chức năng "Log Time Tháng").
+              </p>
             </div>
 
             <!-- Cấu hình Custom Fields (JSON Mapping) -->
             <details
               style="
-                border: 1px solid #fecaca;
+                border: 1px solid #bfdbfe;
                 border-radius: 12px;
                 background: white;
                 padding: 0 14px;
+                margin-top: 8px;
               "
             >
-              <summary style="padding: 12px 0; font-weight: 600; cursor: pointer; color: #b91c1c">
+              <summary style="padding: 12px 0; font-weight: 600; cursor: pointer; color: #1d4ed8">
                 Cấu hình Custom Fields (JSON Mapping)
               </summary>
               <div class="field" style="padding-bottom: 16px">
@@ -289,26 +346,31 @@
                 </p>
               </div>
             </details>
-          </div>
+          </details>
 
           <!-- Nhóm cấu hình Backlog -->
-          <div
+          <details
             style="
               padding: 16px;
-              background: #fffcf0;
-              border: 1px dashed #f59e0b;
+              background: #fef3c7;
+              border: 1px solid #f59e0b;
               border-radius: 12px;
-              margin: 8px 0;
+              margin-bottom: 16px;
+              display: block;
             "
           >
-            <div class="field" style="margin-bottom: 16px">
-              <label for="backlogDomain">Backlog Domain</label>
-              <input id="backlogDomain" type="url" placeholder="https://shift7.backlog.com" />
-              <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
-                💡 Mặc định: https://shift7.backlog.com
-              </p>
-            </div>
-            <div class="field">
+            <summary style="padding: 4px 0; font-weight: 600; color: #b45309; cursor: pointer">
+              📝 Cấu hình Backlog (Thu gọn) - Click để mở rộng
+            </summary>
+            <div style="padding-top: 12px">
+              <div class="field" style="margin-bottom: 0">
+                <label for="backlogDomain">Backlog Domain</label>
+                <input id="backlogDomain" type="url" placeholder="https://shift7.backlog.com" />
+                <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                  💡 Mặc định: https://shift7.backlog.com
+                </p>
+              </div>
+              <div class="field">
               <label for="backlogApiKey">Backlog API Key</label>
               <input id="backlogApiKey" type="text" placeholder="Nhập Backlog API key" />
               <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
@@ -316,25 +378,28 @@
                 nội dung ngược lại từ Redmine sang Backlog.
               </p>
             </div>
-          </div>
+          </details>
+
           <!-- Primary AI Configuration -->
-          <div
+          <details open
             style="
               padding: 16px;
-              background: #f0f7ff;
-              border: 1px solid #bfdbfe;
+              background: #d1fae5;
+              border: 1px solid #10b981;
               border-radius: 12px;
               margin-bottom: 16px;
+              display: block;
             "
           >
-            <h3 style="margin: 0 0 12px; color: #1e40af; font-size: 16px">
-              Cấu hình AI chính (Primary)
-            </h3>
-            <div class="grid">
-              <div class="field">
-                <label for="primaryProvider">Nhà cung cấp (Provider)</label>
+            <summary style="padding: 4px 0; font-weight: 600; color: #065f46; cursor: pointer">
+              🤖 Cấu hình AI chính (Primary) - Click để thu gọn/mở rộng
+            </summary>
+            <div class="grid" style="padding-top: 12px">
+              <div class="field" style="margin-bottom: 0">
+                <label for="primaryProvider">Nhà cung cấp chính (Cố định)</label>
                 <select
                   id="primaryProvider"
+                  disabled
                   style="
                     width: 100%;
                     box-sizing: border-box;
@@ -346,148 +411,75 @@
                   "
                 >
                   <option value="gemini">Google Gemini AI Studio (Miễn phí)</option>
-                  <option value="groq">Groq (Free - Rất nhanh)</option>
-                  <option value="cerebras">Cerebras Cloud (Free)</option>
                 </select>
-              </div>
-              <div id="primaryModelField" class="field">
-                <label for="primaryModel">Model</label>
-                <select
-                  id="primaryModel"
-                  style="
-                    width: 100%;
-                    box-sizing: border-box;
-                    border: 1px solid var(--border);
-                    border-radius: 12px;
-                    padding: 12px 14px;
-                    font: inherit;
-                    background: white;
-                  "
-                >
-                  <!-- Options will be populated -->
-                </select>
+                <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                  Primary AI được cố định là <strong>Gemini</strong>.
+                </p>
               </div>
 
-              <!-- Primary Provider API Keys (Single Key - Legacy) -->
-              <div id="primaryGeminiKeyContainer" style="display: none; margin-top: 12px">
-                <div class="field">
-                  <label for="primaryGeminiApiKey">Gemini API Key</label>
-                  <input
-                    id="primaryGeminiApiKey"
-                    class="gemini-key-sync"
-                    type="text"
-                    placeholder="Nhập Gemini API key"
-                  />
-                  <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
-                    💡 Lấy Key tại
-                    <a
-                      href="https://aistudio.google.com/app/apikey"
-                      target="_blank"
-                      style="color: var(--primary)"
-                      >Google AI Studio</a
-                    >.
-                  </p>
-                </div>
-              </div>
-              <div id="primaryCerebrasKeyContainer" style="display: none; margin-top: 12px">
-                <div class="field">
-                  <label for="primaryCerebrasApiKey">Cerebras API Key</label>
-                  <input
-                    id="primaryCerebrasApiKey"
-                    class="cerebras-key-sync"
-                    type="text"
-                    placeholder="Nhập Cerebras API key"
-                  />
-                  <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
-                    💡 Lấy Key tại
-                    <a
-                      href="https://cloud.cerebras.ai"
-                      target="_blank"
-                      style="color: var(--primary)"
-                      >cloud.cerebras.ai</a
-                    >.
-                  </p>
-                </div>
-              </div>
-
-              <!-- Groq API Key -->
-              <div id="primaryGroqKeyContainer" style="display: none; margin-top: 12px">
-                <div class="field">
-                  <label for="primaryGroqApiKey">Groq API Key</label>
-                  <input
-                    id="primaryGroqApiKey"
-                    class="groq-key-sync"
-                    type="text"
-                    placeholder="Nhập Groq API key"
-                  />
-                  <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
-                    💡 Lấy Key tại
-                    <a
-                      href="https://console.groq.com"
-                      target="_blank"
-                      style="color: var(--primary)"
-                      >console.groq.com</a
-                    >.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Multiple Gemini Keys (Advanced) -->
-          <details
-            style="
-              border: 1px solid #bfdbfe;
-              border-radius: 12px;
-              background: white;
-              padding: 0 16px;
-              margin-bottom: 16px;
-            "
-          >
-            <summary style="padding: 12px 0; font-weight: 600; cursor: pointer; color: #1e40af">
-              🔑 Multiple Gemini Keys (Nâng cao - Tối đa 10 keys)
-            </summary>
-            <div class="field" style="padding-bottom: 16px">
-              <p style="margin: 0 0 12px; font-size: 12px; color: var(--muted)">
-                Nhập nhiều API keys (mỗi dòng một key). Hệ thống sẽ random chọn key để sử dụng, giúp tránh bị rate limit.
-              </p>
-              <textarea
-                id="geminiApiKeys"
-                placeholder="API_KEY_1&#10;API_KEY_2&#10;API_KEY_3"
+              <!-- Multiple Gemini - Models & Keys -->
+              <details open
                 style="
-                  width: 100%;
-                  height: 120px;
-                  box-sizing: border-box;
-                  border: 1px solid var(--border);
+                  border: 1px solid #86efac;
                   border-radius: 12px;
-                  padding: 12px 14px;
-                  font-family: monospace;
-                  font-size: 13px;
-                  background: white;
-                  resize: vertical;
+                  background: #ecfdf5;
+                  padding: 0 12px;
                 "
-              ></textarea>
-              <button type="button" id="addGeminiKeyBtn" class="secondary" style="margin-top: 8px; font-size: 12px; padding: 8px 12px;">
-                + Thêm Key
-              </button>
-            </div>
+              >
+                <summary style="padding: 12px 0; font-weight: 600; color: #166534; cursor: pointer">
+                  🤖🔑 Multiple Gemini (Models & Keys) - Click để thu gọn/mở rộng
+                </summary>
+                <div style="padding-bottom: 12px">
+                  <div style="margin-bottom: 12px">
+                    <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">Models (click chọn/bỏ, max 5)</p>
+                    <div id="geminiModelsList" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+                    <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">
+                      Đã chọn: <span id="selectedModelCount">0</span>/5
+                    </p>
+                  </div>
+
+                  <div>
+                    <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">Keys (nhập + Enter để thêm, click để xóa, max 10)</p>
+                    <div id="geminiKeysList" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;"></div>
+                    <input
+                      id="geminiApiKeys"
+                      placeholder="Nhập key + Enter để thêm"
+                      style="
+                        width: 100%;
+                        height: 36px;
+                        box-sizing: border-box;
+                        border: 1px solid var(--border);
+                        border-radius: 8px;
+                        padding: 8px 12px;
+                        font-family: monospace;
+                        font-size: 12px;
+                      "
+                    />
+                    <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">
+                      Đã chọn: <span id="selectedKeyCount">0</span>/10
+                    </p>
+                  </div>
+                </div>
+              </details>
+</div>
           </details>
 
           <!-- Fallback AI Configuration -->
-          <div
+          <details
             style="
               padding: 16px;
-              background: #fff7ed;
-              border: 1px solid #ffedd5;
+              background: #ede9fe;
+              border: 1px solid #8b5cf6;
               border-radius: 12px;
-              margin-bottom: 24px;
+              margin-bottom: 16px;
+              display: block;
             "
           >
-            <h3 style="margin: 0 0 12px; color: #9a3412; font-size: 16px">
-              Cấu hình AI dự phòng (Fallback)
-            </h3>
-            <div class="grid">
-              <div class="field">
+            <summary style="padding: 4px 0; font-weight: 600; color: #5b21b6; cursor: pointer">
+              🔄 Cấu hình AI dự phòng (Fallback) (Thu gọn) - Click để mở rộng
+            </summary>
+            <div class="grid" style="padding-top: 12px">
+              <div class="field" style="margin-bottom: 0">
                 <label for="fallbackProvider">Nhà cung cấp dự phòng</label>
                 <select
                   id="fallbackProvider"
@@ -501,10 +493,9 @@
                     background: white;
                   "
                 >
-                  <option value="none">Không sử dụng dự phòng</option>
+                  <option value="none" selected>Không sử dụng dự phòng</option>
                   <option value="groq">Groq (Free - Rất nhanh)</option>
                   <option value="cerebras">Cerebras Cloud (Free)</option>
-                  <option value="gemini">Google Gemini AI Studio (Miễn phí)</option>
                 </select>
               </div>
               <div id="fallbackModelField" class="field" style="display: none">
@@ -579,19 +570,13 @@
                   />
                   <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
                     💡 Lấy Key tại
-                    <a
-                      href="https://console.groq.com"
-                      target="_blank"
-                      style="color: var(--primary)"
+                    <a href="https://console.groq.com" target="_blank" style="color: var(--primary)"
                       >console.groq.com</a
                     >.
-                  </p>
-                </div>
+</p>
               </div>
             </div>
-          </div>
-
-          <!-- Dynamic API Credentials Area removed (moved to provider blocks) -->
+          </details>
 
           <div class="actions">
             <button class="primary" type="submit">Lưu cấu hình</button>
@@ -600,9 +585,9 @@
         </form>
 
         <!-- Log Management Section -->
-        <div style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px;">
-          <h3 style="margin: 0 0 12px; font-size: 16px;">Quản lý Lỗi (Logs)</h3>
-          <p style="margin: 0 0 16px; color: var(--muted); font-size: 14px;">
+        <div style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px">
+          <h3 style="margin: 0 0 12px; font-size: 16px">Quản lý Lỗi (Logs)</h3>
+          <p style="margin: 0 0 16px; color: var(--muted); font-size: 14px">
             Nếu gặp sự cố, bạn có thể xuất file log lỗi để gửi cho đội phát triển.
           </p>
           <div class="actions">
@@ -617,7 +602,7 @@
         </div>
 
         <div class="disclaimer">
-          Extension này chỉ làm theo ý bạn—nếu có lỗi thì chắc bạn bấm nhầm thôi👀
+          Extension này chỉ làm theo ý bạn...nếu có lỗi thì chắc chắc bạn bấm nhầm rồi👀
         </div>
       </div>
     </div>

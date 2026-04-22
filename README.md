@@ -1,8 +1,8 @@
-# B2R - Backlog to Redmine (v1.7.1)
+# B2R - Backlog to Redmine
 
 Chrome extension dịch comment từ Backlog sang tiếng Việt và đồng bộ dữ liệu thông minh sang Redmine. Tên mới: **B2R**.
 
-**Latest Update:** Added Groq provider support, multiple Gemini API keys, smarter preview mode, and improved attachment detection.
+**Latest Update:** Curated Groq/Cerebras translation models, streamlined version bump workflow with `npm run bump`, and added release-safe version sync checks.
 
 ---
 
@@ -18,7 +18,7 @@ B2R/
 │   ├── options.html/js          # Settings page
 │   └── modules/
 │       ├── services/
-│       │   ├── ai.js            # AI translation (Gemini/Cerebras)
+│       │   ├── ai.js            # AI translation (Gemini/Groq/Cerebras)
 │       │   ├── redmine.js       # Redmine API wrapper
 │       │   └── backlog.js       # Backlog API wrapper
 │       ├── ui/
@@ -161,6 +161,15 @@ npm run build
 ### Commands
 
 ```bash
+# Auto bump patch version + create changelog stub
+npm run bump
+
+# Bump to a specific version
+npm run bump -- 1.7.3
+
+# Check manifest/package version sync
+npm run check:version-sync
+
 # Lint code
 npm run lint
 
@@ -176,6 +185,12 @@ npm run build
 # Create ZIP package
 npm run build:zip
 ```
+
+### Release Notes
+
+- `manifest.json` là source of truth cho version release của extension.
+- `npm run bump` sẽ tự tăng patch version, đồng bộ `manifest.json` và `package.json`, đồng thời tạo stub entry mới trong `CHANGELOG.md`.
+- CI sẽ fail sớm nếu `manifest.json.version` và `package.json.version` bị lệch.
 
 ### Debugging
 
@@ -241,4 +256,4 @@ Chi tiết các thay đổi qua từng phiên bản có thể được xem tại
 
 ---
 
-**Developed by Hipppo** 🦛 | Version **1.7.1** (April 2026)
+**Developed by Hipppo** 🦛

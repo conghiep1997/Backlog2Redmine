@@ -28,15 +28,12 @@ injectMonthlyLogButton(); // For logging the entire month
  */
 async function getSettings() {
   return new Promise((resolve, reject) => {
-    chrome.storage.local.get(
-      ["redmineDomain", "redmineApiKey", "reportProjectId"],
-      (items) => {
-        if (chrome.runtime.lastError) {
-          return reject(chrome.runtime.lastError);
-        }
-        resolve(items);
+    chrome.storage.local.get(["redmineDomain", "redmineApiKey", "reportProjectId"], (items) => {
+      if (chrome.runtime.lastError) {
+        return reject(chrome.runtime.lastError);
       }
-    );
+      resolve(items);
+    });
   });
 }
 
@@ -76,13 +73,16 @@ async function logTimeForMonth() {
   const { redmineDomain, redmineApiKey, reportProjectId } = settings;
 
   if (!redmineDomain || !redmineApiKey || !reportProjectId) {
-    alert("Lỗi: Vui lòng cấu hình đầy đủ Redmine Domain, API Key, và Report Project ID trong trang Options của extension.");
+    alert(
+      "Lỗi: Vui lòng cấu hình đầy đủ Redmine Domain, API Key, và Report Project ID trong trang Options của extension."
+    );
     return;
   }
 
   const modal = openConfirmModal({
     issueTitle: `Log Time cho Tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}`,
-    previewText: "<div id=\"monthly-log-progress\" style=\"max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;\">Khởi tạo...</div>",
+    previewText:
+      "<div id=\"monthly-log-progress\" style=\"max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;\">Khởi tạo...</div>",
     confirmLabel: "Bắt đầu",
     cancelLabel: "Hủy",
     onConfirm: async (modalInstance) => {
@@ -106,9 +106,11 @@ async function logTimeForMonth() {
         const subjectQuery = `${year}年${month}月`;
 
         const trackers = await getTrackers(redmineDomain, redmineApiKey);
-        const reportTracker = trackers.find(t => t.name.toLowerCase() === "report");
+        const reportTracker = trackers.find((t) => t.name.toLowerCase() === "report");
         if (!reportTracker) {
-          throw new Error("Không thể tìm thấy Tracker \"Report\". Vui lòng kiểm tra cấu hình Redmine.");
+          throw new Error(
+            "Không thể tìm thấy Tracker \"Report\". Vui lòng kiểm tra cấu hình Redmine."
+          );
         }
 
         const issues = await findIssues(redmineDomain, redmineApiKey, {
@@ -116,7 +118,7 @@ async function logTimeForMonth() {
           tracker_id: reportTracker.id,
           subject: `~${subjectQuery}`,
           status_id: "*",
-          limit: 100
+          limit: 100,
         });
 
         if (issues.length === 0) {
@@ -133,20 +135,22 @@ async function logTimeForMonth() {
           try {
             const dateMatch = issue.subject.match(/(\d{4})年(\d{2})月(\d{2})日/);
             let dateLabel = `issue #${issue.id}`;
-            if(dateMatch) {
+            if (dateMatch) {
               dateLabel = `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`;
             }
 
             updateProgress(`- Đang xử lý: <b>${dateLabel}</b>`);
             const loggedTasks = await logTimeFromReport(issue.id, true);
 
-            if(loggedTasks.length > 0) {
-              resultsForSheet.push({ date: dateLabel, tasks: loggedTasks.map(t => `#${t}`).join(",") });
+            if (loggedTasks.length > 0) {
+              resultsForSheet.push({
+                date: dateLabel,
+                tasks: loggedTasks.map((t) => `#${t}`).join(","),
+              });
               updateProgress(`  => Thành công: ${loggedTasks.length} task(s)`);
             } else {
               updateProgress("  => Không có task nào được log.");
             }
-
           } catch (error) {
             updateProgress(`  => Lỗi: ${error.message}`);
           }
@@ -154,12 +158,14 @@ async function logTimeForMonth() {
 
         updateProgress("<br><b>Hoàn tất! Dưới đây là dữ liệu để copy vào Timesheet:</b>");
 
-        let tableHtml = "<div style=\"max-height: 200px; overflow-y: auto; border: 1px solid #ddd; margin-top: 10px;\"><table id=\"timesheet-results-table\" style=\"width:100%; border-collapse: collapse;\"><thead><tr><th style=\"border:1px solid #ccc; padding:8px; position: sticky; top: 0; background: #f0f0f0;\">Ngày</th><th style=\"border:1px solid #ccc; padding:8px; position: sticky; top: 0; background: #f0f0f0;\">Tasks</th></tr></thead><tbody>";
-        resultsForSheet.sort((a,b) => a.date.localeCompare(b.date));
-        for(const result of resultsForSheet) {
+        let tableHtml =
+          "<div style=\"max-height: 200px; overflow-y: auto; border: 1px solid #ddd; margin-top: 10px;\"><table id=\"timesheet-results-table\" style=\"width:100%; border-collapse: collapse;\"><thead><tr><th style=\"border:1px solid #ccc; padding:8px; position: sticky; top: 0; background: #f0f0f0;\">Ngày</th><th style=\"border:1px solid #ccc; padding:8px; position: sticky; top: 0; background: #f0f0f0;\">Tasks</th></tr></thead><tbody>";
+        resultsForSheet.sort((a, b) => a.date.localeCompare(b.date));
+        for (const result of resultsForSheet) {
           tableHtml += `<tr><td style="border:1px solid #ccc; padding:8px;">${result.date}</td><td style="border:1px solid #ccc; padding:8px;">${result.tasks}</td></tr>`;
         }
-        tableHtml += "</tbody></table></div><br><button id=\"copy-ts-btn\" class=\"secondary\">Copy Bảng</button>";
+        tableHtml +=
+          "</tbody></table></div><br><button id=\"copy-ts-btn\" class=\"secondary\">Copy Bảng</button>";
 
         progressDiv.innerHTML += `<br>${tableHtml}`;
 
@@ -179,7 +185,6 @@ async function logTimeForMonth() {
         };
 
         confirmBtn.textContent = "Đã xong";
-
       } catch (error) {
         updateProgress(`<b>Đã xảy ra lỗi nghiêm trọng:</b> ${error.message}`);
         confirmBtn.textContent = "Lỗi";
@@ -198,7 +203,8 @@ async function injectLogTimeButton() {
 
   const issueId = issuePageMatch[1];
 
-  const isReport = document.querySelector("#attributes td.tracker")?.innerText.trim().toLowerCase() === "report";
+  const isReport =
+    document.querySelector("#attributes td.tracker")?.innerText.trim().toLowerCase() === "report";
   if (isReport) {
     const container = document.querySelector("div.contextual");
     if (!container || container.querySelector("#tb-log-time-btn")) return;
@@ -283,14 +289,25 @@ async function handleExtractAndOpenModal(actionsEl, button) {
   setButtonLoading(button, true);
 
   try {
-    const result = await sendRuntimeMessage({ type: "EXTRACT_JAPANESE_CONTENT", commentText: rawText });
+    const result = await sendRuntimeMessage({
+      type: "EXTRACT_JAPANESE_CONTENT",
+      commentText: rawText,
+    });
     openBacklogModal({
       backlogIssueKey,
       previewText: result.data.previewText,
       onCancel: () => setButtonLoading(button, false),
       onConfirm: async ({ backlogIssueKey: confirmedKey, content, notifiedUserId }) => {
-        const sendResult = await sendRuntimeMessage({ type: "SEND_TO_BACKLOG", backlogIssueKey: confirmedKey, content, notifiedUserId });
-        openSuccessModal({ redmineUrl: sendResult.data.backlogUrl, onClose: () => setButtonLoading(button, false) });
+        const sendResult = await sendRuntimeMessage({
+          type: "SEND_TO_BACKLOG",
+          backlogIssueKey: confirmedKey,
+          content,
+          notifiedUserId,
+        });
+        openSuccessModal({
+          redmineUrl: sendResult.data.backlogUrl,
+          onClose: () => setButtonLoading(button, false),
+        });
       },
     });
     setButtonLoading(button, false);
@@ -320,5 +337,7 @@ function setButtonLoading(btn, isLoading) {
   btn.disabled = isLoading;
   btn.style.opacity = isLoading ? "0.5" : "1";
   btn.dataset.originalHtml = btn.dataset.originalHtml || btn.innerHTML;
-  btn.innerHTML = isLoading ? `<span class="tb-loading">${TB.MESSAGES.PROCESSING}</span>` : btn.dataset.originalHtml;
+  btn.innerHTML = isLoading
+    ? `<span class="tb-loading">${TB.MESSAGES.PROCESSING}</span>`
+    : btn.dataset.originalHtml;
 }

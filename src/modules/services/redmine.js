@@ -1,4 +1,3 @@
-
 /* global downloadBacklogFile, TB_LOGGER */
 /**
  * Redmine API Service for Backlog2Redmine Extension.
@@ -109,7 +108,10 @@ async function findRedmineIssueViaApi(redmineDomain, apiKey, issueKey, issueSumm
   return { id: String(result.id), title: result.subject };
 }
 
-async function handleSendToRedmine({ redmineIssueId, notes, backlogIssueKey, processedAttachments = null }, sender) {
+async function handleSendToRedmine(
+  { redmineIssueId, notes, backlogIssueKey, processedAttachments = null },
+  sender
+) {
   // Send note to Redmine issue, including image processing
   const settings = await getSettings();
   const backlogDomain = sender?.tab?.url ? new URL(sender.tab.url).hostname : null;
@@ -143,11 +145,10 @@ async function handleSendToRedmine({ redmineIssueId, notes, backlogIssueKey, pro
   if (!response.ok) {
     const errorMsg = await readErrorMessage(response);
     if (typeof TB_LOGGER !== "undefined") {
-      TB_LOGGER.logError(
-        "RedmineService",
-        `API Error during comment submission: ${errorMsg}`,
-        { requestPayload: payload, redmineResponse: errorMsg }
-      );
+      TB_LOGGER.logError("RedmineService", `API Error during comment submission: ${errorMsg}`, {
+        requestPayload: payload,
+        redmineResponse: errorMsg,
+      });
     }
     throw new Error(
       `${TB.MESSAGES.REDMINE.SEARCH_PAGE_ERROR}: ${sanitizeErrorMessage(errorMsg, response.status)}`
@@ -426,7 +427,10 @@ async function processNotesAttachments(
       // Regex to find all markers for the current ID and replace them.
       // Space-tolerant to catch AI variations
       const imageMarkerPattern = new RegExp(`\\[\\[TB_IMG:\\s*${attachmentId}\\s*\\]\\]`, "gi");
-      const fileMarkerPattern = new RegExp(`\\[\\[TB_FILE:\\s*${attachmentId}\\s*:\\s*[^\\]]+\\s*\\]\\]`, "gi");
+      const fileMarkerPattern = new RegExp(
+        `\\[\\[TB_FILE:\\s*${attachmentId}\\s*:\\s*[^\\]]+\\s*\\]\\]`,
+        "gi"
+      );
 
       finalNotes = finalNotes.replace(imageMarkerPattern, info.markup);
       finalNotes = finalNotes.replace(fileMarkerPattern, info.markup);
@@ -435,7 +439,6 @@ async function processNotesAttachments(
 
   return { updatedNotes: finalNotes, uploads };
 }
-
 
 /**
  * Upload file to Redmine and get token.
@@ -553,7 +556,7 @@ async function getCurrentUser(redmineDomain, apiKey) {
 async function getTrackers(redmineDomain, apiKey) {
   const url = buildRedmineUrl(redmineDomain, "/trackers.json");
   const response = await fetch(url, {
-    headers: { "X-Redmine-API-Key": apiKey, "Content-Type": "application/json" }
+    headers: { "X-Redmine-API-Key": apiKey, "Content-Type": "application/json" },
   });
   if (!response.ok) {
     const errorMsg = await readErrorMessage(response);
