@@ -1,5 +1,19 @@
 # Nhật ký thay đổi (Changelog)
 
+## [1.8.2] - 2026-04-23
+- **🚀 Performance**:
+  - Tối ưu `translateBatch` với `Promise.all()` batch 5 thay vì gọi tuần tự, giảm thời gian dịch batch comments.
+  - Thêm cleanup handlers (`beforeunload`) để giải phóng interval và observer khi rời trang, tránh memory leak.
+  - Giới hạn MutationObserver scope vào container cụ thể (`.comments`, `.comment-list`) thay vì `document.body` để giảm CPU usage.
+  - Thêm projects caching (5 phút) và debounce (500ms) cho `fetchProjects` trong Options page.
+  - Thêm `debounce()` và `throttle()` utility functions trong helpers.js.
+- **🔧 Fixed**:
+  - Sửa `reportProjectId` dropdown không được populate data tương tự `defaultProjectId`.
+  - Sửa lỗi status message bị mất sau khi lưu cấu hình (thêm `setTimeout` trước `loadOptions`).
+- **🔄 Changed**:
+  - Chuẩn hóa code style: đổi single quotes sang double quotes.
+
+
 ## [1.8.1] - 2026-04-23
 - **✨ Added**:
   - Triển khai danh sách "Tứ trụ" AI mạnh mẽ (Gemma 3/4, Gemini 3.1) với RPD cao.
@@ -22,6 +36,13 @@
   - Loại bỏ Gemma 12B khỏi danh sách model.
   - Tối ưu margin/padding: `.field` margin-bottom: 0, `.grid` gap: 0.
   - Đưa Custom Fields vào trong section Redmine.
+- **🚀 Performance & UI Improvements**:
+  - Improved AI translation performance by implementing a caching layer for settings and Redmine issue lookups.
+  - Optimized batch translation flow by reducing redundant API calls and message overhead.
+  - Defaulted Modal UI to "Preview" tab for a more seamless experience.
+  - Enhanced Redmine formatting in preview (Headings, Tables, Lists, and `{{collapse}}` macro).
+  - Refactored AI service to handle Gemma models correctly by merging system instructions into user prompts.
+  - Stabilized "Tứ trụ" AI models configuration (Gemini 3.1 Flash Lite, Gemma 3/4).
 - **🔧 Fixed**:
   - Sửa logic load models mặc định khi không có cấu hình.
   - Clean up code thừa (primaryModelSelect, initialization duplicate).

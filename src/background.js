@@ -73,8 +73,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const settings = await getSettings();
       assertSettings(settings);
 
-      // Find Redmine issue by issue key + summary
-      const redmineIssue = await findRedmineIssue(
+      // Find Redmine issue by issue key + summary (using cache)
+      const redmineIssue = await findRedmineIssueWithCache(
         settings.redmineDomain,
         settings.redmineApiKey,
         message.issueKey,
@@ -163,23 +163,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     handler()
       .then((data) => sendResponse({ ok: true, data }))
       .catch((err) => {
+        const errorString = err instanceof Error ? err.message : String(err || "Unknown error");
         const isSettingsError =
-          err.message &&
-          (err.message.includes("API Key") ||
-            err.message.includes("API key") ||
-            err.message.includes("Setting") ||
-            err.message.includes("cấu hình"));
+          errorString.includes("API Key") ||
+          errorString.includes("API key") ||
+          errorString.includes("Setting") ||
+          errorString.includes("cấu hình");
 
-        if (!isSettingsError && err.message.includes("(403)")) {
-          console.warn(
-            `${DEBUG_PREFIX} Permission denied (403) for:`,
-            message.endpoint || message.type
-          );
-        } else if (!isSettingsError && err.message.includes("(404)")) {
-          console.warn(
-            `${DEBUG_PREFIX} Resource not found (404) for:`,
-            message.endpoint || message.type
-          );
+        if (!isSettingsError && errorString.includes("(403)")) {
+          console.warn(`${DEBUG_PREFIX} Permission denied (403) for:`, message.type);
+        } else if (!isSettingsError && errorString.includes("(404)")) {
+          console.warn(`${DEBUG_PREFIX} Resource not found (404) for:`, message.type);
         } else {
           console.error(`${DEBUG_PREFIX} Message handler error:`, err);
           if (typeof TB_LOGGER !== "undefined") {
@@ -187,17 +181,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           }
         }
 
-        sendResponse({ ok: false, error: err.message, isSettingsError: !!isSettingsError });
+        sendResponse({
+          ok: false,
+          error: errorString,
+          isSettingsError: !!isSettingsError,
+        });
       });
     return true; // Keep channel open for async response
   }
 });
+
+let settingsCache = null;
+let settingsCacheTime = 0;
+const SETTINGS_CACHE_TTL = 30000; // 30 seconds
 
 /**
  * Loads and decrypts extension settings from chrome.storage.local.
  * @returns {Promise<object>} Decrypted settings object
  */
 async function getSettings() {
+  const now = Date.now();
+  if (settingsCache && now - settingsCacheTime < SETTINGS_CACHE_TTL) {
+    return settingsCache;
+  }
+
   return new Promise((resolve) => {
     chrome.storage.local.get(
       [
@@ -226,7 +233,7 @@ async function getSettings() {
           ? geminiModelsStr.split("\n").filter((m) => m.trim())
           : [];
 
-        resolve({
+        const decryptedSettings = {
           redmineDomain: TB.REDMINE_DOMAIN,
           redmineApiKey: await decryptData(items.redmineApiKey ?? ""),
           backlogDomain: items.backlogDomain || TB.BACKLOG_DOMAIN,
@@ -241,10 +248,37 @@ async function getSettings() {
           cerebrasApiKey: await decryptData(items.cerebrasApiKey ?? ""),
           groqApiKey: await decryptData(items.groqApiKey ?? ""),
           defaultProjectId: items.defaultProjectId || "",
-        });
+        };
+
+        settingsCache = decryptedSettings;
+        settingsCacheTime = Date.now();
+        resolve(decryptedSettings);
       }
     );
   });
+}
+
+// Invalidate cache when storage changes
+chrome.storage.onChanged.addListener(() => {
+  settingsCache = null;
+  settingsCacheTime = 0;
+});
+
+const issueLookupCache = new Map();
+const LOOKUP_CACHE_TTL = 60000; // 1 minute
+
+async function findRedmineIssueWithCache(domain, apiKey, issueKey, summary) {
+  const cacheKey = `${issueKey}`;
+  const now = Date.now();
+  const cached = issueLookupCache.get(cacheKey);
+
+  if (cached && now - cached.time < LOOKUP_CACHE_TTL) {
+    return cached.data;
+  }
+
+  const result = await findRedmineIssue(domain, apiKey, issueKey, summary);
+  issueLookupCache.set(cacheKey, { data: result, time: now });
+  return result;
 }
 
 /**

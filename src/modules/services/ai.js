@@ -83,8 +83,15 @@ function getRandomGeminiModel(models) {
 
 async function callAIsByProvider(provider, model, settings, text, url, promptFn) {
   if (provider === TB.PROVIDERS.GEMINI) {
-    // Shuffle models to balance load, but keep gemini-2.5-flash-lite at the end
-    const models = settings.geminiModels?.length > 0 ? [...settings.geminiModels] : [model];
+    // Use settings models if available, otherwise use all official models, otherwise fallback to the passed model
+    let models = [];
+    if (settings.geminiModels?.length > 0) {
+      models = [...settings.geminiModels];
+    } else if (TB.GEMINI_MODELS?.length > 0) {
+      models = TB.GEMINI_MODELS.map((m) => m.value);
+    } else {
+      models = [model];
+    }
 
     // Randomize the order (Shuffle)
     for (let i = models.length - 1; i > 0; i--) {
@@ -106,6 +113,7 @@ async function callAIsByProvider(provider, model, settings, text, url, promptFn)
 
       for (const key of shuffledKeys) {
         try {
+          console.log(`[TB-AI] Attempting call with model: ${m}`);
           return await callGeminiAPI(key, text, m, promptFn, url);
         } catch (error) {
           const isRetryable =

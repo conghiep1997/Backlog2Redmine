@@ -269,6 +269,100 @@ function openConfirmModal(options) {
     );
   };
 
+  // Preview toggle logic
+  let isHtmlMode = true;
+  const escapeHtml = (str) => {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+  const renderMarkdownHtml = (text) => {
+    let html = escapeHtml(text);
+
+    // Redmine/Textile Headings: h1. Title -> <h1>Title</h1>
+    html = html.replace(/^h([1-6])\.\s+(.+)$/gm, "<h$1>$2</h$1>");
+
+    // Markdown Headings: # Title -> <h1>Title</h1>
+    html = html.replace(/^#{1,6}\s+(.+)$/gm, (match, p1) => {
+      const level = match.trim().split(" ")[0].length;
+      return `<h${level}>${p1}</h${level}>`;
+    });
+
+    // Redmine Bold: *text* -> <strong>text</strong>
+    html = html.replace(/\*(.+?)\*/g, "<strong>$1</strong>");
+    // Markdown Bold: **text** -> <strong>text</strong>
+    html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+
+    // Redmine/Markdown Italic: _text_ -> <em>text</em>
+    html = html.replace(/_(.+?)_/g, "<em>$1</em>");
+
+    // Redmine Macro: {{collapse(Title) ... }}
+    html = html.replace(
+      /\{\{collapse\((.*?)\)\n?([\s\S]*?)\n?\}\}/g,
+      "<details style='border: 1px solid #ddd; padding: 10px; border-radius: 4px; margin: 10px 0;'><summary style='font-weight: bold; cursor: pointer;'>$1</summary><div style='margin-top: 10px;'>$2</div></details>"
+    );
+
+    // Redmine Code: @code@ -> <code>code</code>
+    html = html.replace(/@(.+?)@/g, "<code>$1</code>");
+
+    // Block Code: <pre>...</pre> or ```...```
+    html = html.replace(/<pre>([\s\S]*?)<\/pre>/g, "<pre>$1</pre>");
+    html = html.replace(/`{3}(\w*)\n?([\s\S]*?)`{3}/g, "<pre>$2</pre>");
+    html = html.replace(/`(.+?)`/g, "<code>$1</code>");
+
+    // Blockquotes: > text or bq. text
+    html = html.replace(/^>\s+(.+)$/gm, "<blockquote>$1</blockquote>");
+    html = html.replace(/^bq\.\s+(.+)$/gm, "<blockquote>$1</blockquote>");
+
+    // Lists: * item or # item (ordered)
+    html = html.replace(/^\*\s+(.+)$/gm, "<li>$1</li>");
+    html = html.replace(/^#\s+(.+)$/gm, "<li>$1</li>");
+    // Wrap <li> in <ul> (simple approximation)
+    html = html.replace(/(<li>.*<\/li>)(\s*<li>.*<\/li>)*/g, "<ul>$&</ul>");
+
+    // Redmine Tables: |col1|col2|
+    html = html.replace(/^(\|.*\|)$/gm, (match) => {
+      const cells = match
+        .split("|")
+        .filter((c, i, a) => i > 0 && i < a.length - 1)
+        .map((c) => `<td>${c.trim()}</td>`)
+        .join("");
+      return `<tr>${cells}</tr>`;
+    });
+    html = html.replace(
+      /(<tr>.*<\/tr>)(\s*<tr>.*<\/tr>)*/g,
+      '<table class="tb-preview-table">$&</table>'
+    );
+
+    // Links: [text](url) or "text":url
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    html = html.replace(/"([^"]+)":(\S+)/g, '<a href="$2" target="_blank">$1</a>');
+
+    // Newlines to <br>
+    html = html.replace(/\n/g, "<br>");
+    return html;
+  };
+
+  const updatePreviewMode = () => {
+    if (!previewToggleBtn || !previewHtmlEl) return;
+    if (isHtmlMode) {
+      const currentText = previewTextarea.value;
+      previewHtmlEl.innerHTML = renderMarkdownHtml(currentText);
+      previewTextarea.style.display = "none";
+      previewHtmlEl.style.display = "block";
+      previewToggleBtn.textContent = "📝";
+      previewToggleBtn.title = "Switch to Edit mode";
+    } else {
+      previewTextarea.style.display = "block";
+      previewHtmlEl.style.display = "none";
+      previewToggleBtn.textContent = "👁";
+      previewToggleBtn.title = "Switch to Preview mode";
+    }
+  };
+
   // Internal state management for the modal
   function updateModalState() {
     if (isMigration) {
@@ -321,6 +415,7 @@ function openConfirmModal(options) {
         ? TB.MESSAGES.MODAL.BATCH_CONFIRM(remainingComments.length + 1)
         : TB.MESSAGES.MODAL.CONFIRM;
     }
+    updatePreviewMode();
   }
 
   if (isMigration) {
@@ -376,52 +471,15 @@ function openConfirmModal(options) {
     migrateSubjectInput.oninput = validateMigrationForm;
   }
 
-  // Preview toggle logic
-  if (previewToggleBtn && previewHtmlEl) {
-    let isHtmlMode = false;
-    const escapeHtml = (str) => {
-      return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    };
-    const renderMarkdownHtml = (text) => {
-      let html = escapeHtml(text);
-      // Fix lists: wrap consecutive <li> in <ul>
-      html = html.replace(/(<li>.*<\/li>)(\s*<li>.*<\/li>)*/g, "<ul>$&</ul>");
-      html = html
-        .replace(/^#{1,6}\s+(.+)$/gm, "<h$1>$1</h$1>")
-        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-        .replace(/\*(.+?)\*/g, "<em>$1</em>")
-        .replace(/`{3}(\w*)\n?([\s\S]*?)`{3}/g, "<pre>$2</pre>")
-        .replace(/`(.+?)`/g, "<code>$1</code>")
-        .replace(/^>\s+(.+)$/gm, "<blockquote>$1</blockquote>")
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
-        .replace(/\n/g, "<br>");
-      return html;
-    };
-
-    const updatePreviewMode = () => {
-      if (isHtmlMode) {
-        const currentText = previewTextarea.value;
-        previewHtmlEl.innerHTML = renderMarkdownHtml(currentText);
-        previewTextarea.style.display = "none";
-        previewHtmlEl.style.display = "block";
-        previewToggleBtn.textContent = "📝";
-      } else {
-        previewTextarea.style.display = "block";
-        previewHtmlEl.style.display = "none";
-        previewToggleBtn.textContent = "👁";
-      }
-    };
-
+  // Event Listeners for toggle
+  if (previewToggleBtn) {
     previewToggleBtn.onclick = () => {
       isHtmlMode = !isHtmlMode;
       updatePreviewMode();
     };
+  }
 
+  if (previewTextarea) {
     previewTextarea.oninput = () => {
       if (isHtmlMode) {
         updatePreviewMode();
@@ -445,13 +503,18 @@ function openConfirmModal(options) {
         try {
           memoizedBatchNotes = await translateBatch(remainingComments);
         } catch (err) {
-          showToast(err.message, "error");
+          console.error("[TB-Modal] Batch translation failed:", err);
+          const errorMsg = err.error || err.message || TB.MESSAGES.TOAST.TRANSLATION_FAILED;
+          showToast(`Lỗi dịch hàng loạt: ${errorMsg}`, "error");
           batchOptionCheckbox.checked = false;
           currentMode = false;
+        } finally {
+          confirmButton.disabled = false;
+          updateModalState();
         }
-        confirmButton.disabled = false;
+      } else {
+        updateModalState();
       }
-      updateModalState();
     };
   } else {
     batchOptionEl.hidden = true;

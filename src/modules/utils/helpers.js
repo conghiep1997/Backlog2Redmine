@@ -3,6 +3,31 @@
  */
 
 /**
+ * Debounce function to limit execution rate.
+ */
+function debounce(func, wait) {
+  let timeout;
+  return function (...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
+/**
+ * Throttle function to limit execution rate.
+ */
+function throttle(func, limit) {
+  let inThrottle;
+  return function (...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => (inThrottle = false), limit);
+    }
+  };
+}
+
+/**
  * Normalizes a string by removing whitespace and converting to lowercase.
  * Used for loose matching of issue keys and summaries.
  */

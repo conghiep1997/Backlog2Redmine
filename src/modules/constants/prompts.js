@@ -26,6 +26,10 @@ HÃY TRẢ VỀ BẢN DỊCH TRONG THẺ: <result>Nội dung bản dịch tại 
 [BẮT ĐẦU NỘI DUNG]
 ${text}
 [KẾT THÚC NỘI DUNG]`,
+    SIMPLE_TRANSLATE: (text) => `YÊU CẦU DỊCH VĂN BẢN SAU SANG TIẾNG VIỆT:
+[BẮT ĐẦU]
+${text}
+[KẾT THÚC]`,
     EXTRACT_JAPANESE: (text) => `NHIỆM VỤ: CHỈ TRÍCH XUẤT PHẦN TIẾNG NHẬT TỪ VĂN BẢN SAU.
 LOẠI BỎ CÁC PHẦN TIẾNG VIỆT VÀ THÔNG TIN DƯ THỪA.
 GIỮ NGUYÊN ĐỊNH DẠNG MARKDOWN (Nếu có).

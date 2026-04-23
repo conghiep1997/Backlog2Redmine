@@ -19,6 +19,11 @@ observeJournalActions();
 injectLogTimeButton(); // For single report issue
 injectMonthlyLogButton(); // For logging the entire month
 
+// Cleanup on page unload
+window.addEventListener("beforeunload", () => {
+  if (journalObserver) journalObserver.disconnect();
+});
+
 // ====================
 // GLOBAL HELPER FUNCTIONS
 // ====================
@@ -238,7 +243,11 @@ async function injectLogTimeButton() {
 // ====================
 
 function observeJournalActions() {
+  const targetContainer =
+    document.querySelector("#history") || document.querySelector(".journals") || document.body;
+
   journalObserver = new MutationObserver((mutations) => {
+    let shouldRescan = false;
     for (const m of mutations) {
       for (const node of m.addedNodes) {
         if (node.nodeType === Node.ELEMENT_NODE) {
@@ -246,12 +255,16 @@ function observeJournalActions() {
             injectButtonIfNeeded(node);
           } else {
             node.querySelectorAll?.("div.journal div.contextual").forEach(injectButtonIfNeeded);
+            shouldRescan = true;
           }
         }
       }
     }
+    if (shouldRescan) {
+      scanAndInjectButtons();
+    }
   });
-  journalObserver.observe(document.body, { childList: true, subtree: true });
+  journalObserver.observe(targetContainer, { childList: true, subtree: true });
 }
 
 function scanAndInjectButtons() {

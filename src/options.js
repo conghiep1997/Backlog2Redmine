@@ -2,9 +2,24 @@
 /* global TB_LOGGER, setStatus, loadOptions, updateModelDropdown, updateKeyVisibility, fetchProjects */
 document.addEventListener("DOMContentLoaded", () => {
   if (typeof TB === "undefined") {
-    console.error("[OPTIONS] Lỗi: TB chưa được định nghĩa! constants.js có thể chưa tải xong.");
+    console.error("[OPTIONS] TB is not defined! constants.js may not have loaded.");
     return;
   }
+
+  // Cache for projects data
+  let cachedProjects = null;
+  let cacheTimestamp = 0;
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+  // Debounce helper
+  function debounceFetchProjects() {
+    let timeout;
+    return function (...args) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => fetchProjects(...args), 500);
+    };
+  }
+  const debouncedFetch = debounceFetchProjects();
 
   // Get DOM elements
   const form = document.getElementById("optionsForm");
@@ -19,17 +34,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Primary elements
   const primaryProviderSelect = document.getElementById("primaryProvider");
+  const primaryModelSelect = document.getElementById("primaryModel");
+  const primaryModelField = document.getElementById("primaryModelField");
 
   // Fallback elements
   const fallbackProviderSelect = document.getElementById("fallbackProvider");
   const fallbackModelSelect = document.getElementById("fallbackModel");
   const fallbackModelField = document.getElementById("fallbackModelField");
 
-  // Credentials elements (Fallback)
-  const fallbackCerebrasKeyContainer = document.getElementById("fallbackCerebrasKeyContainer");
-  const fallbackGroqKeyContainer = document.getElementById("fallbackGroqKeyContainer");
-  const fallbackCerebrasApiKeyInput = document.getElementById("fallbackCerebrasApiKey");
-  const fallbackGroqApiKeyInput = document.getElementById("fallbackGroqApiKey");
+  // AI Service elements (Credentials)
+  const groqApiKeyInput = document.getElementById("groqApiKey");
+  const cerebrasApiKeyInput = document.getElementById("cerebrasApiKey");
 
   const defaultProjectIdSelect = document.getElementById("defaultProjectId");
   const reportProjectIdSelect = document.getElementById("reportProjectId");
@@ -55,6 +70,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Listeners
 
+  primaryProviderSelect.addEventListener("change", () => {
+    const provider = primaryProviderSelect.value;
+    if (provider === TB.PROVIDERS.GEMINI) {
+      primaryModelField.style.display = "none";
+    } else {
+      primaryModelField.style.display = "block";
+      updateModelDropdown(primaryModelSelect, provider);
+    }
+    updateConfigSectionsVisibility();
+    updateFallbackOptions();
+  });
+
   fallbackProviderSelect.addEventListener("change", () => {
     const provider = fallbackProviderSelect.value;
     if (provider === TB.PROVIDERS.NONE) {
@@ -63,13 +90,17 @@ document.addEventListener("DOMContentLoaded", () => {
       fallbackModelField.style.display = "block";
       updateModelDropdown(fallbackModelSelect, provider);
     }
-    updateKeyVisibility();
+    updateConfigSectionsVisibility();
   });
 
   // Fetch projects if API key is available
   redmineApiKeyInput.addEventListener("blur", () => {
     if (redmineApiKeyInput.value.trim()) {
-      fetchProjects(redmineApiKeyInput.value.trim());
+      debouncedFetch(
+        redmineApiKeyInput.value.trim(),
+        defaultProjectIdSelect.value,
+        reportProjectIdSelect.value
+      );
     }
   });
 
@@ -158,11 +189,23 @@ document.addEventListener("DOMContentLoaded", () => {
         backlogDomain: backlogDomainInput.value.trim() || TB.BACKLOG_DOMAIN,
         backlogApiKey: await encryptData(backlogApiKeyInput.value.trim()),
         primaryProvider: primaryProviderSelect.value,
+        primaryModel: primaryModelSelect.value,
         fallbackProvider: fallbackProviderSelect.value,
         fallbackModel: fallbackModelSelect.value,
         defaultProjectId: defaultProjectIdSelect.value,
         manualFields: manualFieldsInput.value.trim(),
       };
+
+      // AI Credentials (always save if not empty)
+      const groqKey = groqApiKeyInput.value.trim();
+      if (groqKey && groqKey !== "**********") {
+        settings.groqApiKey = await encryptData(groqKey);
+      }
+
+      const cerebrasKey = cerebrasApiKeyInput.value.trim();
+      if (cerebrasKey && cerebrasKey !== "**********") {
+        settings.cerebrasApiKey = await encryptData(cerebrasKey);
+      }
 
       // Save Multiple Gemini Configuration
       if (selectedGeminiModels.length > 0) {
@@ -172,16 +215,6 @@ document.addEventListener("DOMContentLoaded", () => {
         settings.geminiApiKeys = await encryptData(selectedGeminiKeys.join("\n"));
         // For backward compatibility and single-key fallback
         settings.geminiApiKey = await encryptData(selectedGeminiKeys[0]);
-      }
-
-      // Fallback specific keys
-      if (settings.fallbackProvider === TB.PROVIDERS.CEREBRAS) {
-        const key = fallbackCerebrasApiKeyInput.value.trim();
-        if (key) settings.cerebrasApiKey = await encryptData(key);
-      }
-      if (settings.fallbackProvider === TB.PROVIDERS.GROQ) {
-        const key = fallbackGroqApiKeyInput.value.trim();
-        if (key) settings.groqApiKey = await encryptData(key);
       }
     } catch (e) {
       console.error("[OPTIONS] Data gathering failed:", e);
@@ -193,12 +226,6 @@ document.addEventListener("DOMContentLoaded", () => {
       await chrome.storage.local.set(settings);
       setStatus(TB.MESSAGES.SETTINGS.OPTIONS_SAVE_SUCCESS);
       // Briefly clear password inputs for security
-      if (settings.cerebrasApiKey) {
-        fallbackCerebrasApiKeyInput.value = "";
-      }
-      if (settings.groqApiKey) {
-        fallbackGroqApiKeyInput.value = "";
-      }
       // Delay loadOptions to allow status to be displayed
       setTimeout(() => loadOptions(), 100);
     } catch (error) {
@@ -220,6 +247,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "cerebrasApiKey",
         "groqApiKey",
         "primaryProvider",
+        "primaryModel",
         "fallbackProvider",
         "fallbackModel",
         "defaultProjectId",
@@ -236,8 +264,13 @@ document.addEventListener("DOMContentLoaded", () => {
         backlogDomainInput.value = items.backlogDomain || TB.BACKLOG_DOMAIN;
 
         primaryProviderSelect.value = items.primaryProvider || TB.DEFAULT_PRIMARY_PROVIDER;
-        // updateModelDropdown(primaryModelSelect, primaryProviderSelect.value);
-        // primaryModelSelect.value = items.primaryModel || TB.DEFAULT_PRIMARY_MODEL;
+        if (primaryProviderSelect.value !== TB.PROVIDERS.GEMINI) {
+          primaryModelField.style.display = "block";
+          updateModelDropdown(primaryModelSelect, primaryProviderSelect.value);
+          primaryModelSelect.value = items.primaryModel || TB.DEFAULT_PRIMARY_MODEL;
+        } else {
+          primaryModelField.style.display = "none";
+        }
 
         fallbackProviderSelect.value = items.fallbackProvider || TB.DEFAULT_FALLBACK_PROVIDER;
         if (fallbackProviderSelect.value !== TB.PROVIDERS.NONE) {
@@ -247,6 +280,16 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
           fallbackModelField.style.display = "none";
         }
+
+        if (items.groqApiKey) {
+          groqApiKeyInput.value = "**********";
+        }
+        if (items.cerebrasApiKey) {
+          cerebrasApiKeyInput.value = "**********";
+        }
+
+        updateConfigSectionsVisibility();
+        updateFallbackOptions();
 
         if (items.geminiModels) {
           try {
@@ -290,14 +333,20 @@ document.addEventListener("DOMContentLoaded", () => {
             2
           );
         }
-
-        updateKeyVisibility();
       }
     );
   }
 
   async function fetchProjects(apiKey, selectedId = "", selectedReportId = "") {
     if (!apiKey) return;
+
+    // Check cache first
+    const now = Date.now();
+    if (cachedProjects && now - cacheTimestamp < CACHE_DURATION) {
+      renderProjectOptions(cachedProjects, selectedId, selectedReportId);
+      return;
+    }
+
     const syncBtn = document.getElementById("syncProjectsBtn");
     try {
       if (syncBtn) {
@@ -311,21 +360,12 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       if (!response.ok) throw new Error("Failed to fetch");
       const data = await response.json();
-      defaultProjectIdSelect.innerHTML = '<option value="">-- Chọn project --</option>';
-      reportProjectIdSelect.innerHTML = '<option value="">-- Chọn project --</option>';
-      data.projects.forEach((p) => {
-        const opt = document.createElement("option");
-        opt.value = p.id;
-        opt.textContent = p.name;
-        defaultProjectIdSelect.appendChild(opt);
-        reportProjectIdSelect.appendChild(opt.cloneNode(true));
-      });
-      if (selectedId) {
-        defaultProjectIdSelect.value = selectedId;
-      }
-      if (selectedReportId) {
-        reportProjectIdSelect.value = selectedReportId;
-      }
+
+      // Cache the results
+      cachedProjects = data.projects;
+      cacheTimestamp = now;
+
+      renderProjectOptions(data.projects, selectedId, selectedReportId);
     } catch (e) {
       defaultProjectIdSelect.innerHTML =
         '<option value="">Lỗi tải project (Kiểm tra API Key)</option>';
@@ -336,6 +376,24 @@ document.addEventListener("DOMContentLoaded", () => {
         syncBtn.disabled = false;
         syncBtn.textContent = "🔄 Đồng bộ Project";
       }
+    }
+  }
+
+  function renderProjectOptions(projects, selectedId, selectedReportId) {
+    defaultProjectIdSelect.innerHTML = '<option value="">-- Chọn project --</option>';
+    reportProjectIdSelect.innerHTML = '<option value="">-- Chọn project --</option>';
+    projects.forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.name;
+      defaultProjectIdSelect.appendChild(opt);
+      reportProjectIdSelect.appendChild(opt.cloneNode(true));
+    });
+    if (selectedId) {
+      defaultProjectIdSelect.value = selectedId;
+    }
+    if (selectedReportId) {
+      reportProjectIdSelect.value = selectedReportId;
     }
   }
 
@@ -361,13 +419,62 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function updateKeyVisibility() {
-    const f = fallbackProviderSelect.value;
-    if (fallbackCerebrasKeyContainer) {
-      fallbackCerebrasKeyContainer.style.display = f === TB.PROVIDERS.CEREBRAS ? "block" : "none";
+  function updateFallbackOptions() {
+    const primary = primaryProviderSelect.value;
+    const fallback = fallbackProviderSelect.value;
+
+    // Save current selection to restore if possible
+    const currentFallback = fallback;
+
+    // Clear and rebuild options
+    const options = [
+      { value: "none", label: "Không dùng dự phòng" },
+      { value: "gemini", label: "Google Gemini AI Studio" },
+      { value: "groq", label: "Groq Cloud" },
+      { value: "cerebras", label: "Cerebras" },
+    ];
+
+    // Remove current primary from fallback options
+    const filteredOptions = options.filter((opt) => opt.value === "none" || opt.value !== primary);
+
+    // Re-render options
+    fallbackProviderSelect.innerHTML = "";
+    filteredOptions.forEach((opt) => {
+      const el = document.createElement("option");
+      el.value = opt.value;
+      el.textContent = opt.label;
+      fallbackProviderSelect.appendChild(el);
+    });
+
+    // Restore selection if still valid, otherwise default to none
+    if (filteredOptions.some((opt) => opt.value === currentFallback)) {
+      fallbackProviderSelect.value = currentFallback;
+    } else {
+      fallbackProviderSelect.value = "none";
+      // Trigger change to hide model field if switched to none
+      fallbackProviderSelect.dispatchEvent(new Event("change"));
     }
-    if (fallbackGroqKeyContainer) {
-      fallbackGroqKeyContainer.style.display = f === TB.PROVIDERS.GROQ ? "block" : "none";
+  }
+
+  function updateConfigSectionsVisibility() {
+    const p = primaryProviderSelect.value;
+    const f = fallbackProviderSelect.value;
+
+    const geminiSection = document.getElementById("geminiConfigSection");
+    const groqSection = document.getElementById("groqConfigSection");
+    const cerebrasSection = document.getElementById("cerebrasConfigSection");
+
+    if (geminiSection) {
+      geminiSection.style.display =
+        p === TB.PROVIDERS.GEMINI || f === TB.PROVIDERS.GEMINI ? "block" : "none";
+    }
+    if (groqSection) {
+      groqSection.style.display =
+        p === TB.PROVIDERS.GROQ || f === TB.PROVIDERS.GROQ ? "block" : "none";
+    }
+    if (cerebrasSection) {
+      cerebrasSection.style.display =
+        p === TB.PROVIDERS.CEREBRAS || f === TB.PROVIDERS.CEREBRAS ? "block" : "none";
     }
   }
 
