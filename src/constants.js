@@ -37,6 +37,20 @@
     modal_migrate_subtitle: "Sẽ tạo 1 ticket và đính kèm $count$ bình luận.",
     modal_migrate_confirm: "Tạo & Di chuyển toàn bộ",
     modal_migrate_comments_text: "Dịch và di chuyển tất cả $count$ bình luận",
+    settings_redmine_domain_required: "Thiếu tên miền Redmine trong trang Tùy chọn.",
+    settings_redmine_api_key_required: "Thiếu Redmine API Key trong trang Tùy chọn.",
+    settings_backlog_api_key_required: "Thiếu Backlog API Key trong trang Tùy chọn.",
+    settings_gemini_api_key_required: "Thiếu Gemini API Key trong trang Tùy chọn.",
+    options_gemini_key_required: "❌ Vui lòng nhập Gemini API Key.",
+    options_cerebras_key_required: "❌ Vui lòng nhập Cerebras API Key.",
+    options_save_success: "✅ Cấu hình đã được lưu thành công!",
+    options_save_error: "❌ Lỗi khi lưu: $error$",
+    options_saved_placeholder: "********** (Đã lưu)",
+    modal_version_label: "Target Version (Milestone)",
+    modal_due_date_label: "Due Date",
+    modal_due_date_required_label: "Due Date*",
+    modal_preview_description: "Xem trước mô tả",
+    modal_preview_comments: "Xem trước bình luận",
   };
 
   const getMsg = (key, substitution) => {

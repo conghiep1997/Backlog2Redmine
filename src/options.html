@@ -215,23 +215,24 @@
       </div>
 
       <div class="card">
-          <form id="optionsForm" class="grid">
-            <!-- Nhóm cấu hình Redmine -->
-            <details open
-              style="
-                padding: 16px;
-                background: #dbeafe;
-                border: 1px solid #3b82f6;
-                border-radius: 12px;
-                margin-bottom: 16px;
-                display: block;
-              "
-            >
-              <summary style="padding: 4px 0; font-weight: 600; color: #1e40af; cursor: pointer">
-                💎 Cấu hình Redmine - Click để thu gọn/mở rộng
-              </summary>
-              <div style="padding-top: 12px">
-                <div class="field" style="margin-bottom: 0">
+        <form id="optionsForm" class="grid">
+          <!-- Nhóm cấu hình Redmine -->
+          <details
+            open
+            style="
+              padding: 16px;
+              background: #dbeafe;
+              border: 1px solid #3b82f6;
+              border-radius: 12px;
+              margin-bottom: 16px;
+              display: block;
+            "
+          >
+            <summary style="padding: 4px 0; font-weight: 600; color: #1e40af; cursor: pointer">
+              💎 Cấu hình Redmine - Click để thu gọn/mở rộng
+            </summary>
+            <div style="padding-top: 12px">
+              <div class="field" style="margin-bottom: 0">
                 <label for="redmineDomain">Redmine Domain</label>
                 <input
                   id="redmineDomain"
@@ -260,7 +261,7 @@
                 </p>
               </div>
 
-              <div class="field" style="margin-bottom: 0">
+              <div class="field" style="margin-bottom: 12px">
                 <label for="defaultProjectId"
                   >Project mặc định (Dùng cho Migrate)
                   <button
@@ -285,67 +286,68 @@
                   "
                 >
                   <option value="">-- Trước tiên cần lưu API Key --</option>
-              </select>
-            </div>
+                </select>
+              </div>
 
-            <!-- REPORT PROJECT ID -->
-            <div class="field" style="margin-bottom: 0">
-              <label for="reportProjectId">Project cho Report (Log Time Tháng)</label>
-              <select
-                id="reportProjectId"
-                style="
-                  width: 100%;
-                  box-sizing: border-box;
-                  border: 1px solid var(--border);
-                  border-radius: 12px;
-                  padding: 12px 14px;
-                  font: inherit;
-                  background: white;
-                "
-              >
-<option value="">-- Cần lưu API Key trước --</option>
-              </select>
-              <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
-                💡 Project chứa các issue Report (dùng cho chức năng "Log Time Tháng").
-              </p>
-            </div>
-
-            <!-- Cấu hình Custom Fields (JSON Mapping) -->
-            <details
-              style="
-                border: 1px solid #bfdbfe;
-                border-radius: 12px;
-                background: white;
-                padding: 0 14px;
-                margin-top: 8px;
-              "
-            >
-              <summary style="padding: 12px 0; font-weight: 600; cursor: pointer; color: #1d4ed8">
-                Cấu hình Custom Fields (JSON Mapping)
-              </summary>
-              <div class="field" style="padding-bottom: 16px">
-                <textarea
-                  id="manualFields"
-                  placeholder='{ "Severity": 0, "Reproduction Rate": 0, "Role": 0, "QC Activity": 0 }'
+              <!-- REPORT PROJECT ID -->
+              <div class="field" style="margin-bottom: 0">
+                <label for="reportProjectId">Project cho Report (Log Time Tháng)</label>
+                <select
+                  id="reportProjectId"
                   style="
                     width: 100%;
-                    height: 100px;
                     box-sizing: border-box;
                     border: 1px solid var(--border);
                     border-radius: 12px;
                     padding: 12px 14px;
-                    font-family: monospace;
-                    font-size: 13px;
+                    font: inherit;
                     background: white;
-                    resize: none;
                   "
-                ></textarea>
+                >
+                  <option value="">-- Cần lưu API Key trước --</option>
+                </select>
                 <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
-                  💡 Nhập mã ID của các trường bắt buộc. Ví dụ:
-                  <code>{ "Severity": 46, "Role": 11, "QC Activity": 8 }</code>
+                  💡 Project chứa các issue Report (dùng cho chức năng "Log Time Tháng").
                 </p>
               </div>
-            </details>
+
+              <!-- Cấu hình Custom Fields (JSON Mapping) -->
+              <details
+                style="
+                  border: 1px solid #bfdbfe;
+                  border-radius: 12px;
+                  background: white;
+                  padding: 0 14px;
+                  margin-top: 8px;
+                "
+              >
+                <summary style="padding: 12px 0; font-weight: 600; cursor: pointer; color: #1d4ed8">
+                  Cấu hình Custom Fields (JSON Mapping)
+                </summary>
+                <div class="field" style="padding-bottom: 16px">
+                  <textarea
+                    id="manualFields"
+                    placeholder='{ "Severity": 0, "Reproduction Rate": 0, "Role": 0, "QC Activity": 0 }'
+                    style="
+                      width: 100%;
+                      height: 100px;
+                      box-sizing: border-box;
+                      border: 1px solid var(--border);
+                      border-radius: 12px;
+                      padding: 12px 14px;
+                      font-family: monospace;
+                      font-size: 13px;
+                      background: white;
+                      resize: none;
+                    "
+                  ></textarea>
+                  <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                    💡 Nhập mã ID của các trường bắt buộc. Ví dụ:
+                    <code>{ "Severity": 46, "Role": 11, "QC Activity": 8 }</code>
+                  </p>
+                </div>
+              </details>
+            </div>
           </details>
 
           <!-- Nhóm cấu hình Backlog -->
@@ -371,17 +373,19 @@
                 </p>
               </div>
               <div class="field">
-              <label for="backlogApiKey">Backlog API Key</label>
-              <input id="backlogApiKey" type="text" placeholder="Nhập Backlog API key" />
-              <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
-                🔑 Lấy tại: <strong>Tài khoản > API</strong> trong Backlog của bạn. Cần thiết để gửi
-                nội dung ngược lại từ Redmine sang Backlog.
-              </p>
+                <label for="backlogApiKey">Backlog API Key</label>
+                <input id="backlogApiKey" type="text" placeholder="Nhập Backlog API key" />
+                <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                  🔑 Lấy tại: <strong>Tài khoản > API</strong> trong Backlog của bạn. Cần thiết để
+                  gửi nội dung ngược lại từ Redmine sang Backlog.
+                </p>
+              </div>
             </div>
           </details>
 
           <!-- Primary AI Configuration -->
-          <details open
+          <details
+            open
             style="
               padding: 16px;
               background: #d1fae5;
@@ -418,7 +422,8 @@
               </div>
 
               <!-- Multiple Gemini - Models & Keys -->
-              <details open
+              <details
+                open
                 style="
                   border: 1px solid #86efac;
                   border-radius: 12px;
@@ -431,16 +436,26 @@
                 </summary>
                 <div style="padding-bottom: 12px">
                   <div style="margin-bottom: 12px">
-                    <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">Models (click chọn/bỏ, max 5)</p>
-                    <div id="geminiModelsList" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+                    <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">
+                      Models (click chọn/bỏ, max 5)
+                    </p>
+                    <div
+                      id="geminiModelsList"
+                      style="display: flex; flex-wrap: wrap; gap: 6px"
+                    ></div>
                     <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">
                       Đã chọn: <span id="selectedModelCount">0</span>/5
                     </p>
                   </div>
 
                   <div>
-                    <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">Keys (nhập + Enter để thêm, click để xóa, max 10)</p>
-                    <div id="geminiKeysList" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;"></div>
+                    <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">
+                      Keys (nhập + Enter để thêm, click để xóa, max 10)
+                    </p>
+                    <div
+                      id="geminiKeysList"
+                      style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px"
+                    ></div>
                     <input
                       id="geminiApiKeys"
                       placeholder="Nhập key + Enter để thêm"
@@ -461,7 +476,7 @@
                   </div>
                 </div>
               </details>
-</div>
+            </div>
           </details>
 
           <!-- Fallback AI Configuration -->
@@ -517,26 +532,6 @@
               </div>
 
               <!-- Fallback Provider API Keys -->
-              <div id="fallbackGeminiKeyContainer" style="display: none; margin-top: 12px">
-                <div class="field">
-                  <label for="fallbackGeminiApiKey">Gemini API Key</label>
-                  <input
-                    id="fallbackGeminiApiKey"
-                    class="gemini-key-sync"
-                    type="text"
-                    placeholder="Nhập Gemini API key"
-                  />
-                  <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
-                    💡 Lấy Key tại
-                    <a
-                      href="https://aistudio.google.com/app/apikey"
-                      target="_blank"
-                      style="color: var(--primary)"
-                      >Google AI Studio</a
-                    >.
-                  </p>
-                </div>
-              </div>
               <div id="fallbackCerebrasKeyContainer" style="display: none; margin-top: 12px">
                 <div class="field">
                   <label for="fallbackCerebrasApiKey">Cerebras API Key</label>
@@ -573,7 +568,8 @@
                     <a href="https://console.groq.com" target="_blank" style="color: var(--primary)"
                       >console.groq.com</a
                     >.
-</p>
+                  </p>
+                </div>
               </div>
             </div>
           </details>
@@ -602,7 +598,7 @@
         </div>
 
         <div class="disclaimer">
-          Extension này chỉ làm theo ý bạn...nếu có lỗi thì chắc chắc bạn bấm nhầm rồi👀
+          Extension này chỉ làm theo ý bạn...nếu có lỗi thì chắc chắc bạn bấm nhầm thôi 👀
         </div>
       </div>
     </div>

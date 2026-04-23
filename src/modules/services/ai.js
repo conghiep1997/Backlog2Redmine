@@ -83,16 +83,30 @@ function getRandomGeminiModel(models) {
 
 async function callAIsByProvider(provider, model, settings, text, url, promptFn) {
   if (provider === TB.PROVIDERS.GEMINI) {
-    // Try multiple models with fallback chain
-    const models = settings.geminiModels?.length > 0 ? settings.geminiModels : [model];
+    // Shuffle models to balance load, but keep gemini-2.5-flash-lite at the end
+    const models = settings.geminiModels?.length > 0 ? [...settings.geminiModels] : [model];
+
+    // Randomize the order (Shuffle)
+    for (let i = models.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [models[i], models[j]] = [models[j], models[i]];
+    }
+
     const apiKeys =
       settings.geminiApiKeys?.length > 0 ? settings.geminiApiKeys : [settings.geminiApiKey];
 
     let lastError = null;
     for (const m of models) {
-      for (const key of apiKeys) {
+      // Randomize keys order too for better load balancing
+      const shuffledKeys = [...apiKeys];
+      for (let i = shuffledKeys.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledKeys[i], shuffledKeys[j]] = [shuffledKeys[j], shuffledKeys[i]];
+      }
+
+      for (const key of shuffledKeys) {
         try {
-          return await callGeminiAPI(key, text, m, null, promptFn, url);
+          return await callGeminiAPI(key, text, m, promptFn, url);
         } catch (error) {
           const isRetryable =
             error.message.includes("429") ||
@@ -100,7 +114,7 @@ async function callAIsByProvider(provider, model, settings, text, url, promptFn)
             error.message.includes("503") ||
             error.message.toLowerCase().includes("high demand");
           if (!isRetryable) {
-            throw error; // Non-retryable error, stop immediately
+            throw error;
           }
           lastError = error;
           console.warn(`[TB-AI] Gemini (${m}) failed with ${error.message}, trying next...`);
@@ -145,25 +159,48 @@ async function callGeminiAPI(
   apiKey,
   commentText,
   model,
-  fallbackModel = null,
   promptFn = TB.PROMPTS.USER,
   commentUrl = null
 ) {
   // Call Gemini API with timeout to avoid hanging connections
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
+  const isGemma = model.toLowerCase().includes("gemma");
+  const payload = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: isGemma
+              ? `${TB.PROMPTS.SYSTEM}\n\n${promptFn(commentText)}`
+              : promptFn(commentText),
+          },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.2,
+      topP: 0.9,
+      maxOutputTokens: 2048,
+    },
+  };
+
+  // Only Gemini models support system_instruction parameter
+  if (!isGemma) {
+    payload.system_instruction = {
+      parts: [{ text: TB.PROMPTS.SYSTEM }],
+    };
+  }
+
   const response = await timeoutFetch(
     url,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: TB.PROMPTS.SYSTEM }] },
-        contents: [{ role: "user", parts: [{ text: promptFn(commentText) }] }],
-        generationConfig: { temperature: 0.2, topP: 0.9, maxOutputTokens: 2048 },
-      }),
+      body: JSON.stringify(payload),
     },
-    15000
+    10000
   ); // 15s timeout cho Gemini
 
   if (!response.ok) {
@@ -224,7 +261,7 @@ async function callCerebrasAPI(
         max_tokens: 2048,
       }),
     },
-    15000
+    10000
   ); // 15s timeout cho Cerebras
 
   if (!response.ok) {
@@ -265,7 +302,7 @@ async function callGroqAPI(apiKey, commentText, model, promptFn = TB.PROMPTS.USE
         max_tokens: 2048,
       }),
     },
-    15000
+    10000
   );
 
   if (!response.ok) {

@@ -82,7 +82,7 @@ async function findIssues(redmineDomain, apiKey, params) {
 async function findRedmineIssueViaApi(redmineDomain, apiKey, issueKey, issueSummary = "") {
   const url = buildRedmineUrl(
     redmineDomain,
-    `/issues.json?subject=${encodeURIComponent(issueKey)}&limit=10`
+    `/issues.json?subject=${encodeURIComponent(issueKey)}&limit=5`
   );
   const response = await fetch(url, {
     headers: { "X-Redmine-API-Key": apiKey, Accept: "application/json" },

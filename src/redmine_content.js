@@ -82,7 +82,7 @@ async function logTimeForMonth() {
   const modal = openConfirmModal({
     issueTitle: `Log Time cho Tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}`,
     previewText:
-      "<div id=\"monthly-log-progress\" style=\"max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;\">Khởi tạo...</div>",
+      '<div id="monthly-log-progress" style="max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;">Khởi tạo...</div>',
     confirmLabel: "Bắt đầu",
     cancelLabel: "Hủy",
     onConfirm: async (modalInstance) => {
@@ -97,7 +97,7 @@ async function logTimeForMonth() {
       };
 
       try {
-        updateProgress("Đang tìm kiếm các issue \"Report\" của tháng...");
+        updateProgress('Đang tìm kiếm các issue "Report" của tháng...');
         const now = new Date();
         const year = now.getFullYear();
         const month = (now.getMonth() + 1).toString().padStart(2, "0");
@@ -109,7 +109,7 @@ async function logTimeForMonth() {
         const reportTracker = trackers.find((t) => t.name.toLowerCase() === "report");
         if (!reportTracker) {
           throw new Error(
-            "Không thể tìm thấy Tracker \"Report\". Vui lòng kiểm tra cấu hình Redmine."
+            'Không thể tìm thấy Tracker "Report". Vui lòng kiểm tra cấu hình Redmine.'
           );
         }
 
@@ -122,7 +122,7 @@ async function logTimeForMonth() {
         });
 
         if (issues.length === 0) {
-          updateProgress("Không tìm thấy issue \"Report\" nào khớp với tháng này.");
+          updateProgress('Không tìm thấy issue "Report" nào khớp với tháng này.');
           confirmBtn.textContent = "Đã xong";
           return;
         }
@@ -159,13 +159,13 @@ async function logTimeForMonth() {
         updateProgress("<br><b>Hoàn tất! Dưới đây là dữ liệu để copy vào Timesheet:</b>");
 
         let tableHtml =
-          "<div style=\"max-height: 200px; overflow-y: auto; border: 1px solid #ddd; margin-top: 10px;\"><table id=\"timesheet-results-table\" style=\"width:100%; border-collapse: collapse;\"><thead><tr><th style=\"border:1px solid #ccc; padding:8px; position: sticky; top: 0; background: #f0f0f0;\">Ngày</th><th style=\"border:1px solid #ccc; padding:8px; position: sticky; top: 0; background: #f0f0f0;\">Tasks</th></tr></thead><tbody>";
+          '<div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; margin-top: 10px;"><table id="timesheet-results-table" style="width:100%; border-collapse: collapse;"><thead><tr><th style="border:1px solid #ccc; padding:8px; position: sticky; top: 0; background: #f0f0f0;">Ngày</th><th style="border:1px solid #ccc; padding:8px; position: sticky; top: 0; background: #f0f0f0;">Tasks</th></tr></thead><tbody>';
         resultsForSheet.sort((a, b) => a.date.localeCompare(b.date));
         for (const result of resultsForSheet) {
           tableHtml += `<tr><td style="border:1px solid #ccc; padding:8px;">${result.date}</td><td style="border:1px solid #ccc; padding:8px;">${result.tasks}</td></tr>`;
         }
         tableHtml +=
-          "</tbody></table></div><br><button id=\"copy-ts-btn\" class=\"secondary\">Copy Bảng</button>";
+          '</tbody></table></div><br><button id="copy-ts-btn" class="secondary">Copy Bảng</button>';
 
         progressDiv.innerHTML += `<br>${tableHtml}`;
 

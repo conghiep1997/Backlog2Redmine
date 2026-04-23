@@ -4,14 +4,22 @@
 (function (global) {
   const GEMINI_MODELS = [
     {
-      value: "gemini-2.5-flash-lite",
-      label: "Gemini 2.5 Flash-Lite (RPM 15, RPD 1000) ⭐ Fastest",
+      value: "gemini-3.1-flash-lite-preview",
+      label: "Gemini 3.1 Flash Lite (RPD 500) ⭐ Mặc định",
       default: true,
     },
-    { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash (RPM 10, RPD 250)" },
-    { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro (RPM 5, RPD 100) 🔥 Best Quality" },
-    { value: "gemma-3-27b-it", label: "Gemma 3 27B IT (RPM 15, RPD 31)" },
-    { value: "gemini-3.1-flash-lite-preview-05-20", label: "Gemini 3.1 Flash Lite (Legacy)" },
+    {
+      value: "gemma-3-27b-it",
+      label: "Gemma 3 27B IT (RPD 14.4K) 🚀 Hạn mức cực cao",
+    },
+    {
+      value: "gemma-4-31b-it",
+      label: "Gemma 4 31B IT (RPD 1.5K) ✨ Chất lượng cao",
+    },
+    {
+      value: "gemma-4-26b-a4b-it",
+      label: "Gemma 4 26B A4B IT (RPD 1.5K) 💎 MoE Stable",
+    },
   ];
 
   const CEREBRAS_MODELS = [
@@ -38,8 +46,8 @@
     GEMINI_MODELS,
     CEREBRAS_MODELS,
     GROQ_MODELS,
-    GEMINI: "gemini-2.5-flash-lite",
-    GEMINI_FALLBACK: "gemini-2.5-flash",
+    GEMINI: "gemini-3.1-flash-lite-preview",
+    GEMINI_FALLBACK: "gemma-3-27b-it",
     CEREBRAS: "gpt-oss-120b",
     GROQ: "llama-3.3-70b-versatile",
   };

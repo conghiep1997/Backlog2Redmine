@@ -2,7 +2,7 @@
 /* global TB_LOGGER, setStatus, loadOptions, updateModelDropdown, updateKeyVisibility, fetchProjects */
 document.addEventListener("DOMContentLoaded", () => {
   if (typeof TB === "undefined") {
-    console.error("[OPTIONS] TB is not defined! constants.js may not have loaded.");
+    console.error("[OPTIONS] Lỗi: TB chưa được định nghĩa! constants.js có thể chưa tải xong.");
     return;
   }
 
@@ -12,7 +12,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const redmineApiKeyInput = document.getElementById("redmineApiKey");
 
   // New field for Report Project ID
-  const reportProjectIdInput = document.getElementById("reportProjectId");
 
   // Backlog elements
   const backlogDomainInput = document.getElementById("backlogDomain");
@@ -20,34 +19,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Primary elements
   const primaryProviderSelect = document.getElementById("primaryProvider");
-  const primaryModelSelect = document.getElementById("primaryModel");
 
   // Fallback elements
   const fallbackProviderSelect = document.getElementById("fallbackProvider");
   const fallbackModelSelect = document.getElementById("fallbackModel");
   const fallbackModelField = document.getElementById("fallbackModelField");
 
-  // Credentials elements (Primary)
-  const primaryGeminiKeyContainer = document.getElementById("primaryGeminiKeyContainer");
-  const primaryCerebrasKeyContainer = document.getElementById("primaryCerebrasKeyContainer");
-  const primaryGroqKeyContainer = document.getElementById("primaryGroqKeyContainer");
-  const primaryGeminiApiKeyInput = document.getElementById("primaryGeminiApiKey");
-  const primaryCerebrasApiKeyInput = document.getElementById("primaryCerebrasApiKey");
-  const primaryGroqApiKeyInput = document.getElementById("primaryGroqApiKey");
-
   // Credentials elements (Fallback)
-  const fallbackGeminiKeyContainer = document.getElementById("fallbackGeminiKeyContainer");
   const fallbackCerebrasKeyContainer = document.getElementById("fallbackCerebrasKeyContainer");
   const fallbackGroqKeyContainer = document.getElementById("fallbackGroqKeyContainer");
-  const fallbackGeminiApiKeyInput = document.getElementById("fallbackGeminiApiKey");
   const fallbackCerebrasApiKeyInput = document.getElementById("fallbackCerebrasApiKey");
   const fallbackGroqApiKeyInput = document.getElementById("fallbackGroqApiKey");
 
   const defaultProjectIdSelect = document.getElementById("defaultProjectId");
+  const reportProjectIdSelect = document.getElementById("reportProjectId");
   const manualFieldsInput = document.getElementById("manualFields");
   const statusEl = document.getElementById("status");
-  const geminiApiKeysTextarea = document.getElementById("geminiApiKeys");
-  const addGeminiKeyBtn = document.getElementById("addGeminiKeyBtn");
 
   // Multiple Models/Keys elements
   const geminiModelsList = document.getElementById("geminiModelsList");
@@ -58,8 +45,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedGeminiModels = [];
   const selectedGeminiKeys = [];
 
-  if (!form || !primaryProviderSelect || !fallbackProviderSelect || !statusEl) {
-    console.error("[OPTIONS] Missing DOM elements");
+  if (!form || !fallbackProviderSelect || !statusEl) {
+    console.error("[OPTIONS] Thiếu các phần tử DOM cần thiết");
     return;
   }
 
@@ -67,10 +54,6 @@ document.addEventListener("DOMContentLoaded", () => {
   loadOptions();
 
   // Listeners
-  primaryProviderSelect.addEventListener("change", () => {
-    updateModelDropdown(primaryModelSelect, primaryProviderSelect.value);
-    updateKeyVisibility();
-  });
 
   fallbackProviderSelect.addEventListener("change", () => {
     const provider = fallbackProviderSelect.value;
@@ -91,9 +74,13 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   const syncProjectsBtn = document.getElementById("syncProjectsBtn");
-  syncProjectsBtn?.addEventListener("click", () => {
+  syncProjectsBtn?.addEventListener("click", async () => {
     if (redmineApiKeyInput.value.trim()) {
-      fetchProjects(redmineApiKeyInput.value.trim());
+      fetchProjects(
+        redmineApiKeyInput.value.trim(),
+        defaultProjectIdSelect.value,
+        reportProjectIdSelect.value
+      );
     } else {
       alert("Vui lòng nhập Redmine API Key trước khi đồng bộ.");
     }
@@ -112,24 +99,14 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
   };
-  syncFields("gemini-key-sync");
   syncFields("cerebras-key-sync");
-
-  // Add Gemini Key button - append new line to textarea
-  if (addGeminiKeyBtn) {
-    addGeminiKeyBtn.addEventListener("click", () => {
-      const currentValue = geminiApiKeysTextarea.value.trim();
-      geminiApiKeysTextarea.value = currentValue ? currentValue + "\n" : "";
-      geminiApiKeysTextarea.focus();
-    });
-  }
 
   // Handle Export Logs
   const exportLogsBtn = document.getElementById("exportLogsBtn");
   exportLogsBtn?.addEventListener("click", async () => {
     try {
       if (typeof TB_LOGGER === "undefined") {
-        alert("Logger utility not loaded.");
+        alert("Logger utility chưa được tải.");
         return;
       }
       const logs = await TB_LOGGER.getLogs();
@@ -153,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (e) {
-      console.error("Export failed", e);
+      console.error("Xuất log thất bại", e);
       alert("Lỗi khi xuất log: " + e.message);
     }
   });
@@ -173,110 +150,57 @@ document.addEventListener("DOMContentLoaded", () => {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const settings = {
-      redmineApiKey: await encryptData(redmineApiKeyInput.value.trim()),
-      reportProjectId: reportProjectIdInput.value.trim(), // Save the new field
-      backlogDomain: backlogDomainInput.value.trim() || TB.BACKLOG_DOMAIN,
-      backlogApiKey: await encryptData(backlogApiKeyInput.value.trim()),
-      primaryProvider: primaryProviderSelect.value,
-      primaryModel: primaryModelSelect.value,
-      fallbackProvider: fallbackProviderSelect.value,
-      fallbackModel: fallbackModelSelect.value,
-      defaultProjectId: defaultProjectIdSelect.value,
-      manualFields: manualFieldsInput.value.trim(),
-    };
+    let settings = {};
+    try {
+      settings = {
+        redmineApiKey: await encryptData(redmineApiKeyInput.value.trim()),
+        reportProjectId: reportProjectIdSelect.value,
+        backlogDomain: backlogDomainInput.value.trim() || TB.BACKLOG_DOMAIN,
+        backlogApiKey: await encryptData(backlogApiKeyInput.value.trim()),
+        primaryProvider: primaryProviderSelect.value,
+        fallbackProvider: fallbackProviderSelect.value,
+        fallbackModel: fallbackModelSelect.value,
+        defaultProjectId: defaultProjectIdSelect.value,
+        manualFields: manualFieldsInput.value.trim(),
+      };
 
-    // Validate and encrypt needed keys
-    const needsGemini =
-      settings.primaryProvider === TB.PROVIDERS.GEMINI ||
-      settings.fallbackProvider === TB.PROVIDERS.GEMINI;
-    const needsCerebras =
-      settings.primaryProvider === TB.PROVIDERS.CEREBRAS ||
-      settings.fallbackProvider === TB.PROVIDERS.CEREBRAS;
-    const needsGroq =
-      settings.primaryProvider === TB.PROVIDERS.GROQ ||
-      settings.fallbackProvider === TB.PROVIDERS.GROQ;
-
-    if (needsGemini) {
-      const key = (primaryGeminiApiKeyInput.value || fallbackGeminiApiKeyInput.value).trim();
-      const placeholder =
-        primaryGeminiApiKeyInput.placeholder || fallbackGeminiApiKeyInput.placeholder;
-      if (
-        !key &&
-        !placeholder.includes(
-          TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER.replace("********** ", "")
-        )
-      ) {
-        setStatus(TB.MESSAGES.SETTINGS.OPTIONS_GEMINI_KEY_REQUIRED);
-        return;
+      // Save Multiple Gemini Configuration
+      if (selectedGeminiModels.length > 0) {
+        settings.geminiModels = await encryptData(selectedGeminiModels.join("\n"));
       }
-      if (key) {
-        settings.geminiApiKey = await encryptData(key);
+      if (selectedGeminiKeys.length > 0) {
+        settings.geminiApiKeys = await encryptData(selectedGeminiKeys.join("\n"));
+        // For backward compatibility and single-key fallback
+        settings.geminiApiKey = await encryptData(selectedGeminiKeys[0]);
       }
 
-      // Save multiple Gemini keys
-      const multiKeys = geminiApiKeysTextarea.value.trim();
-      if (multiKeys) {
-        const keysArray = multiKeys.split("\n").filter((k) => k.trim());
-        if (keysArray.length > 0 && keysArray.length <= 10) {
-          settings.geminiApiKeys = await encryptData(multiKeys);
-        } else if (keysArray.length > 10) {
-          setStatus("Chỉ được tối đa 10 keys! Đã lưu 10 key đầu tiên.");
-          const limitedKeys = keysArray.slice(0, 10).join("\n");
-          settings.geminiApiKeys = await encryptData(limitedKeys);
-        }
+      // Fallback specific keys
+      if (settings.fallbackProvider === TB.PROVIDERS.CEREBRAS) {
+        const key = fallbackCerebrasApiKeyInput.value.trim();
+        if (key) settings.cerebrasApiKey = await encryptData(key);
       }
-    }
-
-    if (needsCerebras) {
-      const key = (primaryCerebrasApiKeyInput.value || fallbackCerebrasApiKeyInput.value).trim();
-      const placeholder =
-        primaryCerebrasApiKeyInput.placeholder || fallbackCerebrasApiKeyInput.placeholder;
-      if (
-        !key &&
-        !placeholder.includes(
-          TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER.replace("********** ", "")
-        )
-      ) {
-        setStatus(TB.MESSAGES.SETTINGS.OPTIONS_CEREBRAS_KEY_REQUIRED);
-        return;
+      if (settings.fallbackProvider === TB.PROVIDERS.GROQ) {
+        const key = fallbackGroqApiKeyInput.value.trim();
+        if (key) settings.groqApiKey = await encryptData(key);
       }
-      if (key) {
-        settings.cerebrasApiKey = await encryptData(key);
-      }
-    }
-
-    if (needsGroq) {
-      const key = (primaryGroqApiKeyInput.value || fallbackGroqApiKeyInput.value).trim();
-      const placeholder =
-        primaryGroqApiKeyInput.placeholder || fallbackGroqApiKeyInput.placeholder;
-      if (
-        !key &&
-        !placeholder.includes(
-          TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER.replace("********** ", "")
-        )
-      ) {
-        setStatus("Groq API Key is required.");
-        return;
-      }
-      if (key) {
-        settings.groqApiKey = await encryptData(key);
-      }
+    } catch (e) {
+      console.error("[OPTIONS] Data gathering failed:", e);
+      setStatus("Lỗi thu thập dữ liệu: " + e.message);
+      return;
     }
 
     try {
       await chrome.storage.local.set(settings);
       setStatus(TB.MESSAGES.SETTINGS.OPTIONS_SAVE_SUCCESS);
       // Briefly clear password inputs for security
-      if (settings.geminiApiKey) {
-        primaryGeminiApiKeyInput.value = "";
-        fallbackGeminiApiKeyInput.value = "";
-      }
       if (settings.cerebrasApiKey) {
-        primaryCerebrasApiKeyInput.value = "";
         fallbackCerebrasApiKeyInput.value = "";
       }
-      loadOptions(); // Refresh placeholders
+      if (settings.groqApiKey) {
+        fallbackGroqApiKeyInput.value = "";
+      }
+      // Delay loadOptions to allow status to be displayed
+      setTimeout(() => loadOptions(), 100);
     } catch (error) {
       setStatus(TB.MESSAGES.SETTINGS.OPTIONS_SAVE_ERROR(error.message));
     }
@@ -287,15 +211,15 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.storage.local.get(
       [
         "redmineApiKey",
-        "reportProjectId", // Load the new field
+        "reportProjectId",
         "backlogDomain",
         "backlogApiKey",
         "geminiApiKey",
         "geminiApiKeys",
+        "geminiModels",
         "cerebrasApiKey",
         "groqApiKey",
         "primaryProvider",
-        "primaryModel",
         "fallbackProvider",
         "fallbackModel",
         "defaultProjectId",
@@ -306,19 +230,14 @@ document.addEventListener("DOMContentLoaded", () => {
         if (items.redmineApiKey) {
           const key = await decryptData(items.redmineApiKey);
           redmineApiKeyInput.value = key;
-          fetchProjects(key, items.defaultProjectId);
+          fetchProjects(key, items.defaultProjectId, items.reportProjectId);
         }
-
-        reportProjectIdInput.value = items.reportProjectId || ""; // Restore the new field
 
         backlogDomainInput.value = items.backlogDomain || TB.BACKLOG_DOMAIN;
-        if (items.backlogApiKey) {
-          backlogApiKeyInput.value = await decryptData(items.backlogApiKey);
-        }
 
         primaryProviderSelect.value = items.primaryProvider || TB.DEFAULT_PRIMARY_PROVIDER;
-        updateModelDropdown(primaryModelSelect, primaryProviderSelect.value);
-        primaryModelSelect.value = items.primaryModel || TB.DEFAULT_PRIMARY_MODEL;
+        // updateModelDropdown(primaryModelSelect, primaryProviderSelect.value);
+        // primaryModelSelect.value = items.primaryModel || TB.DEFAULT_PRIMARY_MODEL;
 
         fallbackProviderSelect.value = items.fallbackProvider || TB.DEFAULT_FALLBACK_PROVIDER;
         if (fallbackProviderSelect.value !== TB.PROVIDERS.NONE) {
@@ -329,28 +248,32 @@ document.addEventListener("DOMContentLoaded", () => {
           fallbackModelField.style.display = "none";
         }
 
-        if (items.geminiApiKey) {
-          primaryGeminiApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
-          fallbackGeminiApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
+        if (items.geminiModels) {
+          try {
+            const modelsStr = await decryptData(items.geminiModels);
+            if (modelsStr) {
+              const loadedModels = modelsStr.split("\n").filter((m) => m.trim());
+              // Only keep models that exist in the current TB.GEMINI_MODELS list
+              const validIds = TB.GEMINI_MODELS.map((m) => m.value);
+              selectedGeminiModels = loadedModels.filter((m) => validIds.includes(m));
+              renderGeminiModelsTags();
+            }
+          } catch (e) {
+            console.warn("Failed to load Gemini models", e);
+          }
         }
 
         if (items.geminiApiKeys) {
           try {
             const keys = await decryptData(items.geminiApiKeys);
-            geminiApiKeysTextarea.value = keys;
+            if (keys) {
+              selectedGeminiKeys.length = 0;
+              selectedGeminiKeys.push(...keys.split("\n").filter((k) => k.trim()));
+              renderGeminiKeysButtons();
+            }
           } catch (e) {
-            geminiApiKeysTextarea.value = items.geminiApiKeys || "";
+            console.warn("Failed to load Gemini keys", e);
           }
-        }
-
-        if (items.cerebrasApiKey) {
-          primaryCerebrasApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
-          fallbackCerebrasApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
-        }
-
-        if (items.groqApiKey) {
-          primaryGroqApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
-          fallbackGroqApiKeyInput.placeholder = TB.MESSAGES.SETTINGS.OPTIONS_SAVED_PLACEHOLDER;
         }
 
         if (items.manualFields) {
@@ -373,7 +296,7 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  async function fetchProjects(apiKey, selectedId = "") {
+  async function fetchProjects(apiKey, selectedId = "", selectedReportId = "") {
     if (!apiKey) return;
     const syncBtn = document.getElementById("syncProjectsBtn");
     try {
@@ -381,25 +304,33 @@ document.addEventListener("DOMContentLoaded", () => {
         syncBtn.disabled = true;
         syncBtn.textContent = "⌛ Đang tải...";
       }
-      defaultProjectIdSelect.innerHTML = "<option value=\"\">Đang tải project...</option>";
+      defaultProjectIdSelect.innerHTML = '<option value="">Đang tải project...</option>';
+      reportProjectIdSelect.innerHTML = '<option value="">Đang tải project...</option>';
       const response = await fetch(`${TB.REDMINE_DOMAIN}/projects.json?limit=100`, {
         headers: { "X-Redmine-API-Key": apiKey, Accept: "application/json" },
       });
       if (!response.ok) throw new Error("Failed to fetch");
       const data = await response.json();
-      defaultProjectIdSelect.innerHTML = "<option value=\"\">-- Chọn project --</option>";
+      defaultProjectIdSelect.innerHTML = '<option value="">-- Chọn project --</option>';
+      reportProjectIdSelect.innerHTML = '<option value="">-- Chọn project --</option>';
       data.projects.forEach((p) => {
         const opt = document.createElement("option");
         opt.value = p.id;
         opt.textContent = p.name;
         defaultProjectIdSelect.appendChild(opt);
+        reportProjectIdSelect.appendChild(opt.cloneNode(true));
       });
       if (selectedId) {
         defaultProjectIdSelect.value = selectedId;
       }
+      if (selectedReportId) {
+        reportProjectIdSelect.value = selectedReportId;
+      }
     } catch (e) {
       defaultProjectIdSelect.innerHTML =
-        "<option value=\"\">Lỗi tải project (Kiểm tra API Key)</option>";
+        '<option value="">Lỗi tải project (Kiểm tra API Key)</option>';
+      reportProjectIdSelect.innerHTML =
+        '<option value="">Lỗi tải project (Kiểm tra API Key)</option>';
     } finally {
       if (syncBtn) {
         syncBtn.disabled = false;
@@ -431,16 +362,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function updateKeyVisibility() {
-    const p = primaryProviderSelect.value;
     const f = fallbackProviderSelect.value;
-
-    primaryGeminiKeyContainer.style.display = p === TB.PROVIDERS.GEMINI ? "block" : "none";
-    primaryCerebrasKeyContainer.style.display = p === TB.PROVIDERS.CEREBRAS ? "block" : "none";
-    primaryGroqKeyContainer.style.display = p === TB.PROVIDERS.GROQ ? "block" : "none";
-
-    fallbackGeminiKeyContainer.style.display = f === TB.PROVIDERS.GEMINI ? "block" : "none";
-    fallbackCerebrasKeyContainer.style.display = f === TB.PROVIDERS.CEREBRAS ? "block" : "none";
-    fallbackGroqKeyContainer.style.display = f === TB.PROVIDERS.GROQ ? "block" : "none";
+    if (fallbackCerebrasKeyContainer) {
+      fallbackCerebrasKeyContainer.style.display = f === TB.PROVIDERS.CEREBRAS ? "block" : "none";
+    }
+    if (fallbackGroqKeyContainer) {
+      fallbackGroqKeyContainer.style.display = f === TB.PROVIDERS.GROQ ? "block" : "none";
+    }
   }
 
   function setStatus(message) {
@@ -464,14 +392,17 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.style.cssText = `
         display: inline-flex;
         align-items: center;
-        gap: 4px;
-        padding: 6px 12px;
-        background: ${isSelected ? "#10b981" : "#f3f4f6"};
-        border: 1px solid ${isSelected ? "#10b981" : "#d1d5db"};
-        border-radius: 8px;
-        font-size: 12px;
-        color: ${isSelected ? "white" : "#374151"};
+        gap: 6px;
+        padding: 8px 16px;
+        background: ${isSelected ? "#059669" : "#ffffff"};
+        border: 2px solid ${isSelected ? "#059669" : "#e2e8f0"};
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: ${isSelected ? "700" : "500"};
+        color: ${isSelected ? "#ffffff" : "#475569"};
         cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: ${isSelected ? "0 4px 6px -1px rgba(16, 185, 129, 0.2)" : "none"};
       `;
       btn.textContent = model.label;
       btn.addEventListener("click", () => {
@@ -542,13 +473,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Initialize default models if none selected
-  if (selectedGeminiModels.length === 0 && TB.GEMINI_MODELS) {
-    selectedGeminiModels = TB.GEMINI_MODELS.slice(0, 5).map((m) => m.value);
-  }
-
   // Render on load
   if (geminiModelsList) {
+    // If we have default models and none selected yet, initialize them
+    // but only if loadOptions hasn't populated them yet.
+    // We'll move this into loadOptions or keep as fallback.
+    setTimeout(() => {
+      if (selectedGeminiModels.length === 0 && TB.GEMINI_MODELS) {
+        // Default select all available models
+        selectedGeminiModels = TB.GEMINI_MODELS.map((m) => m.value);
+        renderGeminiModelsTags();
+      }
+    }, 200);
+
     renderGeminiModelsTags();
     renderGeminiKeysButtons();
   }

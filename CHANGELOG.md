@@ -1,5 +1,15 @@
 # Nhật ký thay đổi (Changelog)
 
+## [1.8.1] - 2026-04-23
+- **✨ Added**:
+  - Triển khai danh sách "Tứ trụ" AI mạnh mẽ (Gemma 3/4, Gemini 3.1) với RPD cao.
+  - Cơ chế **Load Balancing**: Xáo trộn ngẫu nhiên Model & Key để tối ưu hóa hạn mức.
+  - Tự động nhận diện Gemma để sửa lỗi **Error 400** (Developer instruction support).
+- **🔧 Fixed**:
+  - Khôi phục logic tìm kiếm Redmine ổn định (Chuẩn hóa normalizeLoose & fallback search).
+  - Sửa lỗi hiển thị "Model ma" và cải thiện UI nút chọn model (màu sắc rõ ràng hơn).
+  - Vá các lỗi cú pháp HTML trong trang Options và dọn dẹp code thừa (`fallbackModel`).
+
 ## [1.8.0] - 2026-04-23
 - **✨ Added**:
   - Cải thiện giao diện Options với collapsible sections độc lập (Redmine, Backlog, Primary AI, Fallback AI).

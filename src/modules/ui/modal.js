@@ -56,11 +56,11 @@ function ensureModalShell() {
             </div>
             <div class="tb-field-row">
               <div class="tb-field-group">
-                <label for="tb-migrate-version">Target Version (Milestone)</label>
+                <label for="tb-migrate-version">${TB.MESSAGES.MODAL.VERSION_LABEL || "Target Version (Milestone)"}</label>
                 <select id="tb-migrate-version"><option value="">-- Loader --</option></select>
               </div>
               <div id="tb-migrate-due-date-group" class="tb-field-group">
-                <label id="tb-migrate-due-date-label" for="tb-migrate-due-date">Due Date</label>
+                <label id="tb-migrate-due-date-label" for="tb-migrate-due-date">${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}</label>
                 <input type="date" id="tb-migrate-due-date">
               </div>
             </div>
@@ -84,10 +84,10 @@ function ensureModalShell() {
             </div>
             <div class="tb-preview-container">
               <textarea id="tb-redmine-preview" rows="10"></textarea>
-              <div id="tb-redmine-preview-html" class="tb-preview-html" hidden></div>
+               <div id="tb-redmine-preview-html" class="tb-preview-html" style="display: none;"></div>
             </div>
           </div>
-          <div id="tb-comments-preview-group" class="tb-field-group" hidden>
+          <div id="tb-comments-preview-group" class="tb-field-group" style="display: none;">
             <label for="tb-redmine-comments-preview">Xem trước bình luận</label>
             <textarea id="tb-redmine-comments-preview" rows="8"></textarea>
           </div>
@@ -307,8 +307,8 @@ function openConfirmModal(options) {
       if (currentMode) {
         previewTextarea.value = memoizedBatchNotes
           ? [previewText, ...memoizedBatchNotes]
-            .map((text, index) => `--- Note ${index + 1} ---\n${text}`)
-            .join("\n\n")
+              .map((text, index) => `--- Note ${index + 1} ---\n${text}`)
+              .join("\n\n")
           : `${previewText}\n\n${TB.MESSAGES.MODAL.WAITING_TRANSLATION}`;
         currentNotesList = memoizedBatchNotes
           ? [previewText, ...memoizedBatchNotes]
@@ -330,12 +330,13 @@ function openConfirmModal(options) {
       // Handle defaults when switching tracker
       if (selectedTracker === "Bug") {
         migrateDueDateInput.value = getPlus3WorkingDays();
-        modalElements.migrateDueDateLabel.innerHTML = "Due Date<span class=\"tb-required\">*</span>";
+        modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}<span class="tb-required">*</span>`;
       } else if (selectedTracker === "Task") {
-        modalElements.migrateDueDateLabel.innerHTML = "Due Date<span class=\"tb-required\">*</span>";
+        modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}<span class="tb-required">*</span>`;
       } else {
         migrateDueDateInput.value = "";
-        modalElements.migrateDueDateLabel.innerHTML = "Due Date";
+        modalElements.migrateDueDateLabel.innerHTML =
+          TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date";
       }
 
       // Hide Due Date for others
@@ -353,9 +354,9 @@ function openConfirmModal(options) {
 
       if (initialTracker === "Bug") {
         migrateDueDateInput.value = getPlus3WorkingDays();
-        modalElements.migrateDueDateLabel.innerHTML = "Due Date<span class=\"tb-required\">*</span>";
+        modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}<span class="tb-required">*</span>`;
       } else if (initialTracker === "Task") {
-        modalElements.migrateDueDateLabel.innerHTML = "Due Date<span class=\"tb-required\">*</span>";
+        modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}<span class="tb-required">*</span>`;
       }
 
       const isDueDateVisible = ["Bug", "Task"].includes(initialTracker);
@@ -397,7 +398,7 @@ function openConfirmModal(options) {
         .replace(/`{3}(\w*)\n?([\s\S]*?)`{3}/g, "<pre>$2</pre>")
         .replace(/`(.+?)`/g, "<code>$1</code>")
         .replace(/^>\s+(.+)$/gm, "<blockquote>$1</blockquote>")
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "<a href=\"$2\" target=\"_blank\">$1</a>")
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
         .replace(/\n/g, "<br>");
       return html;
     };
@@ -406,12 +407,12 @@ function openConfirmModal(options) {
       if (isHtmlMode) {
         const currentText = previewTextarea.value;
         previewHtmlEl.innerHTML = renderMarkdownHtml(currentText);
-        previewTextarea.hidden = true;
-        previewHtmlEl.hidden = false;
+        previewTextarea.style.display = "none";
+        previewHtmlEl.style.display = "block";
         previewToggleBtn.textContent = "📝";
       } else {
-        previewTextarea.hidden = false;
-        previewHtmlEl.hidden = true;
+        previewTextarea.style.display = "block";
+        previewHtmlEl.style.display = "none";
         previewToggleBtn.textContent = "👁";
       }
     };
@@ -707,14 +708,14 @@ async function fetchRedmineMetadataForModal(backlogIssueType, backlogMilestone) 
 
 async function updateVersionsDropdown(projectId, backlogMilestone) {
   const { versionSelect } = modalElements;
-  versionSelect.innerHTML = "<option value=\"\">-- Tải version --</option>";
+  versionSelect.innerHTML = '<option value="">-- Tải version --</option>';
   try {
     const versionsRes = await sendRuntimeMessage({
       type: "FETCH_REDMINE_METADATA",
       endpoint: `/projects/${projectId}/versions.json`,
     });
     const versions = versionsRes.data?.versions || [];
-    versionSelect.innerHTML = "<option value=\"\">-- Trống --</option>";
+    versionSelect.innerHTML = '<option value="">-- Trống --</option>';
     versions.forEach((v) => {
       const opt = document.createElement("option");
       opt.value = v.id;
@@ -726,7 +727,7 @@ async function updateVersionsDropdown(projectId, backlogMilestone) {
       versionSelect.appendChild(opt);
     });
   } catch (err) {
-    versionSelect.innerHTML = "<option value=\"\">-- Lỗi tải version --</option>";
+    versionSelect.innerHTML = '<option value="">-- Lỗi tải version --</option>';
   }
 }
 
@@ -814,7 +815,7 @@ function renderTrackerFields(trackerName, validateCallback) {
       const select = document.createElement("select");
       select.className = "tb-cf-input";
       select.dataset.cfId = cfId;
-      select.innerHTML = "<option value=\"\">-- Select --</option>";
+      select.innerHTML = '<option value="">-- Select --</option>';
       optionsMap[fieldName].forEach((opt) => {
         const o = document.createElement("option");
         o.value = opt;
