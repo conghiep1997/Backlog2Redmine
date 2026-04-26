@@ -353,8 +353,8 @@ document.addEventListener("DOMContentLoaded", () => {
         syncBtn.disabled = true;
         syncBtn.textContent = "⌛ Đang tải...";
       }
-      defaultProjectIdSelect.innerHTML = '<option value="">Đang tải project...</option>';
-      reportProjectIdSelect.innerHTML = '<option value="">Đang tải project...</option>';
+      defaultProjectIdSelect.innerHTML = "<option value=\"\">Đang tải project...</option>";
+      reportProjectIdSelect.innerHTML = "<option value=\"\">Đang tải project...</option>";
       const response = await fetch(`${TB.REDMINE_DOMAIN}/projects.json?limit=100`, {
         headers: { "X-Redmine-API-Key": apiKey, Accept: "application/json" },
       });
@@ -368,9 +368,9 @@ document.addEventListener("DOMContentLoaded", () => {
       renderProjectOptions(data.projects, selectedId, selectedReportId);
     } catch (e) {
       defaultProjectIdSelect.innerHTML =
-        '<option value="">Lỗi tải project (Kiểm tra API Key)</option>';
+        "<option value=\"\">Lỗi tải project (Kiểm tra API Key)</option>";
       reportProjectIdSelect.innerHTML =
-        '<option value="">Lỗi tải project (Kiểm tra API Key)</option>';
+        "<option value=\"\">Lỗi tải project (Kiểm tra API Key)</option>";
     } finally {
       if (syncBtn) {
         syncBtn.disabled = false;
@@ -380,8 +380,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderProjectOptions(projects, selectedId, selectedReportId) {
-    defaultProjectIdSelect.innerHTML = '<option value="">-- Chọn project --</option>';
-    reportProjectIdSelect.innerHTML = '<option value="">-- Chọn project --</option>';
+    defaultProjectIdSelect.innerHTML = "<option value=\"\">-- Chọn project --</option>";
+    reportProjectIdSelect.innerHTML = "<option value=\"\">-- Chọn project --</option>";
     projects.forEach((p) => {
       const opt = document.createElement("option");
       opt.value = p.id;

@@ -39,7 +39,7 @@ function ensureModalShell() {
               <input type="text" id="tb-redmine-issue-id" placeholder="VD: 12345">
             </div>
             <div class="tb-field-group">
-              <label for="tb-redmine-issue-title">${TB.MESSAGES.MODAL.ISSUE_TITLE_LABEL}</label>
+              <label id="tb-issue-title-label" for="tb-redmine-issue-title">${TB.MESSAGES.MODAL.ISSUE_TITLE_LABEL}</label>
               <textarea id="tb-redmine-issue-title" class="tb-multiline-input" readonly rows="2"></textarea>
             </div>
           </div>
@@ -84,7 +84,7 @@ function ensureModalShell() {
             </div>
             <div class="tb-preview-container">
               <textarea id="tb-redmine-preview" rows="10"></textarea>
-               <div id="tb-redmine-preview-html" class="tb-preview-html" style="display: none;"></div>
+              <div id="tb-redmine-preview-html" class="tb-preview-html" style="display: none;"></div>
             </div>
           </div>
           <div id="tb-comments-preview-group" class="tb-field-group" style="display: none;">
@@ -97,14 +97,14 @@ function ensureModalShell() {
             <label><input type="checkbox" id="tb-batch-checkbox"> <span id="tb-batch-text"></span></label>
           </div>
 
-          <!-- Backlog Specific Field -->
-          <div id="tb-backlog-fields" hidden>
-            <div class="tb-field-group">
-              <label for="tb-backlog-notify">${TB.MESSAGES.MODAL.NOTIFY_USERS_LABEL}</label>
-              <input type="text" id="tb-backlog-notify" placeholder="Ví dụ: 12345, 67890">
-            </div>
-            <p class="tb-modal-hint">Mẹo: Backlog sẽ gửi thông báo cho những người được tag qua ID.</p>
-          </div>
+           <!-- Backlog Specific Field -->
+           <div id="tb-backlog-fields">
+             <div class="tb-field-group">
+               <label for="tb-backlog-notify">${TB.MESSAGES.MODAL.NOTIFY_USERS_LABEL}</label>
+               <div id="tb-backlog-suggestions" class="tb-suggestions"></div>
+             </div>
+             <p class="tb-modal-hint">Mẹo: Gõ @username trong nội dung để tag người dùng Backlog.</p>
+           </div>
         </div>
         <div class="tb-modal-footer">
           <button id="tb-modal-cancel" class="tb-btn tb-btn-secondary">${TB.MESSAGES.MODAL.CANCEL}</button>
@@ -135,6 +135,7 @@ function ensureModalShell() {
     subtitleEl: overlay.querySelector("#tb-modal-subtitle"),
     issueIdInput: overlay.querySelector("#tb-redmine-issue-id"),
     issueTitleInput: overlay.querySelector("#tb-redmine-issue-title"),
+    issueTitleLabel: overlay.querySelector("#tb-issue-title-label"),
     previewTextarea: overlay.querySelector("#tb-redmine-preview"),
     closeButton: overlay.querySelector("#tb-modal-close"),
     cancelButton: overlay.querySelector("#tb-modal-cancel"),
@@ -159,17 +160,13 @@ function ensureModalShell() {
     migrateDueDateInput: overlay.querySelector("#tb-migrate-due-date"),
     migrateDueDateLabel: overlay.querySelector("#tb-migrate-due-date-label"),
     migrateDueDateGroup: overlay.querySelector("#tb-migrate-due-date-group"),
-
-    // Migration Specific
     commentsPreviewGroup: overlay.querySelector("#tb-comments-preview-group"),
     commentsPreviewTextarea: overlay.querySelector("#tb-redmine-comments-preview"),
     previewLabel: overlay.querySelector("#tb-preview-label"),
-
     dynamicFieldsContainer: overlay.querySelector("#tb-dynamic-fields"),
-    // Backlog Specific UI elements
-    backlogNotifyInput: overlay.querySelector("#tb-backlog-notify"),
+    backlogFields: overlay.querySelector("#tb-backlog-fields"),
+    backlogSuggestionsEl: overlay.querySelector("#tb-backlog-suggestions"),
     issueIdLabel: overlay.querySelector("label[for='tb-redmine-issue-id']"),
-
     loadingOverlay: overlay.querySelector("#tb-modal-loading"),
     loadingText: overlay.querySelector("#tb-modal-loading-text"),
   };
@@ -215,6 +212,7 @@ function openConfirmModal(options) {
     subtitleEl,
     issueIdInput,
     issueTitleInput,
+    issueTitleLabel,
     previewTextarea,
     closeButton,
     cancelButton,
@@ -233,6 +231,7 @@ function openConfirmModal(options) {
     commentsPreviewGroup,
     commentsPreviewTextarea,
     previewLabel,
+    batchHintEl,
   } = modalElements;
   const previewHtmlEl = overlay.querySelector("#tb-redmine-preview-html");
   const previewToggleBtn = overlay.querySelector("#tb-preview-toggle");
@@ -251,7 +250,6 @@ function openConfirmModal(options) {
     const isDueDateRequired = ["Bug", "Task"].includes(selectedTracker);
     const isDueDateFilled = !isDueDateRequired || migrateDueDateInput.value;
 
-    // Validate dynamic mandatory fields
     const dynamicFields = modalElements.dynamicFieldsContainer.querySelectorAll(".tb-cf-input");
     let allRequiredFilled = true;
     dynamicFields.forEach((input) => {
@@ -269,8 +267,7 @@ function openConfirmModal(options) {
     );
   };
 
-  // Preview toggle logic
-  let isHtmlMode = true;
+  let isHtmlMode = false;
   const escapeHtml = (str) => {
     return str
       .replace(/&/g, "&amp;")
@@ -281,68 +278,16 @@ function openConfirmModal(options) {
   };
   const renderMarkdownHtml = (text) => {
     let html = escapeHtml(text);
-
-    // Redmine/Textile Headings: h1. Title -> <h1>Title</h1>
-    html = html.replace(/^h([1-6])\.\s+(.+)$/gm, "<h$1>$2</h$1>");
-
-    // Markdown Headings: # Title -> <h1>Title</h1>
-    html = html.replace(/^#{1,6}\s+(.+)$/gm, (match, p1) => {
-      const level = match.trim().split(" ")[0].length;
-      return `<h${level}>${p1}</h${level}>`;
-    });
-
-    // Redmine Bold: *text* -> <strong>text</strong>
-    html = html.replace(/\*(.+?)\*/g, "<strong>$1</strong>");
-    // Markdown Bold: **text** -> <strong>text</strong>
-    html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-
-    // Redmine/Markdown Italic: _text_ -> <em>text</em>
-    html = html.replace(/_(.+?)_/g, "<em>$1</em>");
-
-    // Redmine Macro: {{collapse(Title) ... }}
-    html = html.replace(
-      /\{\{collapse\((.*?)\)\n?([\s\S]*?)\n?\}\}/g,
-      "<details style='border: 1px solid #ddd; padding: 10px; border-radius: 4px; margin: 10px 0;'><summary style='font-weight: bold; cursor: pointer;'>$1</summary><div style='margin-top: 10px;'>$2</div></details>"
-    );
-
-    // Redmine Code: @code@ -> <code>code</code>
-    html = html.replace(/@(.+?)@/g, "<code>$1</code>");
-
-    // Block Code: <pre>...</pre> or ```...```
-    html = html.replace(/<pre>([\s\S]*?)<\/pre>/g, "<pre>$1</pre>");
-    html = html.replace(/`{3}(\w*)\n?([\s\S]*?)`{3}/g, "<pre>$2</pre>");
-    html = html.replace(/`(.+?)`/g, "<code>$1</code>");
-
-    // Blockquotes: > text or bq. text
-    html = html.replace(/^>\s+(.+)$/gm, "<blockquote>$1</blockquote>");
-    html = html.replace(/^bq\.\s+(.+)$/gm, "<blockquote>$1</blockquote>");
-
-    // Lists: * item or # item (ordered)
-    html = html.replace(/^\*\s+(.+)$/gm, "<li>$1</li>");
-    html = html.replace(/^#\s+(.+)$/gm, "<li>$1</li>");
-    // Wrap <li> in <ul> (simple approximation)
     html = html.replace(/(<li>.*<\/li>)(\s*<li>.*<\/li>)*/g, "<ul>$&</ul>");
-
-    // Redmine Tables: |col1|col2|
-    html = html.replace(/^(\|.*\|)$/gm, (match) => {
-      const cells = match
-        .split("|")
-        .filter((c, i, a) => i > 0 && i < a.length - 1)
-        .map((c) => `<td>${c.trim()}</td>`)
-        .join("");
-      return `<tr>${cells}</tr>`;
-    });
-    html = html.replace(
-      /(<tr>.*<\/tr>)(\s*<tr>.*<\/tr>)*/g,
-      '<table class="tb-preview-table">$&</table>'
-    );
-
-    // Links: [text](url) or "text":url
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-    html = html.replace(/"([^"]+)":(\S+)/g, '<a href="$2" target="_blank">$1</a>');
-
-    // Newlines to <br>
-    html = html.replace(/\n/g, "<br>");
+    html = html
+      .replace(/^#{1,6}\s+(.+)$/gm, "<h$1>$1</h$1>")
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+      .replace(/`{3}(\w*)\n?([\s\S]*?)`{3}/g, "<pre>$2</pre>")
+      .replace(/`(.+?)`/g, "<code>$1</code>")
+      .replace(/^>\s+(.+)$/gm, "<blockquote>$1</blockquote>")
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "<a href=\"$2\" target=\"_blank\">$1</a>")
+      .replace(/\n/g, "<br>");
     return html;
   };
 
@@ -351,15 +296,13 @@ function openConfirmModal(options) {
     if (isHtmlMode) {
       const currentText = previewTextarea.value;
       previewHtmlEl.innerHTML = renderMarkdownHtml(currentText);
-      previewTextarea.style.display = "none";
-      previewHtmlEl.style.display = "block";
+      previewTextarea.hidden = true;
+      previewHtmlEl.hidden = false;
       previewToggleBtn.textContent = "📝";
-      previewToggleBtn.title = "Switch to Edit mode";
     } else {
-      previewTextarea.style.display = "block";
-      previewHtmlEl.style.display = "none";
+      previewTextarea.hidden = false;
+      previewHtmlEl.hidden = true;
       previewToggleBtn.textContent = "👁";
-      previewToggleBtn.title = "Switch to Preview mode";
     }
   };
 
@@ -397,12 +340,13 @@ function openConfirmModal(options) {
       migrationFields.hidden = true;
       commentsPreviewGroup.hidden = true;
       previewLabel.textContent = TB.MESSAGES.MODAL.PREVIEW_LABEL;
+      issueTitleLabel.textContent = TB.MESSAGES.MODAL.ISSUE_TITLE_LABEL;
 
       if (currentMode) {
         previewTextarea.value = memoizedBatchNotes
           ? [previewText, ...memoizedBatchNotes]
-              .map((text, index) => `--- Note ${index + 1} ---\n${text}`)
-              .join("\n\n")
+            .map((text, index) => `--- Note ${index + 1} ---\n${text}`)
+            .join("\n\n")
           : `${previewText}\n\n${TB.MESSAGES.MODAL.WAITING_TRANSLATION}`;
         currentNotesList = memoizedBatchNotes
           ? [previewText, ...memoizedBatchNotes]
@@ -471,20 +415,61 @@ function openConfirmModal(options) {
     migrateSubjectInput.oninput = validateMigrationForm;
   }
 
-  // Event Listeners for toggle
-  if (previewToggleBtn) {
+  if (previewToggleBtn && previewHtmlEl) {
     previewToggleBtn.onclick = () => {
       isHtmlMode = !isHtmlMode;
       updatePreviewMode();
     };
-  }
 
-  if (previewTextarea) {
     previewTextarea.oninput = () => {
       if (isHtmlMode) {
         updatePreviewMode();
       }
     };
+
+    updatePreviewMode();
+  }
+
+  /**
+   * Update currentNotesList (and memoizedBatchNotes if in batch mode) based on previewTextarea value.
+   * This ensures user edits to the preview are reflected when sending to Redmine.
+   */
+  function updateCurrentNotesFromTextarea() {
+    const val = previewTextarea.value.trim();
+    if (isMigration) {
+      // In migration mode, previewTextarea is the description; notesList for comments is handled separately.
+      // No need to update currentNotesList here.
+      return;
+    }
+    if (currentMode) {
+      // Batch mode: textarea contains previewText + batch notes separated by markers
+      // We need to split back into individual notes.
+      const separatorRegex = /\n\n--- Note \d+ ---\n/;
+      const parts = val.split(separatorRegex);
+      // Remove empty strings from split
+      const notes = parts.map((p) => p.trim()).filter((p) => p.length > 0);
+      if (notes.length === 0) {
+        memoizedBatchNotes = [];
+        currentNotesList = [val]; // fallback
+        return;
+      }
+      // Warn if note count differs from original (user may have edited/deleted notes)
+      const originalCount = remainingComments.length + 1;
+      if (notes.length !== originalCount) {
+        showToast(
+          `${TB.MESSAGES.MODAL.BATCH_COUNT_CHANGED_WARNING} (${notes.length}/${originalCount})`,
+          "warning"
+        );
+      }
+      // The first part is the clicked comment's translation (previewText)
+      const firstNote = notes[0];
+      const batchNotes = notes.slice(1);
+      memoizedBatchNotes = batchNotes;
+      currentNotesList = [firstNote, ...batchNotes];
+    } else {
+      // Single note mode: textarea value is the only note
+      currentNotesList = [val];
+    }
   }
 
   if (hasBatchOption || (isMigration && commentsCount > 0)) {
@@ -605,6 +590,7 @@ function openConfirmModal(options) {
           confirmButton.disabled = false;
           return;
         }
+        updateCurrentNotesFromTextarea();
         await onConfirm({ redmineIssueId: id, notesList: currentNotesList });
       }
     } catch (err) {
@@ -622,7 +608,13 @@ function openConfirmModal(options) {
   document.body.classList.add("tb-modal-open");
 }
 
-function openBacklogModal({ backlogIssueKey = "", previewText = "", onCancel, onConfirm }) {
+function openBacklogModal({
+  backlogIssueKey = "",
+  previewText = "",
+  attachments = [],
+  onCancel,
+  onConfirm,
+}) {
   ensureModalShell();
   const {
     overlay,
@@ -630,21 +622,312 @@ function openBacklogModal({ backlogIssueKey = "", previewText = "", onCancel, on
     subtitleEl,
     issueIdInput,
     issueIdLabel,
+    issueTitleInput,
+    issueTitleLabel,
     previewTextarea,
     confirmButton,
-    backlogNotifyInput,
+    backlogSuggestionsEl,
+    previewLabel,
   } = modalElements;
+  const previewHtmlEl = overlay.querySelector("#tb-redmine-preview-html");
+  const previewToggleBtn = overlay.querySelector("#tb-preview-toggle");
+
+  let isHtmlMode = false;
+  const escapeHtml = (str) => {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+  const renderMarkdownHtml = (text) => {
+    let html = escapeHtml(text);
+    html = html.replace(/(<li>.*<\/li>)(\s*<li>.*<\/li>)*/g, "<ul>$&</ul>");
+    html = html
+      .replace(/^#{1,6}\s+(.+)$/gm, "<h$1>$1</h$1>")
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+      .replace(/`{3}(\w*)\n?([\s\S]*?)`{3}/g, "<pre>$2</pre>")
+      .replace(/`(.+?)`/g, "<code>$1</code>")
+      .replace(/^>\s+(.+)$/gm, "<blockquote>$1</blockquote>")
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "<a href=\"$2\" target=\"_blank\">$1</a>")
+      .replace(/\n/g, "<br>");
+    return html;
+  };
+  const updatePreviewMode = () => {
+    if (!previewToggleBtn || !previewHtmlEl) return;
+    if (isHtmlMode) {
+      previewHtmlEl.innerHTML = renderMarkdownHtml(previewTextarea.value);
+      previewTextarea.hidden = true;
+      previewHtmlEl.hidden = false;
+      previewToggleBtn.textContent = "📝";
+    } else {
+      previewTextarea.hidden = false;
+      previewHtmlEl.hidden = true;
+      previewToggleBtn.textContent = "👁";
+    }
+  };
 
   titleEl.textContent = TB.MESSAGES.MODAL.BACKLOG_TITLE;
   subtitleEl.textContent = TB.MESSAGES.MODAL.BACKLOG_SUBTITLE;
   issueIdLabel.textContent = TB.MESSAGES.MODAL.BACKLOG_ISSUE_KEY_LABEL;
+  if (issueTitleLabel) issueTitleLabel.textContent = "Tiêu đề Issue Backlog";
+  if (previewLabel) previewLabel.textContent = TB.MESSAGES.MODAL.PREVIEW_LABEL;
   issueIdInput.value = backlogIssueKey;
+  issueTitleInput.value = "";
+  issueTitleInput.readOnly = false;
   previewTextarea.value = previewText;
+
+  if (attachments.length > 0) {
+    const attachmentText = attachments
+      .map((attachment) => `[${attachment.filename}](${attachment.url})`)
+      .join("\n");
+    previewTextarea.value = `${previewText}\n\n${attachmentText}`.trim();
+  }
+
+  let backlogUsers = [];
+  let mentionTimeout = null;
+  let autoNotifyUserIds = [];
+  const selectedUserIds = []; // Track users selected from suggestion dropdown
+
+  function findMentionsInText(text) {
+    const mentionRegex = /@([a-zA-Z0-9_.-]+)/g;
+    const mentions = [];
+    let match;
+    while ((match = mentionRegex.exec(text)) !== null) {
+      mentions.push({ username: match[1], position: match.index });
+    }
+    return mentions;
+  }
+
+  function updateAutoNotify() {
+    autoNotifyUserIds = [];
+    const mentions = findMentionsInText(previewTextarea.value);
+
+    mentions.forEach((mention) => {
+      const matchedUser = backlogUsers.find(
+        (user) =>
+          user &&
+          user.name &&
+          (user.userId || user.id) &&
+          ((user.userId && user.userId.toLowerCase() === mention.username.toLowerCase()) ||
+            user.name.toLowerCase().includes(mention.username.toLowerCase()))
+      );
+      if (
+        matchedUser &&
+        matchedUser.id !== null &&
+        matchedUser.id !== "" &&
+        !autoNotifyUserIds.includes(String(matchedUser.id))
+      ) {
+        autoNotifyUserIds.push(String(matchedUser.id));
+      }
+    });
+
+    if (autoNotifyUserIds.length > 0) {
+      backlogSuggestionsEl.innerHTML = autoNotifyUserIds
+        .map((id) => {
+          const user = backlogUsers.find((item) => String(item.id) === id);
+          return user
+            ? `<div class="tb-suggestion-item" data-user-id="${user.id}" data-login-id="${user.userId || ""}" data-username="${user.name}">${user.name}${user.userId ? ` (@${user.userId})` : ""}</div>`
+            : "";
+        })
+        .join("");
+      return;
+    }
+
+    if (backlogUsers.length > 0) {
+      backlogSuggestionsEl.innerHTML =
+        "<div class=\"tb-suggestion-item\" style=\"color: #999;\">Không tìm thấy @mention nào</div>";
+    }
+  }
+
+  async function loadBacklogUsers(projectKey) {
+    try {
+      const res = await sendRuntimeMessage({
+        type: "GET_BACKLOG_USERS",
+        projectKey,
+      });
+      backlogUsers = res.data || [];
+      console.log(`[TB-MODAL] Loaded ${backlogUsers.length} users for project ${projectKey}`);
+      if (backlogUsers.length > 0) {
+        console.log("[TB-MODAL] First user sample:", backlogUsers[0]);
+      }
+    } catch (err) {
+      console.warn("[TB-MODAL] Failed to load Backlog users:", err);
+      backlogUsers = [];
+    }
+  }
+
+  function parseMentionsFromPreview() {
+    updateAutoNotify();
+  }
+
+  function showUserSuggestions(query) {
+    if (backlogUsers.length === 0) {
+      backlogSuggestionsEl.innerHTML =
+        "<div class=\"tb-suggestion-item\" style=\"color: #999;\">Chưa tải được danh sách users</div>";
+      return;
+    }
+
+    const matchedUsers = query
+      ? backlogUsers
+        .filter(
+          (user) =>
+            user &&
+              user.name &&
+              (user.userId || user.id) &&
+              ((user.userId && user.userId.toLowerCase().includes(query.toLowerCase())) ||
+                user.name.toLowerCase().includes(query.toLowerCase()))
+        )
+        .slice(0, 10)
+      : backlogUsers.filter((user) => user && user.name && (user.userId || user.id)).slice(0, 10);
+
+    if (matchedUsers.length === 0) {
+      backlogSuggestionsEl.innerHTML =
+        "<div class=\"tb-suggestion-item\" style=\"color: #999;\">Không tìm thấy user</div>";
+      return;
+    }
+
+    backlogSuggestionsEl.innerHTML = matchedUsers
+      .map(
+        (user) =>
+          `<div class="tb-suggestion-item" data-user-id="${user.id}" data-login-id="${user.userId || ""}" data-username="${user.name}">${user.name}${user.userId ? ` (@${user.userId})` : ""}</div>`
+      )
+      .join("");
+
+    backlogSuggestionsEl.querySelectorAll(".tb-suggestion-item[data-username]").forEach((item) => {
+      item.onclick = () => {
+        const username = item.dataset.username;
+        const userId = item.dataset.userId; // This is the numeric id
+        const loginId = item.dataset.loginId; // This is the login ID for mentions
+        const cursorPos = previewTextarea.selectionStart;
+        const textBeforeCursor = previewTextarea.value.slice(0, cursorPos);
+        const textAfterCursor = previewTextarea.value.slice(cursorPos);
+        let mentionText = "";
+        if (loginId && loginId.trim() !== "") {
+          mentionText = `@${loginId}`;
+        } else {
+          mentionText = username; // just the name when loginId is not available
+        }
+        const nextValue = textBeforeCursor.replace(
+          /(^|\s)@([a-zA-Z0-9_.-]*)$/,
+          `$1${mentionText} `
+        );
+        previewTextarea.value = `${nextValue}${textAfterCursor}`;
+        previewTextarea.focus();
+        const newCursorPos = nextValue.length;
+        previewTextarea.setSelectionRange(newCursorPos, newCursorPos);
+        backlogSuggestionsEl.innerHTML = "";
+
+        // Track the selected user ID for notification (always use numeric id)
+        if (userId && !selectedUserIds.includes(userId)) {
+          selectedUserIds.push(userId);
+        }
+
+        parseMentionsFromPreview();
+      };
+    });
+  }
+
+  // Load users when the Backlog issue ID field changes and looks like a valid key
+  const loadUsersForIssueKey = (issueKey) => {
+    const key = issueKey.trim();
+    // Only attempt to load users if the key looks like a valid project key (contains a dash)
+    if (!key || !key.includes("-")) {
+      // Clear user list but don't show hint - let @ typing trigger suggestions
+      backlogUsers = [];
+      backlogSuggestionsEl.innerHTML = "";
+      updateAutoNotify();
+      return;
+    }
+
+    loadBacklogUsers(key).then(() => {
+      updateAutoNotify();
+    });
+  };
+
+  // Load users when the issue ID field changes
+  issueIdInput.addEventListener("input", () => {
+    loadUsersForIssueKey(issueIdInput.value);
+  });
+
+  // Also load on blur to catch final value
+  issueIdInput.addEventListener("blur", () => {
+    loadUsersForIssueKey(issueIdInput.value);
+  });
+
+  // DO NOT auto-load on modal open to avoid calling API with wrong project
+  // Users will be loaded when user types/changes the issue ID field
+  backlogSuggestionsEl.innerHTML = "";
+
+  updateAutoNotify();
+
+  if (previewToggleBtn && previewHtmlEl) {
+    previewToggleBtn.onclick = () => {
+      isHtmlMode = !isHtmlMode;
+      updatePreviewMode();
+    };
+    previewTextarea.oninput = () => {
+      if (isHtmlMode) {
+        updatePreviewMode();
+      }
+      clearTimeout(mentionTimeout);
+      const cursorPos = previewTextarea.selectionStart;
+      const textBeforeCursor = previewTextarea.value.slice(0, cursorPos);
+      const atMatch = textBeforeCursor.match(/(^|\s)@([a-zA-Z0-9_.-]*)$/);
+      if (atMatch) {
+        mentionTimeout = setTimeout(() => showUserSuggestions(atMatch[2] || ""), 150);
+      } else {
+        parseMentionsFromPreview();
+      }
+    };
+  }
+  isHtmlMode = false;
+  updatePreviewMode();
+
+  const loadBacklogIssueInfo = async (key) => {
+    key = key.trim();
+    if (!key) return;
+    try {
+      issueTitleInput.value = TB.MESSAGES.MODAL.LOADING_TITLE;
+      const res = await sendRuntimeMessage({
+        type: "GET_BACKLOG_ISSUE_INFO",
+        issueKey: key,
+      });
+      if (res?.data?.summary) {
+        issueTitleInput.value = `${key} ${res.data.summary}`;
+      } else {
+        issueTitleInput.value = TB.MESSAGES.MODAL.ERROR_NOT_FOUND;
+      }
+    } catch (err) {
+      issueTitleInput.value = TB.MESSAGES.MODAL.ERROR_NOT_FOUND;
+      console.warn("[TB-MODAL] Failed to load Backlog issue info:", err);
+    }
+  };
+
+  if (backlogIssueKey) {
+    loadBacklogIssueInfo(backlogIssueKey);
+  }
+
+  issueIdInput.onblur = (e) => loadBacklogIssueInfo(e.target.value);
 
   modalElements.standardFields.hidden = false;
   modalElements.migrationFields.hidden = true;
   modalElements.backlogFields.hidden = false;
+  modalElements.commentsPreviewGroup.hidden = true;
+  modalElements.batchOptionEl.hidden = true;
   confirmButton.disabled = false;
+
+  backlogSuggestionsEl.style.display = "block";
+  backlogSuggestionsEl.style.position = "relative";
+  backlogSuggestionsEl.style.zIndex = "9999";
+  backlogSuggestionsEl.style.maxHeight = "180px";
+  backlogSuggestionsEl.style.overflowY = "auto";
+  backlogSuggestionsEl.style.border = "1px solid #ddd";
+  backlogSuggestionsEl.style.borderRadius = "6px";
+  backlogSuggestionsEl.style.background = "#fff";
+  backlogSuggestionsEl.style.marginTop = "8px";
 
   confirmButton.onclick = async () => {
     const key = issueIdInput.value.trim();
@@ -655,10 +938,14 @@ function openBacklogModal({ backlogIssueKey = "", previewText = "", onCancel, on
     setModalLoading(true);
     confirmButton.disabled = true;
     try {
+      // Merge auto-detected mentions and manually selected users
+      const allNotifyUserIds = [...new Set([...autoNotifyUserIds, ...selectedUserIds])];
+
       await onConfirm({
         backlogIssueKey: key,
         content: previewTextarea.value,
-        notifiedUserId: backlogNotifyInput.value.trim(),
+        notifiedUserId: allNotifyUserIds,
+        attachments,
       });
     } catch (err) {
       setModalLoading(false);
@@ -673,7 +960,7 @@ function openBacklogModal({ backlogIssueKey = "", previewText = "", onCancel, on
   document.body.classList.add("tb-modal-open");
 }
 
-function openSuccessModal({ redmineUrl, commentCount = 1, onClose }) {
+function openSuccessModal({ redmineUrl, commentCount = 1, onClose, isBacklog = false }) {
   ensureModalShell();
   const {
     overlay,
@@ -686,13 +973,20 @@ function openSuccessModal({ redmineUrl, commentCount = 1, onClose }) {
   successTitleEl.textContent =
     commentCount > 1
       ? TB.MESSAGES.MODAL.BATCH_TITLE_MULTIPLE(commentCount)
-      : TB.MESSAGES.MODAL.SUCCESS_TITLE;
+      : isBacklog
+        ? TB.MESSAGES.MODAL.BACKLOG_SUCCESS_TITLE
+        : TB.MESSAGES.MODAL.SUCCESS_TITLE;
   successSubtitleEl.textContent =
     commentCount > 1
       ? TB.MESSAGES.MODAL.BATCH_SUBTITLE_MULTIPLE
-      : TB.MESSAGES.MODAL.SUCCESS_SUBTITLE;
+      : isBacklog
+        ? TB.MESSAGES.MODAL.BACKLOG_SUCCESS_SUBTITLE
+        : TB.MESSAGES.MODAL.SUCCESS_SUBTITLE;
   successLinkEl.textContent = redmineUrl;
   successLinkEl.href = redmineUrl;
+  successViewButton.textContent = isBacklog
+    ? TB.MESSAGES.MODAL.BACKLOG_SUCCESS_VIEW_BUTTON
+    : TB.MESSAGES.MODAL.SUCCESS_VIEW_BUTTON;
   successViewButton.onclick = () => {
     window.open(redmineUrl, "_blank");
     closeModal();
@@ -771,14 +1065,14 @@ async function fetchRedmineMetadataForModal(backlogIssueType, backlogMilestone) 
 
 async function updateVersionsDropdown(projectId, backlogMilestone) {
   const { versionSelect } = modalElements;
-  versionSelect.innerHTML = '<option value="">-- Tải version --</option>';
+  versionSelect.innerHTML = "<option value=\"\">-- Tải version --</option>";
   try {
     const versionsRes = await sendRuntimeMessage({
       type: "FETCH_REDMINE_METADATA",
       endpoint: `/projects/${projectId}/versions.json`,
     });
     const versions = versionsRes.data?.versions || [];
-    versionSelect.innerHTML = '<option value="">-- Trống --</option>';
+    versionSelect.innerHTML = "<option value=\"\">-- Trống --</option>";
     versions.forEach((v) => {
       const opt = document.createElement("option");
       opt.value = v.id;
@@ -790,7 +1084,7 @@ async function updateVersionsDropdown(projectId, backlogMilestone) {
       versionSelect.appendChild(opt);
     });
   } catch (err) {
-    versionSelect.innerHTML = '<option value="">-- Lỗi tải version --</option>';
+    versionSelect.innerHTML = "<option value=\"\">-- Lỗi tải version --</option>";
   }
 }
 
@@ -878,7 +1172,7 @@ function renderTrackerFields(trackerName, validateCallback) {
       const select = document.createElement("select");
       select.className = "tb-cf-input";
       select.dataset.cfId = cfId;
-      select.innerHTML = '<option value="">-- Select --</option>';
+      select.innerHTML = "<option value=\"\">-- Select --</option>";
       optionsMap[fieldName].forEach((opt) => {
         const o = document.createElement("option");
         o.value = opt;

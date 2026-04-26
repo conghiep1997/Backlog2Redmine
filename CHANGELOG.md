@@ -1,5 +1,32 @@
 # Nhật ký thay đổi (Changelog)
 
+## [1.8.3] - 2026-04-26
+- **✨ Added**:
+  - **Flow Redmine → Backlog**: Hoàn thiện tính năng đồng bộ ngược từ Redmine sang Backlog
+  - **Attachment handling**: Tự động extract và upload file đính kèm từ Redmine sang Backlog
+  - **Batch sync**: Nút "🔄 Đồng bộ tất cả comments" để sync hàng loạt với progress tracking
+  - **Smart @mentions**: 
+    - Hiển thị dropdown gợi ý users khi gõ `@` trong preview
+    - Hỗ trợ cả `userId` (login ID) và fallback sang name khi không có userId
+    - Tự động detect mentions từ preview text để gửi notification
+    - Gửi danh sách numeric IDs qua `notifiedUserId[]` để Backlog gửi notification đúng
+  - **Project-specific user loading**: Dùng API `/api/v2/projects/{key}/users` (cần Project Member, không cần Admin)
+  - **Lazy user loading**: Chỉ load users khi nhập issue key hợp lệ, tránh gọi API sai project
+- **🔧 Fixed**:
+  - Sửa lỗi `userId: null` khiến không tag được một số users trong Backlog
+  - Sửa lỗi modal không hiển thị user suggestions khi gõ `@`
+  - Sửa lỗi auto-load users với project key sai (COUIX_PJ vs CTRIAL)
+  - Thêm null checks cho user data để tránh crash khi API trả về data không đầy đủ
+  - Sửa duplicate code trong `updateAutoNotify()` function
+- **🔄 Changed**:
+  - Không auto-load users khi mở modal → tránh gọi API với project key sai
+  - Hiển thị hint rõ ràng khi chưa có issue key hoặc không load được users
+  - Cải thiện UX: chỉ hiển thị suggestion dropdown khi có data users hợp lệ
+- **📝 Docs**:
+  - Cập nhật README.md với hướng dẫn sử dụng flow Redmine → Backlog
+  - Thêm logging chi tiết để debug API calls
+
+
 ## [1.8.2] - 2026-04-23
 - **🚀 Performance**:
   - Tối ưu `translateBatch` với `Promise.all()` batch 5 thay vì gọi tuần tự, giảm thời gian dịch batch comments.

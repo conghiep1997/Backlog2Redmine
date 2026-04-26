@@ -178,6 +178,37 @@ function injectStyles() {
     .tb-batch-option input { margin: 0; }
     .tb-required { color: #ef4444; margin-left: 2px; font-weight: bold; }
 
+    /* User Suggestions */
+    .tb-suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      margin-top: 4px;
+      display: none;
+    }
+    .tb-suggestions:not(:empty) { display: block; }
+    .tb-suggestion-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #1e293b;
+      transition: background 0.2s;
+    }
+    .tb-suggestion-item:hover {
+      background: #eff6ff;
+    }
+    .tb-suggestion-item:not(:last-child) {
+      border-bottom: 1px solid #f1f5f9;
+    }
+
     /* Modal Loading Overlay */
     .tb-modal-loading {
       position: absolute;

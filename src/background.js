@@ -3,7 +3,7 @@
  * Loads modules and coordinates message handling between content scripts and external APIs.
  */
 
-/* global TB_LOGGER */
+/* global TB_LOGGER, getBacklogIssueInfo, getBacklogUsers */
 
 importScripts(
   "modules/constants/models.js",
@@ -109,6 +109,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
      * Send Japanese content back to Backlog.
      */
     SEND_TO_BACKLOG: () => handleSendToBacklog(message),
+
+    /**
+     * GET_BACKLOG_ISSUE_INFO:
+     * Fetch Backlog issue information by issue key.
+     */
+    GET_BACKLOG_ISSUE_INFO: async () => {
+      const settings = await getSettings();
+      assertSettings(settings);
+      return getBacklogIssueInfo(message.issueKey);
+    },
+
+    /**
+     * GET_BACKLOG_USERS:
+     * Fetch list of Backlog users for mention suggestions.
+     */
+    GET_BACKLOG_USERS: async () => {
+      const settings = await getSettings();
+      assertSettings(settings);
+      return getBacklogUsers(message.projectKey);
+    },
 
     /**
      * FETCH_REDMINE_METADATA:

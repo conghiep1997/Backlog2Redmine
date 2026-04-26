@@ -87,7 +87,7 @@ async function logTimeForMonth() {
   const modal = openConfirmModal({
     issueTitle: `Log Time cho Tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}`,
     previewText:
-      '<div id="monthly-log-progress" style="max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;">Khởi tạo...</div>',
+      "<div id=\"monthly-log-progress\" style=\"max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;\">Khởi tạo...</div>",
     confirmLabel: "Bắt đầu",
     cancelLabel: "Hủy",
     onConfirm: async (modalInstance) => {
@@ -102,7 +102,7 @@ async function logTimeForMonth() {
       };
 
       try {
-        updateProgress('Đang tìm kiếm các issue "Report" của tháng...');
+        updateProgress("Đang tìm kiếm các issue \"Report\" của tháng...");
         const now = new Date();
         const year = now.getFullYear();
         const month = (now.getMonth() + 1).toString().padStart(2, "0");
@@ -114,7 +114,7 @@ async function logTimeForMonth() {
         const reportTracker = trackers.find((t) => t.name.toLowerCase() === "report");
         if (!reportTracker) {
           throw new Error(
-            'Không thể tìm thấy Tracker "Report". Vui lòng kiểm tra cấu hình Redmine.'
+            "Không thể tìm thấy Tracker \"Report\". Vui lòng kiểm tra cấu hình Redmine."
           );
         }
 
@@ -127,7 +127,7 @@ async function logTimeForMonth() {
         });
 
         if (issues.length === 0) {
-          updateProgress('Không tìm thấy issue "Report" nào khớp với tháng này.');
+          updateProgress("Không tìm thấy issue \"Report\" nào khớp với tháng này.");
           confirmBtn.textContent = "Đã xong";
           return;
         }
@@ -164,13 +164,13 @@ async function logTimeForMonth() {
         updateProgress("<br><b>Hoàn tất! Dưới đây là dữ liệu để copy vào Timesheet:</b>");
 
         let tableHtml =
-          '<div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; margin-top: 10px;"><table id="timesheet-results-table" style="width:100%; border-collapse: collapse;"><thead><tr><th style="border:1px solid #ccc; padding:8px; position: sticky; top: 0; background: #f0f0f0;">Ngày</th><th style="border:1px solid #ccc; padding:8px; position: sticky; top: 0; background: #f0f0f0;">Tasks</th></tr></thead><tbody>';
+          "<div style=\"max-height: 200px; overflow-y: auto; border: 1px solid #ddd; margin-top: 10px;\"><table id=\"timesheet-results-table\" style=\"width:100%; border-collapse: collapse;\"><thead><tr><th style=\"border:1px solid #ccc; padding:8px; position: sticky; top: 0; background: #f0f0f0;\">Ngày</th><th style=\"border:1px solid #ccc; padding:8px; position: sticky; top: 0; background: #f0f0f0;\">Tasks</th></tr></thead><tbody>";
         resultsForSheet.sort((a, b) => a.date.localeCompare(b.date));
         for (const result of resultsForSheet) {
           tableHtml += `<tr><td style="border:1px solid #ccc; padding:8px;">${result.date}</td><td style="border:1px solid #ccc; padding:8px;">${result.tasks}</td></tr>`;
         }
         tableHtml +=
-          '</tbody></table></div><br><button id="copy-ts-btn" class="secondary">Copy Bảng</button>';
+          "</tbody></table></div><br><button id=\"copy-ts-btn\" class=\"secondary\">Copy Bảng</button>";
 
         progressDiv.innerHTML += `<br>${tableHtml}`;
 
@@ -246,6 +246,8 @@ function observeJournalActions() {
   const targetContainer =
     document.querySelector("#history") || document.querySelector(".journals") || document.body;
 
+  injectBatchSyncButton(targetContainer);
+
   journalObserver = new MutationObserver((mutations) => {
     let shouldRescan = false;
     for (const m of mutations) {
@@ -262,13 +264,95 @@ function observeJournalActions() {
     }
     if (shouldRescan) {
       scanAndInjectButtons();
+      injectBatchSyncButton(targetContainer);
     }
   });
   journalObserver.observe(targetContainer, { childList: true, subtree: true });
 }
 
+async function handleBatchSyncToBacklog() {
+  const journalContainers = document.querySelectorAll("div.journal");
+  const batchData = [];
+
+  for (const container of journalContainers) {
+    const actionsEl = container.querySelector("div.contextual");
+    const commentContentEl = container.querySelector("div.wiki");
+    const rawText = commentContentEl?.innerText?.trim() || "";
+
+    if (!actionsEl || !rawText) {
+      continue;
+    }
+
+    batchData.push({
+      rawText,
+      attachments: extractRedmineAttachments(commentContentEl),
+    });
+  }
+
+  if (batchData.length === 0) {
+    showToast("Không có nội dung để đồng bộ", "error");
+    return;
+  }
+
+  const backlogIssueKey = findBacklogKeyInPage();
+  if (!backlogIssueKey) {
+    showToast(TB.MESSAGES.TOAST.MISSING_ISSUE_KEY, "error");
+    return;
+  }
+
+  const progressModal = openConfirmModal({
+    issueTitle: `Đồng bộ ${batchData.length} comments sang Backlog`,
+    previewText:
+      "<div id=\"batch-sync-progress\" style=\"max-height: 320px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;\">Sẵn sàng đồng bộ...</div>",
+    confirmLabel: "Bắt đầu",
+    cancelLabel: "Hủy",
+    onConfirm: async (modalInstance) => {
+      const progressDiv = modalInstance.modalEl.querySelector("#batch-sync-progress");
+      const confirmBtn = modalInstance.modalEl.querySelector(".tb-modal-confirm");
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = "Đang xử lý...";
+
+      const updateProgress = (message) => {
+        progressDiv.innerHTML += `<br>${message}`;
+        progressDiv.scrollTop = progressDiv.scrollHeight;
+      };
+
+      let successCount = 0;
+      for (let index = 0; index < batchData.length; index += 1) {
+        const item = batchData[index];
+        updateProgress(`- Comment ${index + 1}/${batchData.length}`);
+
+        try {
+          const extracted = await sendRuntimeMessage({
+            type: "EXTRACT_JAPANESE_CONTENT",
+            commentText: item.rawText,
+          });
+          await sendRuntimeMessage({
+            type: "SEND_TO_BACKLOG",
+            backlogIssueKey,
+            content: extracted.data.previewText,
+            attachments: item.attachments,
+          });
+          successCount += 1;
+          updateProgress("  => Thành công");
+        } catch (error) {
+          updateProgress(`  => Lỗi: ${error.message}`);
+        }
+      }
+
+      updateProgress(`<br><b>Hoàn tất: ${successCount}/${batchData.length}</b>`);
+      confirmBtn.textContent = "Đã xong";
+    },
+  });
+
+  return progressModal;
+}
+
 function scanAndInjectButtons() {
   document.querySelectorAll("div.journal div.contextual").forEach(injectButtonIfNeeded);
+  const targetContainer =
+    document.querySelector("#history") || document.querySelector(".journals") || document.body;
+  injectBatchSyncButton(targetContainer);
 }
 
 function injectButtonIfNeeded(actionsEl) {
@@ -290,6 +374,40 @@ function injectButtonIfNeeded(actionsEl) {
   actionsEl.dataset.tbInjected = "1";
 }
 
+function injectBatchSyncButton(container) {
+  if (!container) return;
+
+  let batchContainer = document.querySelector("#tb-batch-sync-container");
+  if (!batchContainer) {
+    batchContainer = document.createElement("div");
+    batchContainer.id = "tb-batch-sync-container";
+    batchContainer.style.cssText =
+      "margin: 10px 0; padding: 8px; background: #f0f7ff; border: 1px solid #b3d9ff; border-radius: 4px;";
+    const header = document.querySelector("#history h3, .journals h3");
+    if (header) {
+      header.parentNode.insertBefore(batchContainer, header.nextSibling);
+    } else {
+      container.prepend(batchContainer);
+    }
+  }
+
+  if (batchContainer.querySelector("#tb-batch-sync-btn")) return;
+
+  const batchBtn = document.createElement("a");
+  batchBtn.href = "#";
+  batchBtn.id = "tb-batch-sync-btn";
+  batchBtn.className = "icon icon-time-add";
+  batchBtn.textContent = "🔄 Đồng bộ tất cả comments sang Backlog";
+  batchBtn.style.cssText = "font-weight: bold; color: #0066cc; cursor: pointer;";
+  batchBtn.onclick = (e) => {
+    e.preventDefault();
+    handleBatchSyncToBacklog();
+  };
+
+  batchContainer.innerHTML = "";
+  batchContainer.appendChild(batchBtn);
+}
+
 async function handleExtractAndOpenModal(actionsEl, button) {
   const commentContentEl = actionsEl.closest(".journal")?.querySelector("div.wiki");
   const rawText = commentContentEl?.innerText?.trim() || "";
@@ -302,6 +420,7 @@ async function handleExtractAndOpenModal(actionsEl, button) {
   setButtonLoading(button, true);
 
   try {
+    const attachments = extractRedmineAttachments(commentContentEl);
     const result = await sendRuntimeMessage({
       type: "EXTRACT_JAPANESE_CONTENT",
       commentText: rawText,
@@ -309,17 +428,25 @@ async function handleExtractAndOpenModal(actionsEl, button) {
     openBacklogModal({
       backlogIssueKey,
       previewText: result.data.previewText,
+      attachments,
       onCancel: () => setButtonLoading(button, false),
-      onConfirm: async ({ backlogIssueKey: confirmedKey, content, notifiedUserId }) => {
+      onConfirm: async ({
+        backlogIssueKey: confirmedKey,
+        content,
+        notifiedUserId,
+        attachments: confirmedAttachments,
+      }) => {
         const sendResult = await sendRuntimeMessage({
           type: "SEND_TO_BACKLOG",
           backlogIssueKey: confirmedKey,
           content,
           notifiedUserId,
+          attachments: confirmedAttachments,
         });
         openSuccessModal({
           redmineUrl: sendResult.data.backlogUrl,
           onClose: () => setButtonLoading(button, false),
+          isBacklog: true,
         });
       },
     });
@@ -330,8 +457,48 @@ async function handleExtractAndOpenModal(actionsEl, button) {
   }
 }
 
+function extractRedmineAttachments(contentEl) {
+  const attachments = [];
+  if (!contentEl) return attachments;
+
+  const attachmentLinks = contentEl.querySelectorAll("a[href*='/attachments/download']");
+  attachmentLinks.forEach((link) => {
+    const href = link.getAttribute("href");
+    const text = link.innerText.trim();
+    if (href && text) {
+      const attachmentId = href.match(/\/attachments\/download\/(\d+)/)?.[1];
+      if (attachmentId) {
+        attachments.push({
+          id: attachmentId,
+          filename: text,
+          url: href,
+        });
+      }
+    }
+  });
+
+  const images = contentEl.querySelectorAll("img");
+  images.forEach((img) => {
+    const src = img.getAttribute("src");
+    if (src && src.includes("/attachments/download")) {
+      const attachmentId = src.match(/\/attachments\/download\/(\d+)/)?.[1];
+      const filename = img.getAttribute("alt") || `image_${attachmentId}`;
+      if (attachmentId && !attachments.find((a) => a.id === attachmentId)) {
+        attachments.push({
+          id: attachmentId,
+          filename,
+          url: src,
+          isImage: true,
+        });
+      }
+    }
+  });
+
+  return attachments;
+}
+
 function findBacklogKeyInPage() {
-  const patterns = [/([A-Z0-9]+-[0-9]+)/];
+  const patterns = [/([A-Z0-9_]+-[0-9]+)/];
   const title = document.querySelector("#content h2")?.innerText || "";
   for (const p of patterns) {
     const m = title.match(p);
