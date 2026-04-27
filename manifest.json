@@ -10,14 +10,17 @@
   },
   "default_locale": "vi",
   "permissions": [
-    "storage"
+    "storage",
+    "alarms"
   ],
   "host_permissions": [
     "*://*.backlog.com/*",
     "*://*.backlog.jp/*",
     "https://redmine.splus-software.com/*",
     "https://generativelanguage.googleapis.com/*",
-    "https://api.cerebras.ai/*"
+    "https://api.cerebras.ai/*",
+    "https://dev-tool-platform-backend.onrender.com/*",
+    "https://hipppo.vercel.app/*"
   ],
   "background": {
     "service_worker": "src/background.js"

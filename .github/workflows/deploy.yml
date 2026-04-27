@@ -76,7 +76,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload to Google Drive
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.check_tag.outputs.exists == 'false'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: node scripts/upload-gdrive.js
         env:
           GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
@@ -84,6 +84,9 @@ jobs:
           GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
           GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
           VERSION: ${{ steps.get_version.outputs.version }}
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          BACKEND_API_KEY: ${{ secrets.BACKEND_API_KEY }}
+          DASHBOARD_URL: ${{ secrets.DASHBOARD_URL }}
 
 
 

@@ -29,12 +29,92 @@ chrome.action.onClicked.addListener(() => {
  * Message handler for chrome.runtime.onMessage.
  * Handles messages from content scripts and options page.
  */
-chrome.runtime.onInstalled.addListener((details) => {
+// ✅ Update check configuration
+const DASHBOARD_API_URL = "https://dev-tool-platform-api.onrender.com/api";
+const CHECK_INTERVAL_MINUTES = 1440; // 24 hours
+
+chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === "install") {
     console.log(`${DEBUG_PREFIX} Extension installed, opening options page.`);
     chrome.runtime.openOptionsPage();
   }
+  
+  // ✅ Schedule update check every 24 hours
+  chrome.alarms.create("checkForUpdates", { periodInMinutes: CHECK_INTERVAL_MINUTES });
+  
+  // ✅ Initial check on install
+  await checkForUpdates();
 });
+
+// ✅ Handle alarm for periodic update checks
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === "checkForUpdates") {
+    await checkForUpdates();
+  }
+});
+
+// ✅ Check for updates function
+async function checkForUpdates() {
+  const manifest = chrome.runtime.getManifest();
+  const currentVersion = manifest.version;
+  
+  try {
+    const response = await fetch(`${DASHBOARD_API_URL}/versions/latest`);
+    if (!response.ok) {
+      console.warn(`${DEBUG_PREFIX} Failed to fetch latest version: ${response.status}`);
+      return;
+    }
+    
+    const data = await response.json();
+    const latestVersion = data.version_number;
+    
+    // Compare semantic versions
+    const comparison = compareVersions(currentVersion, latestVersion);
+    const isUpToDate = comparison >= 0;
+    
+    console.log(`${DEBUG_PREFIX} Version check: current=${currentVersion}, latest=${latestVersion}, upToDate=${isUpToDate}`);
+    
+    if (!isUpToDate) {
+      // Set red badge
+      await chrome.action.setBadgeText({ text: "!" });
+      await chrome.action.setBadgeBackgroundColor({ color: "#ff0000" });
+      
+      // Store update info for options page to read
+      await chrome.storage.local.set({
+        updateAvailable: true,
+        latestVersion: latestVersion,
+        changelog: data.changelog || [],
+        lastChecked: new Date().toISOString()
+      });
+      
+      console.log(`${DEBUG_PREFIX} Update available! Badge set.`);
+    } else {
+      // Clear badge if up to date
+      await chrome.action.setBadgeText({ text: "" });
+      
+      // Store status
+      await chrome.storage.local.set({
+        updateAvailable: false,
+        lastChecked: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error(`${DEBUG_PREFIX} Error checking for updates:`, error);
+  }
+}
+
+// ✅ Simple semantic version comparison
+function compareVersions(v1, v2) {
+  const parts1 = v1.split('.').map(Number);
+  const parts2 = v2.split('.').map(Number);
+  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+    const a = parts1[i] || 0;
+    const b = parts2[i] || 0;
+    if (a > b) return 1;
+    if (a < b) return -1;
+  }
+  return 0;
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const handler = {

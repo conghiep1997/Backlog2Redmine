@@ -597,6 +597,135 @@ document.addEventListener("DOMContentLoaded", () => {
     renderGeminiKeysButtons();
   }
 
+  // ✅ Update Check Feature
+  const checkUpdateBtn = document.getElementById('checkUpdateBtn');
+  const goToDashboardBtn = document.getElementById('goToDashboardBtn');
+  const updateStatusEl = document.getElementById('updateStatus');
+
+  // Check for updates on page load
+  checkUpdateStatus();
+
+  checkUpdateBtn?.addEventListener('click', checkForUpdates);
+  goToDashboardBtn?.addEventListener('click', () => {
+    chrome.tabs.create({ url: 'https://dev-tool-platform.vercel.app/' });
+  });
+
+  async function checkUpdateStatus() {
+    const manifest = chrome.runtime.getManifest();
+    const currentVersion = manifest.version;
+
+    try {
+      const response = await fetch(`${DASHBOARD_API_URL}/versions/latest`);
+      if (!response.ok) throw new Error('Không thể kết nối server');
+
+      const data = await response.json();
+      const latestVersion = data.version_number;
+      const comparison = compareVersions(currentVersion, latestVersion);
+      const isUpToDate = comparison >= 0;
+
+      if (isUpToDate) {
+        updateStatusEl.innerHTML = `
+          <p style="color: #16a34a; margin: 0;">
+            ✅ Bạn đang dùng phiên bản mới nhất: <strong>v${currentVersion}</strong>
+          </p>
+        `;
+      } else {
+        updateStatusEl.innerHTML = `
+          <p style="color: #dc2626; margin: 0 0 8px;">
+            ⚠️ Có phiên bản mới: <strong>v${latestVersion}</strong>
+          </p>
+          ${data.changelog && data.changelog.length > 0 ? `
+            <details style="margin-bottom: 8px;">
+              <summary style="cursor: pointer; font-size: 13px; color: #0369a1;">
+                📝 Xem thay đổi (${data.changelog.length} mục)
+              </summary>
+              <ul style="margin: 8px 0; padding-left: 20px; font-size: 13px;">
+                ${data.changelog.map(c => `<li>${c.replace(/^- /, '')}</li>`).join('')}
+              </ul>
+            </details>
+          ` : ''}
+          <button onclick="chrome.tabs.create({ url: 'https://dev-tool-platform.vercel.app/' })" 
+                  style="background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+            📥 Download ngay
+          </button>
+        `;
+      }
+    } catch (error) {
+      updateStatusEl.innerHTML = `
+        <p style="color: #dc2626; margin: 0;">
+          ❌ Lỗi kiểm tra: ${error.message}
+        </p>
+      `;
+    }
+  }
+
+  async function checkForUpdates() {
+    const statusEl = document.getElementById('updateStatus');
+    statusEl.innerHTML = '<p style="color: #64748b;">Đang kiểm tra...</p>';
+
+    const manifest = chrome.runtime.getManifest();
+    const currentVersion = manifest.version;
+
+    try {
+      const response = await fetch(`${DASHBOARD_API_URL}/versions/latest`);
+      if (!response.ok) throw new Error('Không thể kết nối server');
+
+      const data = await response.json();
+      const latestVersion = data.version_number;
+      const comparison = compareVersions(currentVersion, latestVersion);
+      const isUpToDate = comparison >= 0;
+
+      if (isUpToDate) {
+        statusEl.innerHTML = `
+          <p style="color: #16a34a; margin: 0;">
+            ✅ Bạn đang dùng phiên bản mới nhất: <strong>v${currentVersion}</strong>
+          </p>
+        `;
+      } else {
+        statusEl.innerHTML = `
+          <p style="color: #dc2626; margin: 0 0 8px;">
+            ⚠️ Có phiên bản mới: <strong>v${latestVersion}</strong>
+          </p>
+          ${data.changelog && data.changelog.length > 0 ? `
+            <details style="margin-bottom: 8px; display: block;">
+              <summary style="cursor: pointer; font-size: 13px; color: #0369a1;">
+                📝 Xem thay đổi (${data.changelog.length} mục)
+              </summary>
+              <ul style="margin: 8px 0; padding-left: 20px; font-size: 13px;">
+                ${data.changelog.map(c => `<li>${c.replace(/^- /, '')}</li>`).join('')}
+              </ul>
+            </details>
+          ` : ''}
+          <button onclick="chrome.tabs.create({ url: 'https://dev-tool-platform.vercel.app/' })" 
+                  style="background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+            📥 Download ngay
+          </button>
+        `;
+      }
+    } catch (error) {
+      statusEl.innerHTML = `
+        <p style="color: #dc2626; margin: 0;">
+          ❌ Lỗi kiểm tra: ${error.message}
+        </p>
+      `;
+    }
+  }
+
+  function compareVersions(v1, v2) {
+    const p1 = v1.split('.').map(Number);
+    const p2 = v2.split('.').map(Number);
+    for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
+      const a = p1[i] || 0;
+      const b = p2[i] || 0;
+      if (a > b) return 1;
+      if (a < b) return -1;
+    }
+    return 0;
+  }
+
   // --- Donate Modal Logic ---
   // --- End of Donate Modal Logic ---
 });
+
+// ✅ Dashboard API URL for options page
+const DASHBOARD_API_URL = "https://dev-tool-platform-api.onrender.com/api";
