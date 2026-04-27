@@ -4,23 +4,41 @@ const crypto = require('crypto');
 const { google } = require('googleapis');
 
 /**
- * Uploads project artifact to Google Drive using OAuth2 Refresh Token.
+ * Uploads project artifact to Google Drive using Service Account.
  * Handles authentication, finding existing files, and overwriting/creating files.
  * After successful upload, registers the version in Dev Tool Platform backend.
  */
 async function uploadToDrive() {
   const {
-    GDRIVE_CLIENT_ID: clientId,
-    GDRIVE_CLIENT_SECRET: clientSecret,
-    GDRIVE_REFRESH_TOKEN: refreshToken,
+    GDRIVE_SERVICE_ACCOUNT_KEY: serviceAccountKeyPath,
     GDRIVE_FOLDER_ID: folderId,
     VERSION: version,
     BACKEND_URL: backendUrl,
     BACKEND_API_KEY: backendApiKey
   } = process.env;
 
-  if (!clientId || !clientSecret || !refreshToken) {
-    console.error('❌ Missing Google Drive OAuth2 credentials (ID, Secret, or Token).');
+  // Validate required environment variables
+  if (!folderId) {
+    console.error('❌ Missing GDRIVE_FOLDER_ID environment variable.');
+    process.exit(1);
+  }
+
+  if (!version) {
+    console.error('❌ Missing VERSION environment variable.');
+    process.exit(1);
+  }
+
+  // Determine service account key file path
+  let keyFilePath = serviceAccountKeyPath;
+  if (!keyFilePath) {
+    // Default to service-account-key.json in project root
+    keyFilePath = path.join(process.cwd(), 'service-account-key.json');
+  }
+  keyFilePath = path.resolve(keyFilePath);
+
+  if (!fs.existsSync(keyFilePath)) {
+    console.error(`❌ Service account key file not found at: ${keyFilePath}`);
+    console.error('   Set GDRIVE_SERVICE_ACCOUNT_KEY environment variable or place service-account-key.json in project root.');
     process.exit(1);
   }
 
@@ -32,17 +50,22 @@ async function uploadToDrive() {
     process.exit(1);
   }
 
-  const oauth2Client = new google.auth.OAuth2(clientId, clientSecret, 'https://developers.google.com/oauthplayground');
-  oauth2Client.setCredentials({ refresh_token: refreshToken });
-
-  const drive = google.drive({ version: 'v3', auth: oauth2Client });
+  // Authenticate using Service Account
+  const auth = new google.auth.GoogleAuth({
+    keyFile: keyFilePath,
+    scopes: ['https://www.googleapis.com/auth/drive'],
+  });
+  const authClient = await auth.getClient();
+  const drive = google.drive({ version: 'v3', auth: authClient });
 
   let fileId = null;
 
+  let fileStream;
   try {
     console.log(`🔍 Searching for existing file: ${fileName}...`);
+    const escapedFileName = fileName.replace(/'/g, "\\'");
     const listRes = await drive.files.list({
-      q: `name = '${fileName}' and '${folderId}' in parents and trashed = false`,
+      q: `name = '${escapedFileName}' and '${folderId}' in parents and trashed = false`,
       fields: 'files(id, name)',
       spaces: 'drive',
     });
@@ -53,28 +76,53 @@ async function uploadToDrive() {
       parents: [folderId],
     };
 
-    const media = {
-      mimeType: 'application/zip',
-      body: fs.createReadStream(filePath),
-    };
+    fileStream = fs.createReadStream(filePath);
+    const maxRetries = 3;
+    let lastError;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      let fileStream;
+      try {
+        fileStream = fs.createReadStream(filePath);
+        const media = {
+          mimeType: 'application/zip',
+          body: fileStream,
+        };
 
-    if (existingFile) {
-      console.log(`🔄 Updating existing file (ID: ${existingFile.id})...`);
-      await drive.files.update({
-        fileId: existingFile.id,
-        media: media,
-      });
-      fileId = existingFile.id;
-      console.log('✅ Update successful!');
-    } else {
-      console.log('📤 Creating new file...');
-      const createRes = await drive.files.create({
-        resource: fileMetadata,
-        media: media,
-        fields: 'id',
-      });
-      fileId = createRes.data.id;
-      console.log('✅ Upload successful!');
+        if (existingFile) {
+          console.log(`🔄 Updating existing file (ID: ${existingFile.id})... (attempt ${attempt}/${maxRetries})`);
+          await drive.files.update({
+            fileId: existingFile.id,
+            media: media,
+          });
+          fileId = existingFile.id;
+          console.log('✅ Update successful!');
+        } else {
+          console.log(`📤 Creating new file... (attempt ${attempt}/${maxRetries})`);
+          const createRes = await drive.files.create({
+            resource: fileMetadata,
+            media: media,
+            fields: 'id',
+          });
+          fileId = createRes.data.id;
+          console.log('✅ Upload successful!');
+        }
+        break;
+      } catch (retryError) {
+        lastError = retryError;
+        if (attempt < maxRetries) {
+          console.warn(`⚠️ Attempt ${attempt} failed, retrying... (${retryError.message})`);
+          await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+        }
+      } finally {
+        if (fileStream) {
+          fileStream.close();
+        }
+      }
+    }
+    
+    if (!fileId) {
+      throw lastError;
     }
 
     // ✅ Register version in backend

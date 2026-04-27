@@ -75,18 +75,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Write service account key to file
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        env:
+          GDRIVE_SERVICE_ACCOUNT_KEY: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_KEY }}
+        run: echo "$GDRIVE_SERVICE_ACCOUNT_KEY" > service-account-key.json
+
       - name: Upload to Google Drive
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: node scripts/upload-gdrive.js
         env:
-          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
-          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
-          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+          GDRIVE_SERVICE_ACCOUNT_KEY: ./service-account-key.json
           GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
           VERSION: ${{ steps.get_version.outputs.version }}
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           BACKEND_API_KEY: ${{ secrets.BACKEND_API_KEY }}
           DASHBOARD_URL: ${{ secrets.DASHBOARD_URL }}
+
+      - name: Cleanup service account key
+        if: always()
+        run: rm -f service-account-key.json
 
 
 
