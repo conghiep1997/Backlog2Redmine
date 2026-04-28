@@ -7,6 +7,14 @@ let modalElements = null;
 let customFieldsMetadata = [];
 let redmineSettings = null;
 
+const DEFAULT_MANUAL_FIELDS = {
+  Severity: 46,
+  "Reproduction Rate": 0,
+  Role: 11,
+  "QC Activity": 8,
+  "Q&A Category": 58,
+};
+
 function ensureModalShell() {
   let overlay = document.getElementById("tb-redmine-overlay");
 
@@ -1121,16 +1129,13 @@ function renderTrackerFields(trackerName, validateCallback) {
   container.className = "tb-field-grid";
 
   fieldsToShow.forEach((fieldName) => {
-    let cfId = manualMap[fieldName];
-    if (!cfId) {
-      cfId = customFieldsMetadata.find(
-        (cf) => cf.name.toLowerCase() === fieldName.toLowerCase()
-      )?.id;
-    }
-    // Hardcoded fallback for known fields if discovery fails (Case-insensitive)
-    if (!cfId && fieldName.toLowerCase() === "q&a category") cfId = 58;
+    // Priority: Settings Manual Map > Hardcoded Defaults > Discovery (which is disabled)
+    let cfId = manualMap[fieldName] || DEFAULT_MANUAL_FIELDS[fieldName];
 
-    if (!cfId) return;
+    if (!cfId) {
+      console.warn(`[TB-MODAL] No ID found for field: ${fieldName}`);
+      return;
+    }
 
     const group = document.createElement("div");
     group.className = "tb-field-group";
