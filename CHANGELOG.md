@@ -1,79 +1,92 @@
 # Nhật ký thay đổi (Changelog)
 
 ## [1.8.3] - 2026-04-26
-- **✨ Added**:
-  - **Flow Redmine → Backlog**: Hoàn thiện tính năng đồng bộ ngược từ Redmine sang Backlog
-  - **Attachment handling**: Tự động extract và upload file đính kèm từ Redmine sang Backlog
-  - **Batch sync**: Nút "🔄 Đồng bộ tất cả comments" để sync hàng loạt với progress tracking
-  - **Smart @mentions**: 
-    - Hiển thị dropdown gợi ý users khi gõ `@` trong preview
-    - Hỗ trợ cả `userId` (login ID) và fallback sang name khi không có userId
-    - Tự động detect mentions từ preview text để gửi notification
-    - Gửi danh sách numeric IDs qua `notifiedUserId[]` để Backlog gửi notification đúng
-  - **Project-specific user loading**: Dùng API `/api/v2/projects/{key}/users` (cần Project Member, không cần Admin)
-  - **Lazy user loading**: Chỉ load users khi nhập issue key hợp lệ, tránh gọi API sai project
-- **🔧 Fixed**:
-  - Sửa lỗi `userId: null` khiến không tag được một số users trong Backlog
-  - Sửa lỗi modal không hiển thị user suggestions khi gõ `@`
-  - Sửa lỗi auto-load users với project key sai (COUIX_PJ vs CTRIAL)
-  - Thêm null checks cho user data để tránh crash khi API trả về data không đầy đủ
-  - Sửa duplicate code trong `updateAutoNotify()` function
-- **🔄 Changed**:
-  - Không auto-load users khi mở modal → tránh gọi API với project key sai
-  - Hiển thị hint rõ ràng khi chưa có issue key hoặc không load được users
-  - Cải thiện UX: chỉ hiển thị suggestion dropdown khi có data users hợp lệ
-- **📝 Docs**:
-  - Cập nhật README.md với hướng dẫn sử dụng flow Redmine → Backlog
-  - Thêm logging chi tiết để debug API calls
+
+### ✨ Tính năng mới
+- **Flow Redmine → Backlog**: Hoàn thiện tính năng đồng bộ ngược từ Redmine sang Backlog
+- **Attachment handling**: Tự động extract và upload file đính kèm từ Redmine sang Backlog
+- **Batch sync**: Nút "🔄 Đồng bộ tất cả comments" để sync hàng loạt với progress tracking
+- **Smart @mentions**: 
+  - Hiển thị dropdown gợi ý users khi gõ `@` trong preview
+  - Hỗ trợ cả `userId` (login ID) và fallback sang name khi không có userId
+  - Tự động detect mentions từ preview text để gửi notification
+  - Gửi danh sách numeric IDs qua `notifiedUserId[]` để Backlog gửi notification đúng
+- **Project-specific user loading**: Dùng API `/api/v2/projects/{key}/users` (cần Project Member, không cần Admin)
+- **Lazy user loading**: Chỉ load users khi nhập issue key hợp lệ, tránh gọi API sai project
+
+### 🔧 Sửa lỗi
+- Sửa lỗi `userId: null` khiến không tag được một số users trong Backlog
+- Sửa lỗi modal không hiển thị user suggestions khi gõ `@`
+- Sửa lỗi auto-load users với project key sai (COUIX_PJ vs CTRIAL)
+- Thêm null checks cho user data để tránh crash khi API trả về data không đầy đủ
+- Sửa duplicate code trong `updateAutoNotify()` function
+
+### 🔄 Thay đổi
+- Không auto-load users khi mở modal → tránh gọi API với project key sai
+- Hiển thị hint rõ ràng khi chưa có issue key hoặc không load được users
+- Cải thiện UX: chỉ hiển thị suggestion dropdown khi có data users hợp lệ
+
+### 📝 Tài liệu
+- Cập nhật README.md với hướng dẫn sử dụng flow Redmine → Backlog
+- Thêm logging chi tiết để debug API calls
 
 
 ## [1.8.2] - 2026-04-23
-- **🚀 Performance**:
-  - Tối ưu `translateBatch` với `Promise.all()` batch 5 thay vì gọi tuần tự, giảm thời gian dịch batch comments.
-  - Thêm cleanup handlers (`beforeunload`) để giải phóng interval và observer khi rời trang, tránh memory leak.
-  - Giới hạn MutationObserver scope vào container cụ thể (`.comments`, `.comment-list`) thay vì `document.body` để giảm CPU usage.
-  - Thêm projects caching (5 phút) và debounce (500ms) cho `fetchProjects` trong Options page.
-  - Thêm `debounce()` và `throttle()` utility functions trong helpers.js.
-- **🔧 Fixed**:
-  - Sửa `reportProjectId` dropdown không được populate data tương tự `defaultProjectId`.
-  - Sửa lỗi status message bị mất sau khi lưu cấu hình (thêm `setTimeout` trước `loadOptions`).
-- **🔄 Changed**:
-  - Chuẩn hóa code style: đổi single quotes sang double quotes.
+
+### 🚀 Cải thiện hiệu năng
+- Tối ưu `translateBatch` với `Promise.all()` batch 5 thay vì gọi tuần tự, giảm thời gian dịch batch comments
+- Thêm cleanup handlers (`beforeunload`) để giải phóng interval và observer khi rời trang, tránh memory leak
+- Giới hạn MutationObserver scope vào container cụ thể (`.comments`, `.comment-list`) thay vì `document.body` để giảm CPU usage
+- Thêm projects caching (5 phút) và debounce (500ms) cho `fetchProjects` trong Options page
+- Thêm `debounce()` và `throttle()` utility functions trong helpers.js
+
+### 🔧 Sửa lỗi
+- Sửa `reportProjectId` dropdown không được populate data tương tự `defaultProjectId`
+- Sửa lỗi status message bị mất sau khi lưu cấu hình (thêm `setTimeout` trước `loadOptions`)
+
+### 🔄 Thay đổi
+- Chuẩn hóa code style: đổi single quotes sang double quotes
 
 
 ## [1.8.1] - 2026-04-23
-- **✨ Added**:
-  - Triển khai danh sách "Tứ trụ" AI mạnh mẽ (Gemma 3/4, Gemini 3.1) với RPD cao.
-  - Cơ chế **Load Balancing**: Xáo trộn ngẫu nhiên Model & Key để tối ưu hóa hạn mức.
-  - Tự động nhận diện Gemma để sửa lỗi **Error 400** (Developer instruction support).
-- **🔧 Fixed**:
-  - Khôi phục logic tìm kiếm Redmine ổn định (Chuẩn hóa normalizeLoose & fallback search).
-  - Sửa lỗi hiển thị "Model ma" và cải thiện UI nút chọn model (màu sắc rõ ràng hơn).
-  - Vá các lỗi cú pháp HTML trong trang Options và dọn dẹp code thừa (`fallbackModel`).
+
+### ✨ Tính năng mới
+- Triển khai danh sách "Tứ trụ" AI mạnh mẽ (Gemma 3/4, Gemini 3.1) với RPD cao
+- Cơ chế **Load Balancing**: Xáo trộn ngẫu nhiên Model & Key để tối ưu hóa hạn mức
+- Tự động nhận diện Gemma để sửa lỗi **Error 400** (Developer instruction support)
+
+### 🔧 Sửa lỗi
+- Khôi phục logic tìm kiếm Redmine ổn định (Chuẩn hóa normalizeLoose & fallback search)
+- Sửa lỗi hiển thị "Model ma" và cải thiện UI nút chọn model (màu sắc rõ ràng hơn)
+- Vá các lỗi cú pháp HTML trong trang Options và dọn dẹp code thừa (`fallbackModel`)
+
 
 ## [1.8.0] - 2026-04-23
-- **✨ Added**:
-  - Cải thiện giao diện Options với collapsible sections độc lập (Redmine, Backlog, Primary AI, Fallback AI).
-  - **Multiple Gemini Models** hiển thị dạng button clickable, chọn/bỏ bằng click.
-  - **Multiple Gemini Keys** gộp chung với Multiple Models trong section Primary AI.
-  - Default chọn 5 models đầu tiên khi chưa có cấu hình.
-- **🔄 Changed**:
-  - Xóa dropdown Model cũ (trùng lặp với Multiple Models).
-  - Fallback provider mặc định là "none" (không dùng dự phòng).
-  - Loại bỏ Gemma 12B khỏi danh sách model.
-  - Tối ưu margin/padding: `.field` margin-bottom: 0, `.grid` gap: 0.
-  - Đưa Custom Fields vào trong section Redmine.
-- **🚀 Performance & UI Improvements**:
-  - Improved AI translation performance by implementing a caching layer for settings and Redmine issue lookups.
-  - Optimized batch translation flow by reducing redundant API calls and message overhead.
-  - Defaulted Modal UI to "Preview" tab for a more seamless experience.
-  - Enhanced Redmine formatting in preview (Headings, Tables, Lists, and `{{collapse}}` macro).
-  - Refactored AI service to handle Gemma models correctly by merging system instructions into user prompts.
-  - Stabilized "Tứ trụ" AI models configuration (Gemini 3.1 Flash Lite, Gemma 3/4).
-- **🔧 Fixed**:
-  - Sửa logic load models mặc định khi không có cấu hình.
-  - Clean up code thừa (primaryModelSelect, initialization duplicate).
-- **📝 Docs**:
+
+### ✨ Tính năng mới
+- Cải thiện giao diện Options với collapsible sections độc lập (Redmine, Backlog, Primary AI, Fallback AI)
+- **Multiple Gemini Models** hiển thị dạng button clickable, chọn/bỏ bằng click
+- **Multiple Gemini Keys** gộp chung với Multiple Models trong section Primary AI
+- Default chọn 5 models đầu tiên khi chưa có cấu hình
+
+### 🔄 Thay đổi
+- Xóa dropdown Model cũ (trùng lặp với Multiple Models)
+- Fallback provider mặc định là "none" (không dùng dự phòng)
+- Loại bỏ Gemma 12B khỏi danh sách model
+- Tối ưu margin/padding: `.field` margin-bottom: 0, `.grid` gap: 0
+- Đưa Custom Fields vào trong section Redmine
+
+### 🚀 Cải thiện hiệu năng
+- Cải thiện hiệu năng dịch AI bằng caching layer cho settings và Redmine issue lookups
+- Tối ưu batch translation bằng cách giảm API calls và message overhead
+- Default Modal UI ở tab "Preview" để trải nghiệm mượt mà hơn
+- Cải thiện Redmine formatting trong preview (Headings, Tables, Lists, `{{collapse}}` macro)
+- Refactor AI service để xử lý Gemma models bằng cách merge system instructions vào user prompts
+- Ổn định cấu hình "Tứ trụ" AI models (Gemini 3.1 Flash Lite, Gemma 3/4)
+
+### 🔧 Sửa lỗi
+- Sửa logic load models mặc định khi không có cấu hình
+- Clean up code thừa (primaryModelSelect, initialization duplicate)
 
 
 ## [1.7.2] - 2026-04-22

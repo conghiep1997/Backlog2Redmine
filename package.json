@@ -11,6 +11,8 @@
     "format:check": "prettier --check \"src/**/*.{js,json,html,css}\"",
     "build": "npm run check:version-sync && npm run lint && npm run format && node scripts/build.js",
     "build:zip": "node scripts/build-zip.js",
+    "sync:version": "node scripts/sync-version.js",
+    "release": "npm run build:zip && npm run sync:version",
     "test": "echo \"Tests coming soon\" && exit 0",
     "dev": "echo \"Load unpacked extension from dist/ folder in chrome://extensions/\""
   },
