@@ -40,7 +40,8 @@ async function registerVersion() {
       changelog = versionSection
         .split('\n')
         .filter(line => line.trim().startsWith('-') || line.trim().startsWith('*'))
-        .map(line => line.trim().replace(/^[-*]\s*/, '- '));
+        // Keep original line (with leading spaces) to preserve indentation
+        .map(line => line);
     }
   }
 

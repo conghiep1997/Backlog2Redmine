@@ -191,26 +191,26 @@ function extractBacklogContent(element) {
         return;
       }
 
-      // Blockquotes: <blockquote> -> > text
-      if (tag === "blockquote") {
-        if (result.length > 0 && !result.endsWith("\n")) {
-          result += "\n";
-        }
-        const quoteStart = result.length;
-        for (const child of node.childNodes) {
-          walk(child, { ...options, isInsideBlockquote: true });
-        }
-        const quoteText = result.slice(quoteStart);
-        result =
-          result.slice(0, quoteStart) +
-          quoteText
-            .trimEnd()
-            .split("\n")
-            .map((line) => "> " + line.trimStart())
-            .join("\n");
-        result += "\n\n";
-        return;
-      }
+       // Blockquotes: <blockquote> -> > text
+       if (tag === "blockquote") {
+         if (result.length > 0 && !result.endsWith("\n")) {
+           result += "\n";
+         }
+         const quoteStart = result.length;
+         for (const child of node.childNodes) {
+           walk(child, { ...options, isInsideBlockquote: true });
+         }
+         const quoteText = result.slice(quoteStart);
+         result =
+           result.slice(0, quoteStart) +
+           quoteText
+             .trimEnd()
+             .split("\n")
+             .map((line) => "> " + line.trimStart())
+             .join("\n");
+         result += "\n\n";
+         return;
+       }
 
       // Unordered/Ordered lists: <ul>, <ol> -> * or 1.
       if (tag === "ul" || tag === "ol") {

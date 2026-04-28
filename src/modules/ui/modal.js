@@ -2,7 +2,7 @@
  * Modal UI management for Backlog2Redmine Extension.
  */
 
-const TB = globalThis.TB_CONSTANTS;
+import { escapeHtml, renderMarkdownHtml } from "../utils/render-markdown.js";
 let modalElements = null;
 let customFieldsMetadata = [];
 let redmineSettings = null;
@@ -286,16 +286,21 @@ function openConfirmModal(options) {
   };
   const renderMarkdownHtml = (text) => {
     let html = escapeHtml(text);
-    html = html.replace(/(<li>.*<\/li>)(\s*<li>.*<\/li>)*/g, "<ul>$&</ul>");
+    
+    // Convert blockquotes first (before line breaks)
+    html = html.replace(/^&gt;\s+(.+)$/gm, "<blockquote>$1</blockquote>");
+    
+    // Convert other markdown
     html = html
+      .replace(/(<li>.*<\/li>)(\s*<li>.*<\/li>)*/g, "<ul>$&</ul>")
       .replace(/^#{1,6}\s+(.+)$/gm, "<h$1>$1</h$1>")
       .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
       .replace(/\*(.+?)\*/g, "<em>$1</em>")
       .replace(/`{3}(\w*)\n?([\s\S]*?)`{3}/g, "<pre>$2</pre>")
       .replace(/`(.+?)`/g, "<code>$1</code>")
-      .replace(/^>\s+(.+)$/gm, "<blockquote>$1</blockquote>")
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "<a href=\"$2\" target=\"_blank\">$1</a>")
       .replace(/\n/g, "<br>");
+    
     return html;
   };
 
@@ -651,16 +656,21 @@ function openBacklogModal({
   };
   const renderMarkdownHtml = (text) => {
     let html = escapeHtml(text);
-    html = html.replace(/(<li>.*<\/li>)(\s*<li>.*<\/li>)*/g, "<ul>$&</ul>");
+    
+    // Convert blockquotes first (before line breaks)
+    html = html.replace(/^&gt;\s+(.+)$/gm, "<blockquote>$1</blockquote>");
+    
+    // Convert other markdown
     html = html
+      .replace(/(<li>.*<\/li>)(\s*<li>.*<\/li>)*/g, "<ul>$&</ul>")
       .replace(/^#{1,6}\s+(.+)$/gm, "<h$1>$1</h$1>")
       .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
       .replace(/\*(.+?)\*/g, "<em>$1</em>")
       .replace(/`{3}(\w*)\n?([\s\S]*?)`{3}/g, "<pre>$2</pre>")
       .replace(/`(.+?)`/g, "<code>$1</code>")
-      .replace(/^>\s+(.+)$/gm, "<blockquote>$1</blockquote>")
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "<a href=\"$2\" target=\"_blank\">$1</a>")
       .replace(/\n/g, "<br>");
+    
     return html;
   };
   const updatePreviewMode = () => {

@@ -25,13 +25,266 @@ chrome.action.onClicked.addListener(() => {
   chrome.runtime.openOptionsPage();
 });
 
+// ✅ Backend API URL for version check
+const BACKEND_API_URL = "https://dev-tool-platform-api.onrender.com/api";
+
+/**
+ * Check if we should run update check today
+ * Returns true if never checked or last check was yesterday or earlier
+ */
+function shouldCheckForUpdates() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['lastUpdateCheck'], (result) => {
+      const lastCheck = result.lastUpdateCheck;
+      
+      if (!lastCheck) {
+        // Never checked before
+        resolve(true);
+        return;
+      }
+      
+      const lastCheckDate = new Date(lastCheck);
+      const now = new Date();
+      
+      // Check if it's a new day (or 24 hours have passed)
+      const hoursSinceLastCheck = (now - lastCheckDate) / (1000 * 60 * 60);
+      
+      if (hoursSinceLastCheck >= 24) {
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    });
+  });
+}
+
+/**
+ * Mark update check as completed for today
+ */
+function markUpdateCheckComplete() {
+  return chrome.storage.local.set({
+    lastUpdateCheck: new Date().toISOString()
+  });
+}
+
+// Check for updates when extension starts
+chrome.runtime.onStartup.addListener(async () => {
+  console.log(`${DEBUG_PREFIX} Extension started, checking for updates...`);
+  const shouldCheck = await shouldCheckForUpdates();
+  if (shouldCheck) {
+    await checkForUpdates();
+    await markUpdateCheckComplete();
+  }
+});
+
+// Check when extension is installed or updated
+chrome.runtime.onInstalled.addListener(async (details) => {
+  if (details.reason === "install") {
+    console.log(`${DEBUG_PREFIX} Extension installed, opening options page.`);
+    chrome.runtime.openOptionsPage();
+  }
+  
+  // Always check on install/update
+  await checkForUpdates();
+  await markUpdateCheckComplete();
+});
+
+// Optional: Check when extension receives a message (can be triggered by content script or options page)
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "checkForUpdates") {
+    checkForUpdates().then(() => {
+      sendResponse({status: "checked"});
+    });
+    return true; // Keep message channel open for async response
+  }
+  return false;
+});
+
+// ✅ Check for updates function
+async function checkForUpdates() {
+  const manifest = chrome.runtime.getManifest();
+  const currentVersion = manifest.version;
+  
+  try {
+    const response = await fetch(`${BACKEND_API_URL}/versions/latest`);
+    if (!response.ok) {
+      console.warn(`${DEBUG_PREFIX} Failed to fetch latest version: ${response.status}`);
+      return;
+    }
+    
+    const data = await response.json();
+    const latestVersion = data.version_number;
+    
+    // Compare semantic versions
+    const comparison = compareVersions(currentVersion, latestVersion);
+    const isUpToDate = comparison >= 0;
+    
+    console.log(`${DEBUG_PREFIX} Version check: current=${currentVersion}, latest=${latestVersion}, upToDate=${isUpToDate}`);
+    
+    if (!isUpToDate) {
+      // Set red badge
+      await chrome.action.setBadgeText({ text: "!" });
+      await chrome.action.setBadgeBackgroundColor({ color: "#ff0000" });
+      
+      // Store update info for options page to read
+      await chrome.storage.local.set({
+        updateAvailable: true,
+        latestVersion: latestVersion,
+        changelog: data.changelog || [],
+        lastChecked: new Date().toISOString()
+      });
+      
+      console.log(`${DEBUG_PREFIX} Update available! Badge set.`);
+      
+      // Show notification popup
+      await chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'assets/icons/icon-48.png',
+        title: '🚀 Cập nhật mới sẵn sàng!',
+        message: `Phiên bản ${latestVersion} đã ra mắt. Click để download ngay!`,
+        priority: 2,
+        buttons: [
+          { title: 'Download ngay' },
+          { title: 'Để sau' }
+        ]
+      });
+    } else {
+      // Clear badge if up to date
+      await chrome.action.setBadgeText({ text: "" });
+      
+      // Store status
+      await chrome.storage.local.set({
+        updateAvailable: false,
+        lastChecked: new Date().toISOString()
+      });
+      
+      console.log(`${DEBUG_PREFIX} Extension is up to date.`);
+    }
+  } catch (error) {
+    console.error(`${DEBUG_PREFIX} Update check failed:`, error.message);
+  }
+}
+
+// Handle notification clicks
+chrome.notifications.onClicked.addListener((notificationId) => {
+  chrome.notifications.clear(notificationId);
+  chrome.tabs.create({ 
+    url: 'https://dev-tool-platform.vercel.app/' 
+  });
+});
+
+chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
+  chrome.notifications.clear(notificationId);
+  
+  if (buttonIndex === 0) {
+    // Download now button
+    chrome.tabs.create({ 
+      url: 'https://dev-tool-platform.vercel.app/' 
+    });
+  }
+  // Button 1 (Later) - just dismiss
+});
+
+// --- Donate Modal Logic ---
+// --- End of Donate Modal Logic ---
+
+
+// Check for updates when extension starts
+chrome.runtime.onStartup.addListener(async () => {
+  console.log(`${DEBUG_PREFIX} Extension started, checking for updates...`);
+  const shouldCheck = await shouldCheckForUpdates();
+  if (shouldCheck) {
+    await checkForUpdates();
+    await markUpdateCheckComplete();
+  }
+});
+
+// Also check when extension is installed or updated
+chrome.runtime.onInstalled.addListener(async (details) => {
+  if (details.reason === "install") {
+    console.log(`${DEBUG_PREFIX} Extension installed, opening options page.`);
+    chrome.runtime.openOptionsPage();
+  }
+  
+  // Always check on install/update
+  await checkForUpdates();
+  await markUpdateCheckComplete();
+});
+
+// Optional: Check when extension receives a message (can be triggered by content script)
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "checkForUpdates") {
+    checkForUpdates().then(() => {
+      sendResponse({status: "checked"});
+    });
+    return true; // Keep message channel open for async response
+  }
+  return false;
+});
+
+// Also check periodically (once per day) as backup
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === "checkForUpdates") {
+    await checkForUpdates();
+  }
+});
+
+// Initialize alarm for daily check
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.alarms.create("checkForUpdates", { periodInMinutes: 60 }); // Check hourly as backup
+});
+
+// Check on startup to set up alarm
+chrome.runtime.onStartup.addListener(() => {
+  chrome.alarms.create("checkForUpdates", { periodInMinutes: 60 });
+});
+
 /**
  * Message handler for chrome.runtime.onMessage.
  * Handles messages from content scripts and options page.
  */
 // ✅ Backend API URL for version check
 const BACKEND_API_URL = "https://dev-tool-platform-api.onrender.com/api";
-const CHECK_INTERVAL_MINUTES = 1440; // 24 hours
+const CHECK_INTERVAL_HOURS = 24; // Check once per day
+
+/**
+ * Check if we should run update check today
+ * Returns true if never checked or last check was yesterday or earlier
+ */
+function shouldCheckForUpdates() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['lastUpdateCheck'], (result) => {
+      const lastCheck = result.lastUpdateCheck;
+      
+      if (!lastCheck) {
+        // Never checked before
+        resolve(true);
+        return;
+      }
+      
+      const lastCheckDate = new Date(lastCheck);
+      const now = new Date();
+      
+      // Check if it's a new day (or 24 hours have passed)
+      const hoursSinceLastCheck = (now - lastCheckDate) / (1000 * 60 * 60);
+      
+      if (hoursSinceLastCheck >= CHECK_INTERVAL_HOURS) {
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    });
+  });
+}
+
+/**
+ * Mark update check as completed for today
+ */
+function markUpdateCheckComplete() {
+  return chrome.storage.local.set({
+    lastUpdateCheck: new Date().toISOString()
+  });
+}
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === "install") {
@@ -39,11 +292,9 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     chrome.runtime.openOptionsPage();
   }
   
-  // ✅ Schedule update check every 24 hours
-  chrome.alarms.create("checkForUpdates", { periodInMinutes: CHECK_INTERVAL_MINUTES });
-  
-  // ✅ Initial check on install
+  // ✅ Check on install
   await checkForUpdates();
+  await markUpdateCheckComplete();
 });
 
 // ✅ Handle alarm for periodic update checks
@@ -88,6 +339,19 @@ async function checkForUpdates() {
       });
       
       console.log(`${DEBUG_PREFIX} Update available! Badge set.`);
+      
+      // Show notification popup
+      await chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'assets/icons/icon-48.png',
+        title: '🚀 Cập nhật mới sẵn sàng!',
+        message: `Phiên bản ${latestVersion} đã ra mắt. Click để download ngay!`,
+        priority: 2,
+        buttons: [
+          { title: 'Download ngay' },
+          { title: 'Để sau' }
+        ]
+      });
     } else {
       // Clear badge if up to date
       await chrome.action.setBadgeText({ text: "" });
@@ -97,7 +361,118 @@ async function checkForUpdates() {
         updateAvailable: false,
         lastChecked: new Date().toISOString()
       });
+      
+      console.log(`${DEBUG_PREFIX} Extension is up to date.`);
     }
+  } catch (error) {
+    console.error(`${DEBUG_PREFIX} Update check failed:`, error.message);
+  }
+}
+
+// Handle notification clicks
+chrome.notifications.onClicked.addListener((notificationId) => {
+  chrome.notifications.clear(notificationId);
+  chrome.tabs.create({ 
+    url: 'https://dev-tool-platform.vercel.app/' 
+  });
+});
+
+chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
+  chrome.notifications.clear(notificationId);
+  
+  if (buttonIndex === 0) {
+    // Download now button
+    chrome.tabs.create({ 
+      url: 'https://dev-tool-platform.vercel.app/' 
+    });
+  }
+  // Button 1 (Later) - just dismiss
+});
+
+// ✅ Check for updates function
+async function checkForUpdates() {
+  const manifest = chrome.runtime.getManifest();
+  const currentVersion = manifest.version;
+  
+  try {
+    const response = await fetch(`${BACKEND_API_URL}/versions/latest`);
+    if (!response.ok) {
+      console.warn(`${DEBUG_PREFIX} Failed to fetch latest version: ${response.status}`);
+      return;
+    }
+    
+    const data = await response.json();
+    const latestVersion = data.version_number;
+    
+    // Compare semantic versions
+    const comparison = compareVersions(currentVersion, latestVersion);
+    const isUpToDate = comparison >= 0;
+    
+    console.log(`${DEBUG_PREFIX} Version check: current=${currentVersion}, latest=${latestVersion}, upToDate=${isUpToDate}`);
+    
+    if (!isUpToDate) {
+      // Set red badge
+      await chrome.action.setBadgeText({ text: "!" });
+      await chrome.action.setBadgeBackgroundColor({ color: "#ff0000" });
+      
+      // Store update info for options page to read
+      await chrome.storage.local.set({
+        updateAvailable: true,
+        latestVersion: latestVersion,
+        changelog: data.changelog || [],
+        lastChecked: new Date().toISOString()
+      });
+      
+      console.log(`${DEBUG_PREFIX} Update available! Badge set.`);
+      
+      // Show notification popup
+      await chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'assets/icons/icon-48.png',
+        title: '🚀 Cập nhật mới sẵn sàng!',
+        message: `Phiên bản ${latestVersion} đã ra mắt. Click để download ngay!`,
+        priority: 2,
+        buttons: [
+          { title: 'Download ngay' },
+          { title: 'Để sau' }
+        ]
+      });
+    } else {
+      // Clear badge if up to date
+      await chrome.action.setBadgeText({ text: "" });
+      
+      // Store status
+      await chrome.storage.local.set({
+        updateAvailable: false,
+        lastChecked: new Date().toISOString()
+      });
+      
+      console.log(`${DEBUG_PREFIX} Extension is up to date.`);
+    }
+  } catch (error) {
+    console.error(`${DEBUG_PREFIX} Update check failed:`, error.message);
+  }
+}
+
+// Handle notification clicks
+chrome.notifications.onClicked.addListener((notificationId) => {
+  chrome.notifications.clear(notificationId);
+  chrome.tabs.create({ 
+    url: 'https://dev-tool-platform.vercel.app/' 
+  });
+});
+
+chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
+  chrome.notifications.clear(notificationId);
+  
+  if (buttonIndex === 0) {
+    // Download now button
+    chrome.tabs.create({ 
+      url: 'https://dev-tool-platform.vercel.app/' 
+    });
+  }
+  // Button 1 (Later) - just dismiss
+});
   } catch (error) {
     console.error(`${DEBUG_PREFIX} Error checking for updates:`, error);
   }
