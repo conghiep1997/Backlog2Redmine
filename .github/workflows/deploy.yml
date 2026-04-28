@@ -53,48 +53,27 @@ jobs:
         run: |
           awk '/^## \[/{count++} count==2{exit} count==1{print}' CHANGELOG.md > LATEST_CHANGES.md
 
-      - name: Check if Tag exists
-        id: check_tag
-        run: |
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Tag $TAG already exists. Skipping release."
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "Tag $TAG is new. Preparing release."
-          fi
-
       - name: Create Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.check_tag.outputs.exists == 'false'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        id: create_release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.get_version.outputs.tag }}
           name: Release ${{ steps.get_version.outputs.tag }}
           files: Backlog2Redmine-v*.zip
           body_path: LATEST_CHANGES.md
+          overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Write service account key to file
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      - name: Register version in backend
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.create_release.outputs.url
+        run: node scripts/register-version.js
         env:
-          GDRIVE_SERVICE_ACCOUNT_KEY: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_KEY }}
-        run: echo "$GDRIVE_SERVICE_ACCOUNT_KEY" > service-account-key.json
-
-      - name: Upload to Google Drive
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        run: node scripts/upload-gdrive.js
-        env:
-          GDRIVE_SERVICE_ACCOUNT_KEY: ./service-account-key.json
-          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
-          VERSION: ${{ steps.get_version.outputs.version }}
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           BACKEND_API_KEY: ${{ secrets.BACKEND_API_KEY }}
-          DASHBOARD_URL: ${{ secrets.DASHBOARD_URL }}
-
-      - name: Cleanup service account key
-        if: always()
-        run: rm -f service-account-key.json
+          VERSION: ${{ steps.get_version.outputs.version }}
+          DOWNLOAD_URL: https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.tag }}/Backlog2Redmine-v${{ steps.get_version.outputs.version }}.zip
 
 
 

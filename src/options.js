@@ -615,7 +615,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const currentVersion = manifest.version;
 
     try {
-      const response = await fetch(`${DASHBOARD_API_URL}/versions/latest`);
+      const response = await fetch(`${BACKEND_API_URL}/versions/latest`);
       if (!response.ok) throw new Error('Không thể kết nối server');
 
       const data = await response.json();
@@ -667,7 +667,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const currentVersion = manifest.version;
 
     try {
-      const response = await fetch(`${DASHBOARD_API_URL}/versions/latest`);
+      const response = await fetch(`${BACKEND_API_URL}/versions/latest`);
       if (!response.ok) throw new Error('Không thể kết nối server');
 
       const data = await response.json();
@@ -727,5 +727,5 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- End of Donate Modal Logic ---
 });
 
-// ✅ Dashboard API URL for options page
-const DASHBOARD_API_URL = "https://dev-tool-platform-api.onrender.com/api";
+// ✅ Backend API URL for version check
+const BACKEND_API_URL = "https://dev-tool-platform-api.onrender.com/api";

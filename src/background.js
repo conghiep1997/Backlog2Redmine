@@ -29,8 +29,8 @@ chrome.action.onClicked.addListener(() => {
  * Message handler for chrome.runtime.onMessage.
  * Handles messages from content scripts and options page.
  */
-// ✅ Update check configuration
-const DASHBOARD_API_URL = "https://dev-tool-platform-api.onrender.com/api";
+// ✅ Backend API URL for version check
+const BACKEND_API_URL = "https://dev-tool-platform-api.onrender.com/api";
 const CHECK_INTERVAL_MINUTES = 1440; // 24 hours
 
 chrome.runtime.onInstalled.addListener(async (details) => {
@@ -59,7 +59,7 @@ async function checkForUpdates() {
   const currentVersion = manifest.version;
   
   try {
-    const response = await fetch(`${DASHBOARD_API_URL}/versions/latest`);
+    const response = await fetch(`${BACKEND_API_URL}/versions/latest`);
     if (!response.ok) {
       console.warn(`${DEBUG_PREFIX} Failed to fetch latest version: ${response.status}`);
       return;
