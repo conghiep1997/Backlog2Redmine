@@ -167,16 +167,12 @@ async function handleSendToRedmine(
 }
 
 async function handleCreateRedmineIssue({ issueData, comments }) {
-  // Create new issue on Redmine with description and comments from Backlog
   const settings = await getSettings();
-  // Shared map to track already uploaded attachments during this migration session
-  // Key: attachmentId (string), Value: markup (string)
   const processedAttachments = new Map();
 
-  // Process attachments in description
   const { updatedNotes: updatedDescription, uploads: descUploads } = await processNotesAttachments(
     issueData.description || "",
-    null,
+    null, // Pass null, let the function grab from settings
     settings,
     issueData.backlogIssueKey,
     processedAttachments
@@ -197,60 +193,66 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
     },
   };
 
-  const response = await fetch(createUrl, {
-    method: "POST",
-    headers: {
-      "X-Redmine-API-Key": settings.redmineApiKey,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  try {
+    const response = await fetch(createUrl, {
+      method: "POST",
+      headers: {
+        "X-Redmine-API-Key": settings.redmineApiKey,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-  if (!response.ok) {
-    const errorMsg = await readErrorMessage(response);
-    if (typeof TB_LOGGER !== "undefined") {
-      TB_LOGGER.logError("RedmineService", `API Error during issue creation: ${errorMsg}`, {
-        requestPayload: payload,
-        redmineResponse: errorMsg,
-      });
+    if (!response.ok) {
+      const errorMsg = await readErrorMessage(response);
+      // Re-throw with enriched context
+      throw new Error(errorMsg);
     }
-    throw new Error(
-      `${TB.MESSAGES.REDMINE.API_REQUEST_FAILED}: ${sanitizeErrorMessage(errorMsg, response.status)}`
-    );
-  }
 
-  const result = await response.json();
-  const newIssueId = result.issue.id;
+    const result = await response.json();
+    const newIssueId = result.issue.id;
 
-  // Send each comment sequentially after successful issue creation
-  if (Array.isArray(comments) && comments.length > 0) {
-    for (const commentText of comments) {
-      try {
-        await handleSendToRedmine(
-          {
-            redmineIssueId: newIssueId,
-            notes: commentText,
-            backlogIssueKey: issueData.backlogIssueKey,
-            processedAttachments, // Reuse the map to avoid duplicate uploads
-          },
-          null
-        );
-      } catch (e) {
-        console.error("Comment migration failed", e);
-        if (typeof TB_LOGGER !== "undefined") {
-          TB_LOGGER.logError("RedmineService", `Failed to migrate comment: ${e.message}`, {
-            commentText,
-          });
+    if (Array.isArray(comments) && comments.length > 0) {
+      for (const commentText of comments) {
+        try {
+          await handleSendToRedmine(
+            {
+              redmineIssueId: newIssueId,
+              notes: commentText,
+              backlogIssueKey: issueData.backlogIssueKey,
+              processedAttachments, // Reuse map to avoid re-uploading
+            },
+            null // Sender is null, so backlogDomain will be correctly sourced from settings
+          );
+        } catch (e) {
+          console.error("Comment migration failed", e);
+          if (typeof TB_LOGGER !== "undefined") {
+            TB_LOGGER.logError("RedmineService", `Failed to migrate comment: ${e.message}`, {
+              commentText,
+            });
+          }
         }
       }
     }
-  }
 
-  return {
-    issueId: newIssueId,
-    redmineUrl: buildRedmineUrl(settings.redmineDomain, `/issues/${newIssueId}`),
-  };
+    return {
+      issueId: newIssueId,
+      redmineUrl: buildRedmineUrl(settings.redmineDomain, `/issues/${newIssueId}`),
+    };
+  } catch (error) {
+    if (typeof TB_LOGGER !== "undefined") {
+      TB_LOGGER.logError("RedmineService", `API Error during issue creation: ${error.message}`,
+        {
+          requestPayload: payload,
+          redmineResponse: error.message,
+        });
+    }
+    // Rethrow a user-friendly error
+    throw new Error(
+      `${TB.MESSAGES.REDMINE.API_REQUEST_FAILED}: ${sanitizeErrorMessage(error.message, error.status || 500)}`
+    );
+  }
 }
 
 // ============================================================================\
@@ -318,7 +320,7 @@ function pickBestRedmineSearchResult(results, normalizedIssueKey, normalizedIssu
  * This function is optimized to prevent duplicate uploads of the same attachment ID.
  *
  * @param {string} notes - The text containing attachment markers.
- * @param {string} backlogDomain - The Backlog domain for downloading files.
+ * @param {string | null} backlogDomain - The Backlog domain. If null, it will be sourced from settings.
  * @param {object} settings - The extension's settings.
  * @param {string} backlogIssueKey - The Backlog issue key.
  * @param {Map|null} processedAttachments - (Optional) Persistent map of [attachmentId -> markup] to reuse across calls.
@@ -335,21 +337,23 @@ async function processNotesAttachments(
     return { updatedNotes: "", uploads: [] };
   }
 
-  const uploads = [];
-  // A map to hold information about each unique attachment ID found.
-  // Key: attachmentId (string), Value: { filename: string, markup: string, isImageOnly: boolean }
-  const attachmentRegistry = new Map();
+  // ✅ FIX: Ensure we have a valid Backlog domain, sourcing from settings if needed.
+  const effectiveBacklogDomain = backlogDomain || settings.backlogDomain;
+  if (!effectiveBacklogDomain) {
+    throw new Error("Backlog domain is not configured. Cannot download attachments.");
+  }
 
+  const uploads = [];
+  const attachmentRegistry = new Map();
   const imagePattern = /\[\[TB_IMG:\s*(\d+)\s*\]\]/g;
   const filePattern = /\[\[TB_FILE:\s*(\d+)\s*:\s*([^\]]+?)\s*\]\]/g;
 
-  // --- Step 1: Scan text and register all unique attachments that need processing ---
   for (const match of notes.matchAll(imagePattern)) {
     const attachmentId = match[1];
     if (!attachmentRegistry.has(attachmentId)) {
       attachmentRegistry.set(attachmentId, {
         filename: `image_${attachmentId}.png`,
-        isImageOnly: true, // This was a legacy TB_IMG marker
+        isImageOnly: true,
       });
     }
   }
@@ -358,12 +362,10 @@ async function processNotesAttachments(
     const attachmentId = match[1];
     const filename = match[2].trim();
     if (!attachmentRegistry.has(attachmentId)) {
-      // The first encountered filename for an ID is used.
       attachmentRegistry.set(attachmentId, { filename, isImageOnly: false });
     }
   }
 
-  // --- Step 2: Process each unique attachment from the registry ---
   for (const [attachmentId, info] of attachmentRegistry.entries()) {
     try {
       if (processedAttachments && processedAttachments.has(attachmentId)) {
@@ -374,7 +376,7 @@ async function processNotesAttachments(
       const { filename } = info;
 
       const blob = await downloadBacklogFile(
-        backlogDomain,
+        effectiveBacklogDomain, // Use the validated domain
         attachmentId,
         filename,
         backlogIssueKey
@@ -394,7 +396,6 @@ async function processNotesAttachments(
           content_type: blob.type || "application/octet-stream",
         });
 
-        // Determine the correct Redmine markup.
         const ext = filename.split(".").pop().toLowerCase();
         const videoExts = ["mp4", "mov", "webm", "m4v"];
         const imageExts = ["jpg", "jpeg", "png", "gif", "webp"];
@@ -407,7 +408,6 @@ async function processNotesAttachments(
           info.markup = `attachment:${filename}`;
         }
 
-        // Cache for subsequent calls in the same session
         if (processedAttachments) {
           processedAttachments.set(attachmentId, info.markup);
         }
@@ -420,12 +420,9 @@ async function processNotesAttachments(
     }
   }
 
-  // --- Step 3: Replace all markers in the text with the generated markup ---
   let finalNotes = notes;
   for (const [attachmentId, info] of attachmentRegistry.entries()) {
     if (info.markup) {
-      // Regex to find all markers for the current ID and replace them.
-      // Space-tolerant to catch AI variations
       const imageMarkerPattern = new RegExp(`\\[\\[TB_IMG:\\s*${attachmentId}\\s*\\]\\]`, "gi");
       const fileMarkerPattern = new RegExp(
         `\\[\\[TB_FILE:\\s*${attachmentId}\\s*:\\s*[^\\]]+\\s*\\]\\]`,
@@ -439,6 +436,7 @@ async function processNotesAttachments(
 
   return { updatedNotes: finalNotes, uploads };
 }
+
 
 /**
  * Upload file to Redmine and get token.

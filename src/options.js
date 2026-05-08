@@ -1,5 +1,4 @@
-// Wait for DOM and constants.js to be ready
-/* global TB_LOGGER, setStatus, loadOptions, updateModelDropdown, updateKeyVisibility, fetchProjects */
+/* global TB_LOGGER, setStatus, loadOptions, updateModelDropdown, updateKeyVisibility, fetchProjects, compareVersions, BACKEND_API_URL */
 document.addEventListener("DOMContentLoaded", () => {
   if (typeof TB === "undefined") {
     console.error("[OPTIONS] TB is not defined! constants.js may not have loaded.");
@@ -23,42 +22,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Get DOM elements
   const form = document.getElementById("optionsForm");
-  const redmineDomainInput = document.getElementById("redmineDomain");
   const redmineApiKeyInput = document.getElementById("redmineApiKey");
-
-  // New field for Report Project ID
-
-  // Backlog elements
-  const backlogDomainInput = document.getElementById("backlogDomain");
   const backlogApiKeyInput = document.getElementById("backlogApiKey");
-
-  // Primary elements
-  const primaryProviderSelect = document.getElementById("primaryProvider");
-  const primaryModelSelect = document.getElementById("primaryModel");
-  const primaryModelField = document.getElementById("primaryModelField");
-
-  // Fallback elements
-  const fallbackProviderSelect = document.getElementById("fallbackProvider");
-  const fallbackModelSelect = document.getElementById("fallbackModel");
-  const fallbackModelField = document.getElementById("fallbackModelField");
-
-  // AI Service elements (Credentials)
   const groqApiKeyInput = document.getElementById("groqApiKey");
   const cerebrasApiKeyInput = document.getElementById("cerebrasApiKey");
+  const gemApiKeyInput = document.getElementById("gemApiKey");
 
-  const defaultProjectIdSelect = document.getElementById("defaultProjectId");
-  const reportProjectIdSelect = document.getElementById("reportProjectId");
-  const manualFieldsInput = document.getElementById("manualFields");
+  const primaryProviderSelect = document.getElementById("primaryProvider");
+  const fallbackProviderSelect = document.getElementById("fallbackProvider");
   const statusEl = document.getElementById("status");
 
-  // Multiple Models/Keys elements
-  const geminiModelsList = document.getElementById("geminiModelsList");
-  const geminiKeysList = document.getElementById("geminiKeysList");
-  const geminiApiKeysInput = document.getElementById("geminiApiKeys");
-
-  // Store selected items
-  let selectedGeminiModels = [];
-  const selectedGeminiKeys = [];
+  // Placeholder for functions that send messages to background
+  const handleRefreshModels = (provider) => console.log(`TODO: Refresh ${provider} models`);
+  const handleTestModels = (provider) => console.log(`TODO: Test ${provider} models`);
+  const handleExportLogs = () => console.log("TODO: Export logs");
+  const handleClearLogs = () => console.log("TODO: Clear logs");
+  const checkForUpdates = () => console.log("TODO: Check for updates");
 
   if (!form || !fallbackProviderSelect || !statusEl) {
     console.error("[OPTIONS] Thiếu các phần tử DOM cần thiết");
@@ -68,279 +47,141 @@ document.addEventListener("DOMContentLoaded", () => {
   // Load existing options
   loadOptions();
 
-  // Listeners
+  // --- Event Listeners ---
+  primaryProviderSelect.addEventListener("change", () => handleProviderChange(primaryProviderSelect));
+  fallbackProviderSelect.addEventListener("change", () => handleProviderChange(fallbackProviderSelect));
+  redmineApiKeyInput.addEventListener("blur", () => handleRedmineKeyBlur());
+  document.getElementById("syncProjectsBtn")?.addEventListener("click", () => handleSyncProjects());
+  document.getElementById("refreshGeminiModelsBtn")?.addEventListener("click", () => handleRefreshModels("gemini"));
+  document.getElementById("testGeminiModelsBtn")?.addEventListener("click", () => handleTestModels("gemini"));
+  document.getElementById("exportLogsBtn")?.addEventListener("click", () => handleExportLogs());
+  document.getElementById("clearLogsBtn")?.addEventListener("click", () => handleClearLogs());
+  document.getElementById("geminiApiKeys")?.addEventListener("keydown", (e) => handleGeminiKeyInput(e));
+  document.getElementById("checkUpdateBtn")?.addEventListener("click", checkForUpdates);
+  document.getElementById("goToDashboardBtn")?.addEventListener("click", () => chrome.tabs.create({ url: "https://dev-tool-platform.vercel.app/" }));
 
-  primaryProviderSelect.addEventListener("change", () => {
-    const provider = primaryProviderSelect.value;
-    if (provider === TB.PROVIDERS.GEMINI) {
-      primaryModelField.style.display = "none";
-    } else {
-      primaryModelField.style.display = "block";
-      updateModelDropdown(primaryModelSelect, provider);
-    }
-    updateConfigSectionsVisibility();
-    updateFallbackOptions();
-  });
-
-  fallbackProviderSelect.addEventListener("change", () => {
-    const provider = fallbackProviderSelect.value;
-    if (provider === TB.PROVIDERS.NONE) {
-      fallbackModelField.style.display = "none";
-    } else {
-      fallbackModelField.style.display = "block";
-      updateModelDropdown(fallbackModelSelect, provider);
-    }
-    updateConfigSectionsVisibility();
-  });
-
-  // Fetch projects if API key is available
-  redmineApiKeyInput.addEventListener("blur", () => {
-    if (redmineApiKeyInput.value.trim()) {
-      debouncedFetch(
-        redmineApiKeyInput.value.trim(),
-        defaultProjectIdSelect.value,
-        reportProjectIdSelect.value
-      );
-    }
-  });
-
-  const syncProjectsBtn = document.getElementById("syncProjectsBtn");
-  syncProjectsBtn?.addEventListener("click", async () => {
-    if (redmineApiKeyInput.value.trim()) {
-      fetchProjects(
-        redmineApiKeyInput.value.trim(),
-        defaultProjectIdSelect.value,
-        reportProjectIdSelect.value
-      );
-    } else {
-      alert("Vui lòng nhập Redmine API Key trước khi đồng bộ.");
-    }
-  });
-
-  // Sync key fields with same class
-  const syncFields = (className) => {
-    const fields = document.querySelectorAll(`.${className}`);
-    fields.forEach((f) => {
-      f.addEventListener("input", (e) => {
-        fields.forEach((other) => {
-          if (other !== e.target) {
-            other.value = e.target.value;
-          }
-        });
-      });
-    });
-  };
-  syncFields("cerebras-key-sync");
-
-  // Handle Export Logs
-  const exportLogsBtn = document.getElementById("exportLogsBtn");
-  exportLogsBtn?.addEventListener("click", async () => {
-    try {
-      if (typeof TB_LOGGER === "undefined") {
-        alert("Logger utility chưa được tải.");
-        return;
-      }
-      const logs = await TB_LOGGER.getLogs();
-      if (logs.length === 0) {
-        alert("Hiện chưa có log lỗi nào.");
-        return;
-      }
-
-      const logLines = logs.map((log) => {
-        return `[${log.timestamp}] [${log.source}] ${log.message}\nContext: ${JSON.stringify(log.context || {})}\nStack: ${log.stack || "N/A"}\n----------------------------------------`;
-      });
-      const logContent = logLines.join("\n\n");
-
-      const blob = new Blob([logContent], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `b2r_error_logs_${new Date().getTime()}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error("Xuất log thất bại", e);
-      alert("Lỗi khi xuất log: " + e.message);
-    }
-  });
-
-  // Handle Clear Logs
-  const clearLogsBtn = document.getElementById("clearLogsBtn");
-  clearLogsBtn?.addEventListener("click", async () => {
-    if (confirm("Bạn có chắc chắn muốn xóa toàn bộ lịch sử lỗi không?")) {
-      if (typeof TB_LOGGER !== "undefined") {
-        await TB_LOGGER.clearLogs();
-        alert("Đã xóa toàn bộ log.");
-      }
-    }
-  });
-
-  // Form submit handler
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-
-    let settings = {};
     try {
-      settings = {
-        redmineApiKey: await encryptData(redmineApiKeyInput.value.trim()),
-        reportProjectId: reportProjectIdSelect.value,
-        backlogDomain: backlogDomainInput.value.trim() || TB.BACKLOG_DOMAIN,
-        backlogApiKey: await encryptData(backlogApiKeyInput.value.trim()),
-        primaryProvider: primaryProviderSelect.value,
-        primaryModel: primaryModelSelect.value,
-        fallbackProvider: fallbackProviderSelect.value,
-        fallbackModel: fallbackModelSelect.value,
-        defaultProjectId: defaultProjectIdSelect.value,
-        manualFields: manualFieldsInput.value.trim(),
-      };
-
-      // AI Credentials (always save if not empty)
-      const groqKey = groqApiKeyInput.value.trim();
-      if (groqKey && groqKey !== "**********") {
-        settings.groqApiKey = await encryptData(groqKey);
-      }
-
-      const cerebrasKey = cerebrasApiKeyInput.value.trim();
-      if (cerebrasKey && cerebrasKey !== "**********") {
-        settings.cerebrasApiKey = await encryptData(cerebrasKey);
-      }
-
-      // Save Multiple Gemini Configuration
-      if (selectedGeminiModels.length > 0) {
-        settings.geminiModels = await encryptData(selectedGeminiModels.join("\n"));
-      }
-      if (selectedGeminiKeys.length > 0) {
-        settings.geminiApiKeys = await encryptData(selectedGeminiKeys.join("\n"));
-        // For backward compatibility and single-key fallback
-        settings.geminiApiKey = await encryptData(selectedGeminiKeys[0]);
-      }
-    } catch (e) {
-      console.error("[OPTIONS] Data gathering failed:", e);
-      setStatus("Lỗi thu thập dữ liệu: " + e.message);
-      return;
-    }
-
-    try {
+      const settings = await gatherSettings();
       await chrome.storage.local.set(settings);
       setStatus(TB.MESSAGES.SETTINGS.OPTIONS_SAVE_SUCCESS);
-      // Briefly clear password inputs for security
-      // Delay loadOptions to allow status to be displayed
-      setTimeout(() => loadOptions(), 100);
+      setTimeout(loadOptions, 200); // Reload to reflect changes and mask keys
     } catch (error) {
+      console.error("[OPTIONS] Save failed:", error);
       setStatus(TB.MESSAGES.SETTINGS.OPTIONS_SAVE_ERROR(error.message));
     }
   });
 
-  // Functions
+  // --- Core Functions ---
+
+  async function gatherSettings() {
+    const settings = {};
+    const fields = {
+      backlogDomain: document.getElementById("backlogDomain").value.trim() || TB.BACKLOG_DOMAIN,
+      primaryProvider: primaryProviderSelect.value,
+      primaryModel: document.getElementById("primaryModel").value,
+      fallbackProvider: fallbackProviderSelect.value,
+      fallbackModel: document.getElementById("fallbackModel").value,
+      defaultProjectId: document.getElementById("defaultProjectId").value,
+      reportProjectId: document.getElementById("reportProjectId").value,
+      manualFields: document.getElementById("manualFields").value.trim(),
+      gemEndpoint: document.getElementById("gemEndpoint").value.trim(),
+    };
+
+    Object.assign(settings, fields);
+
+    // Securely handle API keys
+    await Promise.all([
+      handleApiKeyUpdate(settings, "redmineApiKey", redmineApiKeyInput),
+      handleApiKeyUpdate(settings, "backlogApiKey", backlogApiKeyInput),
+      handleApiKeyUpdate(settings, "groqApiKey", groqApiKeyInput),
+      handleApiKeyUpdate(settings, "cerebrasApiKey", cerebrasApiKeyInput),
+      handleApiKeyUpdate(settings, "gemApiKey", gemApiKeyInput),
+    ]);
+
+    // Handle multi-value Gemini fields
+    const selectedGeminiModels = Array.from(document.querySelectorAll("#geminiModelsList button.selected")).map(b => b.dataset.modelId);
+    if (selectedGeminiModels.length > 0) {
+      settings.geminiModels = await encryptData(selectedGeminiModels.join("\n"));
+    }
+
+    const selectedGeminiKeys = Array.from(document.querySelectorAll("#geminiKeysList button")).map(b => b.title);
+    if (selectedGeminiKeys.length > 0) {
+      settings.geminiApiKeys = await encryptData(selectedGeminiKeys.join("\n"));
+      settings.geminiApiKey = await encryptData(selectedGeminiKeys[0]); // For backward compatibility
+    }
+
+    return settings;
+  }
+
+  async function handleApiKeyUpdate(settings, keyName, inputElement) {
+    const value = inputElement.value.trim();
+    if (value === "" || value === null) {
+      // User wants to clear the key
+      settings[keyName] = "";
+    } else if (value !== "**********") {
+      // User entered a new key
+      settings[keyName] = await encryptData(value);
+    } else {
+      // Placeholder found, do not update the key. It will be excluded from the `settings` object.
+      // This prevents overwriting the stored key with the placeholder.
+    }
+  }
+
   function loadOptions() {
-    chrome.storage.local.get(
-      [
-        "redmineApiKey",
-        "reportProjectId",
-        "backlogDomain",
-        "backlogApiKey",
-        "geminiApiKey",
-        "geminiApiKeys",
-        "geminiModels",
-        "cerebrasApiKey",
-        "groqApiKey",
-        "primaryProvider",
-        "primaryModel",
-        "fallbackProvider",
-        "fallbackModel",
-        "defaultProjectId",
-        "manualFields",
-      ],
-      async (items) => {
-        redmineDomainInput.value = TB.REDMINE_DOMAIN;
-        if (items.redmineApiKey) {
-          const key = await decryptData(items.redmineApiKey);
-          redmineApiKeyInput.value = key;
-          fetchProjects(key, items.defaultProjectId, items.reportProjectId);
-        }
+    const keys = [
+      "redmineApiKey", "reportProjectId", "backlogDomain", "backlogApiKey", "geminiApiKey",
+      "geminiApiKeys", "geminiModels", "cerebrasApiKey", "groqApiKey", "gemEndpoint", "gemApiKey",
+      "primaryProvider", "primaryModel", "fallbackProvider", "fallbackModel", "defaultProjectId", "manualFields"
+    ];
 
-        backlogDomainInput.value = items.backlogDomain || TB.BACKLOG_DOMAIN;
+    chrome.storage.local.get(keys, async (items) => {
+      document.getElementById("redmineDomain").value = TB.REDMINE_DOMAIN;
+      document.getElementById("backlogDomain").value = items.backlogDomain || TB.BACKLOG_DOMAIN;
+      document.getElementById("gemEndpoint").value = items.gemEndpoint || TB.DEFAULT_GEM_ENDPOINT;
+      document.getElementById("manualFields").value = items.manualFields || JSON.stringify({ "Severity": 46, "Role": 11 }, null, 2);
 
-        primaryProviderSelect.value = items.primaryProvider || TB.DEFAULT_PRIMARY_PROVIDER;
-        if (primaryProviderSelect.value !== TB.PROVIDERS.GEMINI) {
-          primaryModelField.style.display = "block";
-          updateModelDropdown(primaryModelSelect, primaryProviderSelect.value);
-          primaryModelSelect.value = items.primaryModel || TB.DEFAULT_PRIMARY_MODEL;
-        } else {
-          primaryModelField.style.display = "none";
-        }
+      // Set API key fields to placeholder if they exist
+      redmineApiKeyInput.value = items.redmineApiKey ? "**********" : "";
+      backlogApiKeyInput.value = items.backlogApiKey ? "**********" : "";
+      groqApiKeyInput.value = items.groqApiKey ? "**********" : "";
+      cerebrasApiKeyInput.value = items.cerebrasApiKey ? "**********" : "";
+      gemApiKeyInput.value = items.gemApiKey ? "**********" : "";
 
-        fallbackProviderSelect.value = items.fallbackProvider || TB.DEFAULT_FALLBACK_PROVIDER;
-        if (fallbackProviderSelect.value !== TB.PROVIDERS.NONE) {
-          fallbackModelField.style.display = "block";
-          updateModelDropdown(fallbackModelSelect, fallbackProviderSelect.value);
-          fallbackModelSelect.value = items.fallbackModel || TB.DEFAULT_FALLBACK_MODEL;
-        } else {
-          fallbackModelField.style.display = "none";
-        }
+      // Load providers and models
+      primaryProviderSelect.value = items.primaryProvider || TB.DEFAULT_PRIMARY_PROVIDER;
+      handleProviderChange(primaryProviderSelect, items.primaryModel || TB.DEFAULT_PRIMARY_MODEL);
 
-        if (items.groqApiKey) {
-          groqApiKeyInput.value = "**********";
-        }
-        if (items.cerebrasApiKey) {
-          cerebrasApiKeyInput.value = "**********";
-        }
+      fallbackProviderSelect.value = items.fallbackProvider || TB.DEFAULT_FALLBACK_PROVIDER;
+      handleProviderChange(fallbackProviderSelect, items.fallbackModel || TB.DEFAULT_FALLBACK_MODEL);
+      updateFallbackOptions();
 
-        updateConfigSectionsVisibility();
-        updateFallbackOptions();
-
-        if (items.geminiModels) {
-          try {
-            const modelsStr = await decryptData(items.geminiModels);
-            if (modelsStr) {
-              const loadedModels = modelsStr.split("\n").filter((m) => m.trim());
-              // Only keep models that exist in the current TB.GEMINI_MODELS list
-              const validIds = TB.GEMINI_MODELS.map((m) => m.value);
-              selectedGeminiModels = loadedModels.filter((m) => validIds.includes(m));
-              renderGeminiModelsTags();
-            }
-          } catch (e) {
-            console.warn("Failed to load Gemini models", e);
-          }
-        }
-
-        if (items.geminiApiKeys) {
-          try {
-            const keys = await decryptData(items.geminiApiKeys);
-            if (keys) {
-              selectedGeminiKeys.length = 0;
-              selectedGeminiKeys.push(...keys.split("\n").filter((k) => k.trim()));
-              renderGeminiKeysButtons();
-            }
-          } catch (e) {
-            console.warn("Failed to load Gemini keys", e);
-          }
-        }
-
-        if (items.manualFields) {
-          manualFieldsInput.value = items.manualFields;
-        } else {
-          manualFieldsInput.value = JSON.stringify(
-            {
-              Severity: 46,
-              "Reproduction Rate": 0,
-              Role: 11,
-              "QC Activity": 8,
-            },
-            null,
-            2
-          );
-        }
+      // Load projects if Redmine key exists
+      if (items.redmineApiKey) {
+        const decryptedKey = await decryptData(items.redmineApiKey);
+        fetchProjects(decryptedKey, items.defaultProjectId, items.reportProjectId);
       }
-    );
+
+      // Load and render Gemini multi-value fields
+      if (items.geminiModels) {
+        const modelsStr = await decryptData(items.geminiModels);
+        const selectedModels = modelsStr ? modelsStr.split("\n").filter(Boolean) : [];
+        renderGeminiModelsTags(selectedModels);
+      }
+      if (items.geminiApiKeys) {
+        const keysStr = await decryptData(items.geminiApiKeys);
+        const selectedKeys = keysStr ? keysStr.split("\n").filter(Boolean) : [];
+        renderGeminiKeysButtons(selectedKeys);
+      }
+
+      updateConfigSectionsVisibility();
+    });
   }
 
   async function fetchProjects(apiKey, selectedId = "", selectedReportId = "") {
     if (!apiKey) return;
 
-    // Check cache first
     const now = Date.now();
     if (cachedProjects && now - cacheTimestamp < CACHE_DURATION) {
       renderProjectOptions(cachedProjects, selectedId, selectedReportId);
@@ -348,384 +189,185 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const syncBtn = document.getElementById("syncProjectsBtn");
+    const defaultProjectSelect = document.getElementById("defaultProjectId");
+    const reportProjectSelect = document.getElementById("reportProjectId");
+
     try {
-      if (syncBtn) {
-        syncBtn.disabled = true;
-        syncBtn.textContent = "⌛ Đang tải...";
-      }
-      defaultProjectIdSelect.innerHTML = "<option value=\"\">Đang tải project...</option>";
-      reportProjectIdSelect.innerHTML = "<option value=\"\">Đang tải project...</option>";
+      if (syncBtn) { syncBtn.disabled = true; syncBtn.textContent = "⌛ Đang tải..."; }
+      defaultProjectSelect.innerHTML = "<option value=\"\">Đang tải...</option>";
+      reportProjectSelect.innerHTML = "<option value=\"\">Đang tải...</option>";
+
       const response = await fetch(`${TB.REDMINE_DOMAIN}/projects.json?limit=100`, {
         headers: { "X-Redmine-API-Key": apiKey, Accept: "application/json" },
       });
-      if (!response.ok) throw new Error("Failed to fetch");
-      const data = await response.json();
+      if (!response.ok) throw new Error(`API ${response.status}`);
 
-      // Cache the results
+      const data = await response.json();
       cachedProjects = data.projects;
       cacheTimestamp = now;
-
       renderProjectOptions(data.projects, selectedId, selectedReportId);
+
     } catch (e) {
-      defaultProjectIdSelect.innerHTML =
-        "<option value=\"\">Lỗi tải project (Kiểm tra API Key)</option>";
-      reportProjectIdSelect.innerHTML =
-        "<option value=\"\">Lỗi tải project (Kiểm tra API Key)</option>";
+      defaultProjectSelect.innerHTML = "<option value=\"\">Lỗi tải (Kiểm tra Key)</option>";
+      reportProjectSelect.innerHTML = "<option value=\"\">Lỗi tải (Kiểm tra Key)</option>";
     } finally {
-      if (syncBtn) {
-        syncBtn.disabled = false;
-        syncBtn.textContent = "🔄 Đồng bộ Project";
-      }
+      if (syncBtn) { syncBtn.disabled = false; syncBtn.textContent = "🔄 Đồng bộ Project"; }
     }
   }
 
   function renderProjectOptions(projects, selectedId, selectedReportId) {
-    defaultProjectIdSelect.innerHTML = "<option value=\"\">-- Chọn project --</option>";
-    reportProjectIdSelect.innerHTML = "<option value=\"\">-- Chọn project --</option>";
+    const defaultSelect = document.getElementById("defaultProjectId");
+    const reportSelect = document.getElementById("reportProjectId");
+    defaultSelect.innerHTML = "<option value=\"\">-- Chọn project --</option>";
+    reportSelect.innerHTML = "<option value=\"\">-- Chọn project --</option>";
+
     projects.forEach((p) => {
-      const opt = document.createElement("option");
-      opt.value = p.id;
-      opt.textContent = p.name;
-      defaultProjectIdSelect.appendChild(opt);
-      reportProjectIdSelect.appendChild(opt.cloneNode(true));
+      const opt = new Option(p.name, p.id);
+      defaultSelect.add(opt);
+      reportSelect.add(opt.cloneNode(true));
     });
-    if (selectedId) {
-      defaultProjectIdSelect.value = selectedId;
-    }
-    if (selectedReportId) {
-      reportProjectIdSelect.value = selectedReportId;
-    }
+
+    if (selectedId) defaultSelect.value = selectedId;
+    if (selectedReportId) reportSelect.value = selectedReportId;
   }
 
-  function updateModelDropdown(selectElement, provider) {
-    if (!selectElement) {
-      return;
-    }
-    const models =
-      provider === TB.PROVIDERS.GEMINI
-        ? TB.GEMINI_MODELS
-        : provider === TB.PROVIDERS.CEREBRAS
-          ? TB.CEREBRAS_MODELS
-          : provider === TB.PROVIDERS.GROQ
-            ? TB.GROQ_MODELS
-            : [];
+  function handleProviderChange(selectElement, selectedModel = null) {
+    const provider = selectElement.value;
+    const modelField = selectElement.id.includes("primary") ? document.getElementById("primaryModelField") : document.getElementById("fallbackModelField");
+    const modelSelect = selectElement.id.includes("primary") ? document.getElementById("primaryModel") : document.getElementById("fallbackModel");
 
+    if (provider === TB.PROVIDERS.GEMINI || provider === TB.PROVIDERS.NONE) {
+      modelField.style.display = "none";
+    } else {
+      modelField.style.display = "block";
+      updateModelDropdown(modelSelect, provider);
+      if (selectedModel) {
+        modelSelect.value = selectedModel;
+      }
+    }
+
+    if (selectElement.id.includes("primary")) {
+      updateFallbackOptions();
+    }
+    updateConfigSectionsVisibility();
+  }
+
+  // --- UI Update Functions ---
+
+  function updateModelDropdown(selectElement, provider) {
+    const models = TB.MODELS[`${provider.toUpperCase()}_MODELS`] || [];
     selectElement.innerHTML = "";
-    models.forEach((model) => {
-      const option = document.createElement("option");
-      option.value = model.value;
-      option.textContent = model.label;
-      selectElement.appendChild(option);
-    });
+    models.forEach(model => selectElement.add(new Option(model.label, model.value)));
   }
 
   function updateFallbackOptions() {
     const primary = primaryProviderSelect.value;
-    const fallback = fallbackProviderSelect.value;
+    const currentFallback = fallbackProviderSelect.value;
 
-    // Save current selection to restore if possible
-    const currentFallback = fallback;
-
-    // Clear and rebuild options
     const options = [
       { value: "none", label: "Không dùng dự phòng" },
       { value: "gemini", label: "Google Gemini AI Studio" },
       { value: "groq", label: "Groq Cloud" },
       { value: "cerebras", label: "Cerebras" },
-    ];
+      { value: "gem", label: "Custom GEM" },
+    ].filter(opt => opt.value === "none" || opt.value !== primary);
 
-    // Remove current primary from fallback options
-    const filteredOptions = options.filter((opt) => opt.value === "none" || opt.value !== primary);
-
-    // Re-render options
     fallbackProviderSelect.innerHTML = "";
-    filteredOptions.forEach((opt) => {
-      const el = document.createElement("option");
-      el.value = opt.value;
-      el.textContent = opt.label;
-      fallbackProviderSelect.appendChild(el);
-    });
+    options.forEach(opt => fallbackProviderSelect.add(new Option(opt.label, opt.value)));
 
-    // Restore selection if still valid, otherwise default to none
-    if (filteredOptions.some((opt) => opt.value === currentFallback)) {
-      fallbackProviderSelect.value = currentFallback;
-    } else {
-      fallbackProviderSelect.value = "none";
-      // Trigger change to hide model field if switched to none
-      fallbackProviderSelect.dispatchEvent(new Event("change"));
-    }
+    fallbackProviderSelect.value = options.some(opt => opt.value === currentFallback) ? currentFallback : "none";
+    handleProviderChange(fallbackProviderSelect);
   }
 
   function updateConfigSectionsVisibility() {
     const p = primaryProviderSelect.value;
     const f = fallbackProviderSelect.value;
+    const activeProviders = new Set([p, f]);
 
-    const geminiSection = document.getElementById("geminiConfigSection");
-    const groqSection = document.getElementById("groqConfigSection");
-    const cerebrasSection = document.getElementById("cerebrasConfigSection");
-
-    if (geminiSection) {
-      geminiSection.style.display =
-        p === TB.PROVIDERS.GEMINI || f === TB.PROVIDERS.GEMINI ? "block" : "none";
-    }
-    if (groqSection) {
-      groqSection.style.display =
-        p === TB.PROVIDERS.GROQ || f === TB.PROVIDERS.GROQ ? "block" : "none";
-    }
-    if (cerebrasSection) {
-      cerebrasSection.style.display =
-        p === TB.PROVIDERS.CEREBRAS || f === TB.PROVIDERS.CEREBRAS ? "block" : "none";
-    }
+    document.getElementById("geminiConfigSection").style.display = activeProviders.has(TB.PROVIDERS.GEMINI) ? "block" : "none";
+    document.getElementById("groqConfigSection").style.display = activeProviders.has(TB.PROVIDERS.GROQ) ? "block" : "none";
+    document.getElementById("cerebrasConfigSection").style.display = activeProviders.has(TB.PROVIDERS.CEREBRAS) ? "block" : "none";
+    document.getElementById("gemConfigSection").style.display = activeProviders.has(TB.PROVIDERS.GEM) ? "block" : "none";
   }
 
-  function setStatus(message) {
+  function setStatus(message, isError = false) {
     statusEl.textContent = message;
-    window.setTimeout(() => {
-      if (statusEl.textContent === message) {
-        statusEl.textContent = "";
-      }
-    }, 2500);
-  }
-
-  // Render Multiple Models as clickable buttons
-  function renderGeminiModelsTags() {
-    if (!geminiModelsList || !TB.GEMINI_MODELS) return;
-    geminiModelsList.innerHTML = "";
-
-    TB.GEMINI_MODELS.forEach((model) => {
-      const isSelected = selectedGeminiModels.includes(model.value);
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.style.cssText = `
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 16px;
-        background: ${isSelected ? "#059669" : "#ffffff"};
-        border: 2px solid ${isSelected ? "#059669" : "#e2e8f0"};
-        border-radius: 10px;
-        font-size: 13px;
-        font-weight: ${isSelected ? "700" : "500"};
-        color: ${isSelected ? "#ffffff" : "#475569"};
-        cursor: pointer;
-        transition: all 0.2s;
-        box-shadow: ${isSelected ? "0 4px 6px -1px rgba(16, 185, 129, 0.2)" : "none"};
-      `;
-      btn.textContent = model.label;
-      btn.addEventListener("click", () => {
-        if (isSelected) {
-          selectedGeminiModels = selectedGeminiModels.filter((m) => m !== model.value);
-        } else {
-          if (selectedGeminiModels.length < 5) {
-            selectedGeminiModels.push(model.value);
-          }
-        }
-        renderGeminiModelsTags();
-      });
-      geminiModelsList.appendChild(btn);
-    });
-
-    // Update count display
-    const countEl = document.getElementById("selectedModelCount");
-    if (countEl) countEl.textContent = selectedGeminiModels.length;
-  }
-
-  // Render Multiple Keys as clickable buttons
-  function renderGeminiKeysButtons() {
-    if (!geminiKeysList) return;
-    geminiKeysList.innerHTML = "";
-
-    selectedGeminiKeys.forEach((key, index) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.style.cssText = `
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 10px;
-        background: #bfdbfe;
-        border: 1px solid #3b82f6;
-        border-radius: 6px;
-        font-size: 11px;
-        font-family: monospace;
-        color: #1e40af;
-        cursor: pointer;
-      `;
-      btn.textContent = key.slice(0, 8) + "...";
-      btn.title = key;
-      btn.addEventListener("click", () => {
-        selectedGeminiKeys.splice(index, 1);
-        renderGeminiKeysButtons();
-      });
-      geminiKeysList.appendChild(btn);
-    });
-
-    // Update count display
-    const countEl = document.getElementById("selectedKeyCount");
-    if (countEl) countEl.textContent = selectedGeminiKeys.length;
-  }
-
-  // Handle Enter key in keys input
-  geminiApiKeysInput?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const key = geminiApiKeysInput.value.trim();
-      if (key && !selectedGeminiKeys.includes(key)) {
-        if (selectedGeminiKeys.length < 10) {
-          selectedGeminiKeys.push(key);
-          renderGeminiKeysButtons();
-        }
-      }
-      geminiApiKeysInput.value = "";
-    }
-  });
-
-  // Render on load
-  if (geminiModelsList) {
-    // If we have default models and none selected yet, initialize them
-    // but only if loadOptions hasn't populated them yet.
-    // We'll move this into loadOptions or keep as fallback.
+    statusEl.className = isError ? "status status-error" : "status status-success";
     setTimeout(() => {
-      if (selectedGeminiModels.length === 0 && TB.GEMINI_MODELS) {
-        // Default select all available models
-        selectedGeminiModels = TB.GEMINI_MODELS.map((m) => m.value);
-        renderGeminiModelsTags();
-      }
-    }, 200);
-
-    renderGeminiModelsTags();
-    renderGeminiKeysButtons();
+      statusEl.textContent = "";
+      statusEl.className = "status";
+    }, 3000);
   }
 
-  // ✅ Update Check Feature
-  const checkUpdateBtn = document.getElementById('checkUpdateBtn');
-  const goToDashboardBtn = document.getElementById('goToDashboardBtn');
-  const updateStatusEl = document.getElementById('updateStatus');
+  // --- Gemini Multi-value Field Handlers ---
 
-  // Check for updates on page load
-  checkUpdateStatus();
+  function renderGeminiModelsTags(selectedModels = []) {
+    const listEl = document.getElementById("geminiModelsList");
+    listEl.innerHTML = "";
+    (TB.GEMINI_MODELS || []).forEach(model => {
+      const isSelected = selectedModels.includes(model.value);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.dataset.modelId = model.value;
+      btn.textContent = model.label;
+      btn.className = isSelected ? "selected" : "";
+      btn.onclick = () => {
+        btn.classList.toggle("selected");
+        document.getElementById("selectedModelCount").textContent = listEl.querySelectorAll(".selected").length;
+      };
+      listEl.appendChild(btn);
+    });
+    document.getElementById("selectedModelCount").textContent = selectedModels.length;
+  }
 
-  checkUpdateBtn?.addEventListener('click', checkForUpdates);
-  goToDashboardBtn?.addEventListener('click', () => {
-    chrome.tabs.create({ url: 'https://dev-tool-platform.vercel.app/' });
-  });
+  function renderGeminiKeysButtons(keys = []) {
+    const listEl = document.getElementById("geminiKeysList");
+    listEl.innerHTML = "";
+    keys.forEach(key => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.title = key;
+      btn.textContent = `${key.slice(0, 8)}...`;
+      btn.onclick = () => {
+        btn.remove();
+        document.getElementById("selectedKeyCount").textContent = listEl.children.length;
+      };
+      listEl.appendChild(btn);
+    });
+    document.getElementById("selectedKeyCount").textContent = keys.length;
+  }
 
-  async function checkUpdateStatus() {
-    const manifest = chrome.runtime.getManifest();
-    const currentVersion = manifest.version;
+  function handleGeminiKeyInput(e) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const input = e.target;
+    const key = input.value.trim();
+    const listEl = document.getElementById("geminiKeysList");
 
-    try {
-      const response = await fetch(`${BACKEND_API_URL}/versions/latest`);
-      if (!response.ok) throw new Error('Không thể kết nối server');
-
-      const data = await response.json();
-      const latestVersion = data.version_number;
-      const comparison = compareVersions(currentVersion, latestVersion);
-      const isUpToDate = comparison >= 0;
-
-      if (isUpToDate) {
-        updateStatusEl.innerHTML = `
-          <p style="color: #16a34a; margin: 0;">
-            ✅ Bạn đang dùng phiên bản mới nhất: <strong>v${currentVersion}</strong>
-          </p>
-        `;
-      } else {
-        updateStatusEl.innerHTML = `
-          <p style="color: #dc2626; margin: 0 0 8px;">
-            ⚠️ Có phiên bản mới: <strong>v${latestVersion}</strong>
-          </p>
-          ${data.changelog && data.changelog.length > 0 ? `
-            <details style="margin-bottom: 8px;">
-              <summary style="cursor: pointer; font-size: 13px; color: #0369a1;">
-                📝 Xem thay đổi (${data.changelog.length} mục)
-              </summary>
-              <ul style="margin: 8px 0; padding-left: 20px; font-size: 13px;">
-                ${data.changelog.map(c => `<li>${c.replace(/^- /, '')}</li>`).join('')}
-              </ul>
-            </details>
-          ` : ''}
-          <button onclick="chrome.tabs.create({ url: 'https://dev-tool-platform.vercel.app/' })" 
-                  style="background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
-            📥 Download ngay
-          </button>
-        `;
-      }
-    } catch (error) {
-      updateStatusEl.innerHTML = `
-        <p style="color: #dc2626; margin: 0;">
-          ❌ Lỗi kiểm tra: ${error.message}
-        </p>
-      `;
+    if (key && listEl.children.length < 10 && !Array.from(listEl.children).some(b => b.title === key)) {
+      const keys = Array.from(listEl.children).map(b => b.title);
+      keys.push(key);
+      renderGeminiKeysButtons(keys);
+      input.value = "";
     }
   }
 
-  async function checkForUpdates() {
-    const statusEl = document.getElementById('updateStatus');
-    statusEl.innerHTML = '<p style="color: #64748b;">Đang kiểm tra...</p>';
+  // --- Handlers for Buttons & Inputs ---
 
-    const manifest = chrome.runtime.getManifest();
-    const currentVersion = manifest.version;
-
-    try {
-      const response = await fetch(`${BACKEND_API_URL}/versions/latest`);
-      if (!response.ok) throw new Error('Không thể kết nối server');
-
-      const data = await response.json();
-      const latestVersion = data.version_number;
-      const comparison = compareVersions(currentVersion, latestVersion);
-      const isUpToDate = comparison >= 0;
-
-      if (isUpToDate) {
-        statusEl.innerHTML = `
-          <p style="color: #16a34a; margin: 0;">
-            ✅ Bạn đang dùng phiên bản mới nhất: <strong>v${currentVersion}</strong>
-          </p>
-        `;
-      } else {
-        statusEl.innerHTML = `
-          <p style="color: #dc2626; margin: 0 0 8px;">
-            ⚠️ Có phiên bản mới: <strong>v${latestVersion}</strong>
-          </p>
-          ${data.changelog && data.changelog.length > 0 ? `
-            <details style="margin-bottom: 8px; display: block;">
-              <summary style="cursor: pointer; font-size: 13px; color: #0369a1;">
-                📝 Xem thay đổi (${data.changelog.length} mục)
-              </summary>
-              <ul style="margin: 8px 0; padding-left: 20px; font-size: 13px;">
-                ${data.changelog.map(c => `<li>${c.replace(/^- /, '')}</li>`).join('')}
-              </ul>
-            </details>
-          ` : ''}
-          <button onclick="chrome.tabs.create({ url: 'https://dev-tool-platform.vercel.app/' })" 
-                  style="background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
-            📥 Download ngay
-          </button>
-        `;
-      }
-    } catch (error) {
-      statusEl.innerHTML = `
-        <p style="color: #dc2626; margin: 0;">
-          ❌ Lỗi kiểm tra: ${error.message}
-        </p>
-      `;
+  async function handleRedmineKeyBlur() {
+    const key = redmineApiKeyInput.value.trim();
+    if (key && key !== "**********") {
+      debouncedFetch(key, document.getElementById("defaultProjectId").value, document.getElementById("reportProjectId").value);
     }
   }
 
-  function compareVersions(v1, v2) {
-    const p1 = v1.split('.').map(Number);
-    const p2 = v2.split('.').map(Number);
-    for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
-      const a = p1[i] || 0;
-      const b = p2[i] || 0;
-      if (a > b) return 1;
-      if (a < b) return -1;
+  async function handleSyncProjects() {
+    const key = await decryptData((await chrome.storage.local.get("redmineApiKey")).redmineApiKey);
+    if (key) {
+      fetchProjects(key, document.getElementById("defaultProjectId").value, document.getElementById("reportProjectId").value);
+    } else {
+      alert("Vui lòng lưu Redmine API Key trước.");
     }
-    return 0;
   }
 
-  // --- Donate Modal Logic ---
-  // --- End of Donate Modal Logic ---
 });
-
-// ✅ Backend API URL for version check
-const BACKEND_API_URL = "https://dev-tool-platform-api.onrender.com/api";

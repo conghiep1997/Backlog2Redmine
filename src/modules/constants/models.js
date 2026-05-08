@@ -42,13 +42,27 @@
     { value: "openai/gpt-oss-20b", label: "GPT OSS 20B (Balanced & Fast)" },
   ];
 
+  const GEM_MODELS = [{ value: "custom-gem", label: "Custom GEM Model", default: true }];
+
+  global.TB_PROVIDERS = {
+    GEMINI: "gemini",
+    CEREBRAS: "cerebras",
+    GROQ: "groq",
+    GEM: "gem",
+    NONE: "none",
+  };
+
   global.TB_MODELS = {
     GEMINI_MODELS,
     CEREBRAS_MODELS,
     GROQ_MODELS,
+    GEM_MODELS,
     GEMINI: "gemini-3.1-flash-lite-preview",
     GEMINI_FALLBACK: "gemma-3-27b-it",
     CEREBRAS: "gpt-oss-120b",
     GROQ: "llama-3.3-70b-versatile",
+    GEM: "custom-gem",
   };
+
+  global.TB_DEFAULT_GEM_ENDPOINT = "http://localhost:11434/v1/chat/completions";
 })(globalThis);

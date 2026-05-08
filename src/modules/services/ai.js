@@ -2,6 +2,112 @@
  * AI Translation Service using Gemini and Cerebras.
  */
 
+// Global state for round-robin index. This persists for the service worker's lifetime.
+let lastUsedGeminiIndex = 0;
+
+/**
+ * Fetches the list of available models from a provider.
+ * @param {string} provider - The AI provider (e.g., 'gemini', 'groq').
+ * @param {string} apiKey - The API key for the provider.
+ * @returns {Promise<Array<{value: string, label: string}>>} A list of models.
+ */
+async function listProviderModels(provider, apiKey) {
+  switch (provider) {
+  case TB.PROVIDERS.GEMINI:
+    return _listGeminiModels(apiKey);
+  case TB.PROVIDERS.GROQ:
+    return _listGroqModels(apiKey);
+  case TB.PROVIDERS.CEREBRAS:
+    // Cerebras does not have a public model listing API, return hardcoded list.
+    return Promise.resolve(TB.CEREBRAS_MODELS);
+  case TB.PROVIDERS.GEM:
+    // Custom GEM does not support dynamic listing, return hardcoded list.
+    return Promise.resolve(TB.GEM_MODELS);
+  default:
+    return Promise.resolve([]);
+  }
+}
+
+async function _listGeminiModels(apiKey) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`;
+  const response = await timeoutFetch(url, { method: "GET" }, 5000);
+  if (!response.ok) {
+    const errorMsg = await readErrorMessage(response);
+    throw new Error(`Failed to fetch Gemini models: ${sanitizeErrorMessage(errorMsg, response.status)}`);
+  }
+  const data = await safeReadJson(response);
+  return data.models
+    .filter((model) => model.supportedGenerationMethods.includes("generateContent"))
+    .map((model) => ({
+      value: model.name.replace("models/", ""),
+      label: model.displayName || model.name,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label)); // Sort for better UX
+}
+
+async function _listGroqModels(apiKey) {
+  const url = "https://api.groq.com/openai/v1/models";
+  const response = await timeoutFetch(
+    url,
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${apiKey}` },
+    },
+    5000
+  );
+  if (!response.ok) {
+    const errorMsg = await readErrorMessage(response);
+    throw new Error(`Failed to fetch Groq models: ${sanitizeErrorMessage(errorMsg, response.status)}`);
+  }
+  const data = await safeReadJson(response);
+  return data.data
+    .map((model) => ({
+      value: model.id,
+      label: model.id,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/**
+ * Tests the availability of a specific model by sending a minimal request.
+ * @param {string} provider The AI provider.
+ * @param {string} modelId The ID of the model to test.
+ * @param {object} settings The extension settings.
+ * @returns {Promise<{ok: boolean, message: string}>} Test result.
+ */
+async function testModelAvailability(provider, modelId, settings) {
+  const testText = "Hello";
+  try {
+    switch (provider) {
+    case TB.PROVIDERS.GEMINI: {
+      // Find any valid Gemini key to use for testing
+      const apiKey = settings.geminiApiKeys?.[0] || settings.geminiApiKey;
+      if (!apiKey) throw new Error("No Gemini API key found for testing.");
+      await callGeminiAPI(apiKey, testText, modelId, () => "Just say \"ok\"");
+      break;
+    }
+    case TB.PROVIDERS.GROQ:
+      if (!settings.groqApiKey) throw new Error("No Groq API key found for testing.");
+      await callGroqAPI(settings.groqApiKey, testText, modelId, () => "Just say \"ok\"");
+      break;
+    case TB.PROVIDERS.CEREBRAS:
+      if (!settings.cerebrasApiKey) throw new Error("No Cerebras API key found for testing.");
+      await callCerebrasAPI(settings.cerebrasApiKey, testText, modelId, () => "Just say \"ok\"");
+      break;
+    case TB.PROVIDERS.GEM:
+      if (!settings.gemEndpoint) throw new Error("No Custom GEM endpoint configured.");
+      await callGemAPI(settings.gemEndpoint, settings.gemApiKey, testText, modelId, () => "Just say \"ok\"");
+      break;
+    default:
+      throw new Error(`Unsupported provider for testing: ${provider}`);
+    }
+    return { ok: true, message: "Model is responsive." };
+  } catch (error) {
+    console.warn(`[TB-AI] Model test failed for ${modelId}:`, error);
+    return { ok: false, message: error.message };
+  }
+}
+
 /**
  * Main translation function with fallback support.
  * @param {string} commentText - Text to translate
@@ -86,57 +192,117 @@ async function callAIsByProvider(provider, model, settings, text, url, promptFn)
     // Use settings models if available, otherwise use all official models, otherwise fallback to the passed model
     let models = [];
     if (settings.geminiModels?.length > 0) {
-      models = [...settings.geminiModels];
+      models = settings.geminiModels;
     } else if (TB.GEMINI_MODELS?.length > 0) {
       models = TB.GEMINI_MODELS.map((m) => m.value);
     } else {
       models = [model];
     }
 
-    // Randomize the order (Shuffle)
-    for (let i = models.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [models[i], models[j]] = [models[j], models[i]];
+    const apiKeys =
+      (settings.geminiApiKeys?.length > 0
+        ? settings.geminiApiKeys
+        : [settings.geminiApiKey]
+      ).filter(Boolean);
+
+    // Create a flat list of all [model, key] combinations
+    const combinations = [];
+    for (const m of models) {
+      for (const key of apiKeys) {
+        combinations.push({ model: m, key });
+      }
     }
 
-    const apiKeys =
-      settings.geminiApiKeys?.length > 0 ? settings.geminiApiKeys : [settings.geminiApiKey];
+    if (combinations.length === 0) {
+      throw new Error("No Gemini models or API keys are configured.");
+    }
 
     let lastError = null;
-    for (const m of models) {
-      // Randomize keys order too for better load balancing
-      const shuffledKeys = [...apiKeys];
-      for (let i = shuffledKeys.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffledKeys[i], shuffledKeys[j]] = [shuffledKeys[j], shuffledKeys[i]];
-      }
+    const startIndex = lastUsedGeminiIndex % combinations.length;
 
-      for (const key of shuffledKeys) {
-        try {
-          console.log(`[TB-AI] Attempting call with model: ${m}`);
-          return await callGeminiAPI(key, text, m, promptFn, url);
-        } catch (error) {
-          const isRetryable =
-            error.message.includes("429") ||
-            error.message.includes("rate limit") ||
-            error.message.includes("503") ||
-            error.message.toLowerCase().includes("high demand");
-          if (!isRetryable) {
-            throw error;
-          }
-          lastError = error;
-          console.warn(`[TB-AI] Gemini (${m}) failed with ${error.message}, trying next...`);
+    // Iterate through combinations in a round-robin fashion for failover
+    for (let i = 0; i < combinations.length; i++) {
+      const currentIndex = (startIndex + i) % combinations.length;
+      const { model: currentModel, key: currentKey } = combinations[currentIndex];
+
+      try {
+        console.log(`[TB-AI] Attempting call with model: ${currentModel} (Round-Robin)`);
+        const result = await callGeminiAPI(currentKey, text, currentModel, promptFn, url);
+
+        // Success! Update the index for the next call and return.
+        lastUsedGeminiIndex = (currentIndex + 1) % combinations.length;
+        return result;
+      } catch (error) {
+        const isRetryable =
+          error.message.includes("429") ||
+          error.message.includes("rate limit") ||
+          error.message.includes("503") ||
+          error.message.toLowerCase().includes("high demand") ||
+          error.message.toLowerCase().includes("try again later");
+
+        if (!isRetryable) {
+          // For non-retryable errors, fail immediately.
+          throw error;
         }
+        lastError = error;
+        console.warn(`[TB-AI] Gemini (${currentModel}) failed with ${error.message}, trying next...`);
       }
     }
-    // All models/keys exhausted
-    throw lastError || new Error("No Gemini API key available");
+
+    // If all combinations were exhausted, throw the last captured error.
+    throw lastError || new Error("All Gemini model/key combinations failed.");
   } else if (provider === TB.PROVIDERS.CEREBRAS) {
     return await callCerebrasAPI(settings.cerebrasApiKey, text, model, promptFn, url);
   } else if (provider === TB.PROVIDERS.GROQ) {
     return await callGroqAPI(settings.groqApiKey, text, model, promptFn);
+  } else if (provider === TB.PROVIDERS.GEM) {
+    return await callGemAPI(settings.gemEndpoint, settings.gemApiKey, text, model, promptFn);
   }
   throw new Error(`Unknown provider: ${provider}`);
+}
+
+async function callGemAPI(endpoint, apiKey, commentText, model, promptFn = TB.PROMPTS.USER) {
+  const headers = {
+    "Content-Type": "application/json",
+  };
+  if (apiKey) {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+
+  const response = await timeoutFetch(
+    endpoint,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        model: model || "custom-gem",
+        messages: [
+          { role: "system", content: TB.PROMPTS.SYSTEM },
+          { role: "user", content: promptFn(commentText) },
+        ],
+        temperature: 0.2,
+        max_tokens: 2048,
+      }),
+    },
+    15000
+  ); // 15s timeout
+
+  if (!response.ok) {
+    const errorMsg = await readErrorMessage(response);
+    throw new Error(`Custom GEM (${model}): ${sanitizeErrorMessage(errorMsg, response.status)}`);
+  }
+
+  const data = await safeReadJson(response);
+  const rawText = data?.choices?.[0]?.message?.content?.trim();
+  if (!rawText) {
+    throw new Error("Custom GEM returned no content.");
+  }
+
+  const cleaned = normalizeTranslationOutput(rawText);
+  if (promptFn === TB.PROMPTS.USER) {
+    return formatTranslation(commentText, cleaned, null);
+  }
+  return cleaned;
 }
 
 async function translateWithGemini(
@@ -171,7 +337,9 @@ async function callGeminiAPI(
   commentUrl = null
 ) {
   // Call Gemini API with timeout to avoid hanging connections
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(
+    apiKey
+  )}`;
 
   const isGemma = model.toLowerCase().includes("gemma");
   const payload = {

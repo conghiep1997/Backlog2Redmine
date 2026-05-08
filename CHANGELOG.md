@@ -1,5 +1,26 @@
 # Nhật ký thay đổi (Changelog)
 
+## [1.8.4] - 2024-05-24
+
+### ✨ Tính năng mới
+
+*   **tính năng(gem):** Thêm hỗ trợ cho các mô hình "Generative Enhanced Models" (GEM) tùy chỉnh, hoạt động như một nhà cung cấp AI mới.
+*   **tính năng(ui):** Tạo một mục cấu hình riêng cho "Custom GEM", cho phép người dùng chỉ định API endpoint và API key.
+
+### 🐛 Sửa lỗi
+
+*   **sửa lỗi(migrate):** Sửa một lỗi nghiêm trọng trong chức năng "Migrate Issue". Lỗi này xảy ra khi quá trình xử lý file đính kèm bị thất bại do không lấy đúng domain của Backlog. Logic mới sẽ luôn lấy domain từ phần cài đặt một cách chính xác.
+*   **sửa lỗi(migrate):** Cải thiện việc ghi log lỗi cho chức năng migrate. Giờ đây, toàn bộ dữ liệu request (payload) sẽ được ghi lại nếu Redmine không thể tạo issue, giúp việc chẩn đoán các lỗi liên quan đến trường tùy chỉnh (custom field) trở nên dễ dàng hơn.
+*   **sửa lỗi(options):** Khắc phục lỗi nghiêm trọng trong việc lưu API key. Logic mới đảm bảo các key được lưu, cập nhật và xóa một cách chính xác, ngăn chặn việc vô tình lưu giá trị `**********`.
+
+### ♻️ Tái cấu trúc (Refactoring)
+
+*   **tái cấu trúc(background):** Dọn dẹp và tái cấu trúc lại file `background.js` để loại bỏ các khối code bị trùng lặp liên quan đến cơ chế kiểm tra cập nhật, giúp cải thiện sự ổn định và khả năng bảo trì.
+
+### 🔨 Công việc khác (Chore)
+
+*   **chore(lint):** Sửa tất cả các lỗi và cảnh báo từ ESLint để cải thiện chất lượng và tính nhất quán của code.
+
 ## [1.8.3] - 2026-04-26
 
 ### ✨ Tính năng mới

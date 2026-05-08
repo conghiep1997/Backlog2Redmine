@@ -24,10 +24,10 @@ export function escapeHtml(str) {
  */
 export function renderMarkdownHtml(text) {
   let html = escapeHtml(text);
-  
+
   // Convert blockquotes first (before line breaks)
   html = html.replace(/^&gt;\s+(.+)$/gm, "<blockquote>$1</blockquote>");
-  
+
   // Convert other markdown
   html = html
     .replace(/(<li>.*<\/li>)(\s*<li>.*<\/li>)*/g, "<ul>$&</ul>")
@@ -38,6 +38,6 @@ export function renderMarkdownHtml(text) {
     .replace(/`(.+?)`/g, "<code>$1</code>")
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "<a href=\"$2\" target=\"_blank\">$1</a>")
     .replace(/\n/g, "<br>");
-  
+
   return html;
 }
