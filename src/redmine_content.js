@@ -375,6 +375,9 @@ function injectButtonIfNeeded(actionsEl) {
 }
 
 function injectBatchSyncButton(container) {
+  // Temporarily disabled due to positioning issues.
+  return;
+
   // 1. Only run on issue detail pages
   if (!window.location.pathname.match(/\/issues\/(\d+)/)) {
     return;

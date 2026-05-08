@@ -190,7 +190,7 @@ Mỗi installation có salt duy nhất:
 ```javascript
 // crypto.js: deriveKey()
 const storageId = await getUserStorageId(); // UUID from chrome.storage
-const combinedSalt = `openclaw-backlog2redmine-${storageId}-2026`;
+const combinedSalt = `openclaw-backlog2redmine-${storageId}-2024`;
 ```
 
 ### Permissions
@@ -395,5 +395,5 @@ chrome.storage.local.get(null, console.log); // Show all stored data
 
 ---
 
-**Last Updated:** 2026-04-18  
-**Version:** 1.4.3
+**Last Updated:** 2024-05-24
+**Version:** 1.8.4
