@@ -375,7 +375,18 @@ function injectButtonIfNeeded(actionsEl) {
 }
 
 function injectBatchSyncButton(container) {
+  // 1. Only run on issue detail pages
+  if (!window.location.pathname.match(/\/issues\/(\d+)/)) {
+    return;
+  }
   if (!container) return;
+
+  // Attempt to find the correct insertion point
+  const header = document.querySelector("#history h3, .journals h3");
+  // 2. If we can't find the header, don't do anything. This prevents insertion at the top of the body.
+  if (!header) {
+    return;
+  }
 
   let batchContainer = document.querySelector("#tb-batch-sync-container");
   if (!batchContainer) {
@@ -383,12 +394,8 @@ function injectBatchSyncButton(container) {
     batchContainer.id = "tb-batch-sync-container";
     batchContainer.style.cssText =
       "margin: 10px 0; padding: 8px; background: #f0f7ff; border: 1px solid #b3d9ff; border-radius: 4px;";
-    const header = document.querySelector("#history h3, .journals h3");
-    if (header) {
-      header.parentNode.insertBefore(batchContainer, header.nextSibling);
-    } else {
-      container.prepend(batchContainer);
-    }
+    // This is the correct positioning logic, right after the "History" title.
+    header.parentNode.insertBefore(batchContainer, header.nextSibling);
   }
 
   if (batchContainer.querySelector("#tb-batch-sync-btn")) return;
@@ -396,7 +403,7 @@ function injectBatchSyncButton(container) {
   const batchBtn = document.createElement("a");
   batchBtn.href = "#";
   batchBtn.id = "tb-batch-sync-btn";
-  batchBtn.className = "icon icon-time-add";
+  batchBtn.className = "icon icon-sync"; // Changed icon
   batchBtn.textContent = "🔄 Đồng bộ tất cả comments sang Backlog";
   batchBtn.style.cssText = "font-weight: bold; color: #0066cc; cursor: pointer;";
   batchBtn.onclick = (e) => {
