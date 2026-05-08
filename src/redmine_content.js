@@ -246,8 +246,6 @@ function observeJournalActions() {
   const targetContainer =
     document.querySelector("#history") || document.querySelector(".journals") || document.body;
 
-  injectBatchSyncButton(targetContainer);
-
   journalObserver = new MutationObserver((mutations) => {
     let shouldRescan = false;
     for (const m of mutations) {
@@ -264,95 +262,13 @@ function observeJournalActions() {
     }
     if (shouldRescan) {
       scanAndInjectButtons();
-      injectBatchSyncButton(targetContainer);
     }
   });
   journalObserver.observe(targetContainer, { childList: true, subtree: true });
 }
 
-async function handleBatchSyncToBacklog() {
-  const journalContainers = document.querySelectorAll("div.journal");
-  const batchData = [];
-
-  for (const container of journalContainers) {
-    const actionsEl = container.querySelector("div.contextual");
-    const commentContentEl = container.querySelector("div.wiki");
-    const rawText = commentContentEl?.innerText?.trim() || "";
-
-    if (!actionsEl || !rawText) {
-      continue;
-    }
-
-    batchData.push({
-      rawText,
-      attachments: extractRedmineAttachments(commentContentEl),
-    });
-  }
-
-  if (batchData.length === 0) {
-    showToast("Không có nội dung để đồng bộ", "error");
-    return;
-  }
-
-  const backlogIssueKey = findBacklogKeyInPage();
-  if (!backlogIssueKey) {
-    showToast(TB.MESSAGES.TOAST.MISSING_ISSUE_KEY, "error");
-    return;
-  }
-
-  const progressModal = openConfirmModal({
-    issueTitle: `Đồng bộ ${batchData.length} comments sang Backlog`,
-    previewText:
-      "<div id=\"batch-sync-progress\" style=\"max-height: 320px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;\">Sẵn sàng đồng bộ...</div>",
-    confirmLabel: "Bắt đầu",
-    cancelLabel: "Hủy",
-    onConfirm: async (modalInstance) => {
-      const progressDiv = modalInstance.modalEl.querySelector("#batch-sync-progress");
-      const confirmBtn = modalInstance.modalEl.querySelector(".tb-modal-confirm");
-      confirmBtn.disabled = true;
-      confirmBtn.textContent = "Đang xử lý...";
-
-      const updateProgress = (message) => {
-        progressDiv.innerHTML += `<br>${message}`;
-        progressDiv.scrollTop = progressDiv.scrollHeight;
-      };
-
-      let successCount = 0;
-      for (let index = 0; index < batchData.length; index += 1) {
-        const item = batchData[index];
-        updateProgress(`- Comment ${index + 1}/${batchData.length}`);
-
-        try {
-          const extracted = await sendRuntimeMessage({
-            type: "EXTRACT_JAPANESE_CONTENT",
-            commentText: item.rawText,
-          });
-          await sendRuntimeMessage({
-            type: "SEND_TO_BACKLOG",
-            backlogIssueKey,
-            content: extracted.data.previewText,
-            attachments: item.attachments,
-          });
-          successCount += 1;
-          updateProgress("  => Thành công");
-        } catch (error) {
-          updateProgress(`  => Lỗi: ${error.message}`);
-        }
-      }
-
-      updateProgress(`<br><b>Hoàn tất: ${successCount}/${batchData.length}</b>`);
-      confirmBtn.textContent = "Đã xong";
-    },
-  });
-
-  return progressModal;
-}
-
 function scanAndInjectButtons() {
   document.querySelectorAll("div.journal div.contextual").forEach(injectButtonIfNeeded);
-  const targetContainer =
-    document.querySelector("#history") || document.querySelector(".journals") || document.body;
-  injectBatchSyncButton(targetContainer);
 }
 
 function injectButtonIfNeeded(actionsEl) {
@@ -372,50 +288,6 @@ function injectButtonIfNeeded(actionsEl) {
   const quoteBtn = actionsEl.querySelector("a.icon-comment");
   quoteBtn ? quoteBtn.before(button) : actionsEl.appendChild(button);
   actionsEl.dataset.tbInjected = "1";
-}
-
-function injectBatchSyncButton(container) {
-  // Temporarily disabled due to positioning issues.
-  return;
-
-  // 1. Only run on issue detail pages
-  if (!window.location.pathname.match(/\/issues\/(\d+)/)) {
-    return;
-  }
-  if (!container) return;
-
-  // Attempt to find the correct insertion point
-  const header = document.querySelector("#history h3, .journals h3");
-  // 2. If we can't find the header, don't do anything. This prevents insertion at the top of the body.
-  if (!header) {
-    return;
-  }
-
-  let batchContainer = document.querySelector("#tb-batch-sync-container");
-  if (!batchContainer) {
-    batchContainer = document.createElement("div");
-    batchContainer.id = "tb-batch-sync-container";
-    batchContainer.style.cssText =
-      "margin: 10px 0; padding: 8px; background: #f0f7ff; border: 1px solid #b3d9ff; border-radius: 4px;";
-    // This is the correct positioning logic, right after the "History" title.
-    header.parentNode.insertBefore(batchContainer, header.nextSibling);
-  }
-
-  if (batchContainer.querySelector("#tb-batch-sync-btn")) return;
-
-  const batchBtn = document.createElement("a");
-  batchBtn.href = "#";
-  batchBtn.id = "tb-batch-sync-btn";
-  batchBtn.className = "icon icon-sync"; // Changed icon
-  batchBtn.textContent = "🔄 Đồng bộ tất cả comments sang Backlog";
-  batchBtn.style.cssText = "font-weight: bold; color: #0066cc; cursor: pointer;";
-  batchBtn.onclick = (e) => {
-    e.preventDefault();
-    handleBatchSyncToBacklog();
-  };
-
-  batchContainer.innerHTML = "";
-  batchContainer.appendChild(batchBtn);
 }
 
 async function handleExtractAndOpenModal(actionsEl, button) {

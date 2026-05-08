@@ -1,8 +1,8 @@
 # Nhật ký thay đổi (Changelog)
 
 ## [1.8.5] - 2026-05-08
-- **🗑️ Tạm ẩn (Temporarily Disabled)**:
-  - **tạm ẩn(redmine):** Vô hiệu hóa tạm thời chức năng "Đồng bộ tất cả comments sang Backlog" do lỗi hiển thị vị trí trên giao diện. Tính năng này sẽ được kích hoạt lại trong các phiên bản sau khi lỗi được khắc phục.
+- **🗑️ Đã xóa (Removed)**:
+  - **xóa(redmine):** Xóa bỏ hoàn toàn chức năng "Đồng bộ tất cả comments sang Backlog" do lỗi hiển thị và không cần thiết ở thời điểm hiện tại.
 
 
 ## [1.8.4] - 2024-05-24
