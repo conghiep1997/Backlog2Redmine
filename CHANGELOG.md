@@ -1,5 +1,14 @@
 # Nhật ký thay đổi (Changelog)
 
+## [1.8.6] - 2026-05-11
+- **🔧 Fixed**: 
+  - Sửa lỗi cập nhật model trong trang Options (model `gemma-3-27b-it` không hỗ trợ trên Google AI Studio API).
+- **♻️ Refactored**:
+  - Sửa lại hàm test model cho tương thích API mới.
+  - Xóa tính năng "Làm mới Model" không còn sử dụng được.
+  - Cập nhật danh sách model mặc định: `gemini-3.1-flash-lite-preview` (mặc định), `gemma-4-31b-it`, `gemma-4-26b-a4b-it`.
+  - Cập nhật fallback model: `gemma-4-31b-it`.
+
 ## [1.8.5] - 2026-05-08
 - **🗑️ Đã xóa (Removed)**:
   - **xóa(redmine):** Xóa bỏ hoàn toàn chức năng "Đồng bộ tất cả comments sang Backlog" do lỗi hiển thị và không cần thiết ở thời điểm hiện tại.

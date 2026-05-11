@@ -229,7 +229,7 @@ async function getSettings() {
 
   const keys = [
     "redmineApiKey", "backlogDomain", "backlogApiKey", "geminiApiKey", "geminiApiKeys",
-    "geminiModels", "cerebrasApiKey", "groqApiKey", "gemEndpoint", "gemApiKey",
+    "geminiModels", "cerebrasApiKey", "groqApiKey", "openrouterApiKey",
     "primaryProvider", "primaryModel", "fallbackProvider", "fallbackModel", "defaultProjectId",
   ];
   const items = await chrome.storage.local.get(keys);
@@ -251,8 +251,7 @@ async function getSettings() {
     geminiModels: geminiModelsStr.split("\n").filter(Boolean),
     cerebrasApiKey: await decryptData(items.cerebrasApiKey ?? ""),
     groqApiKey: await decryptData(items.groqApiKey ?? ""),
-    gemEndpoint: items.gemEndpoint || TB.DEFAULT_GEM_ENDPOINT,
-    gemApiKey: await decryptData(items.gemApiKey ?? ""),
+    openrouterApiKey: await decryptData(items.openrouterApiKey ?? ""),
     defaultProjectId: items.defaultProjectId || "",
   };
 
@@ -292,6 +291,9 @@ function assertSettings(settings, required = []) {
     }
     if (provider === TB.PROVIDERS.CEREBRAS && !settings.cerebrasApiKey) {
       throw new Error("Missing Cerebras API Key.");
+    }
+    if (provider === TB.PROVIDERS.OPENROUTER && !settings.openrouterApiKey) {
+      throw new Error("Missing OpenRouter API Key.");
     }
   }
 }

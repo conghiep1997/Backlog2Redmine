@@ -51,12 +51,19 @@ function ensureChangelogStub(version) {
 }
 
 function isSemver(version) {
-  return /^\d+\.\d+\.\d+$/.test(version);
+  return /^\d+\.\d+\.\d{1,2}$/.test(version);
 }
 
 function incrementPatch(version) {
-  const [major, minor, patch] = version.split('.').map(Number);
-  return `${major}.${minor}.${patch + 1}`;
+  const parts = version.split('.');
+  const major = parts[0];
+  const minor = parts[1];
+  const patch = parseInt(parts[2], 10);
+  
+  // Nếu patch cũ < 10 (1 chữ số), version tiếp theo sẽ là patch + 1 và pad 2 chữ số (e.g. 5 -> 06)
+  // Nếu đã là 2 chữ số (e.g. 06), tăng bình thường thành 07
+  const nextPatch = (patch + 1).toString().padStart(2, '0');
+  return `${major}.${minor}.${nextPatch}`;
 }
 
 function main() {
@@ -79,6 +86,7 @@ function main() {
 
   manifest.version = version;
   packageJson.version = version;
+  console.log(`New version format: ${version} (2-digit patch format)`);
 
   writeJson(manifestPath, manifest);
   writeJson(packageJsonPath, packageJson);

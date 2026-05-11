@@ -20,9 +20,6 @@ async function listProviderModels(provider, apiKey) {
   case TB.PROVIDERS.CEREBRAS:
     // Cerebras does not have a public model listing API, return hardcoded list.
     return Promise.resolve(TB.CEREBRAS_MODELS);
-  case TB.PROVIDERS.GEM:
-    // Custom GEM does not support dynamic listing, return hardcoded list.
-    return Promise.resolve(TB.GEM_MODELS);
   default:
     return Promise.resolve([]);
   }
@@ -93,10 +90,6 @@ async function testModelAvailability(provider, modelId, settings) {
     case TB.PROVIDERS.CEREBRAS:
       if (!settings.cerebrasApiKey) throw new Error("No Cerebras API key found for testing.");
       await callCerebrasAPI(settings.cerebrasApiKey, testText, modelId, () => "Just say \"ok\"");
-      break;
-    case TB.PROVIDERS.GEM:
-      if (!settings.gemEndpoint) throw new Error("No Custom GEM endpoint configured.");
-      await callGemAPI(settings.gemEndpoint, settings.gemApiKey, testText, modelId, () => "Just say \"ok\"");
       break;
     default:
       throw new Error(`Unsupported provider for testing: ${provider}`);
@@ -188,6 +181,12 @@ function getRandomGeminiModel(models) {
 }
 
 async function callAIsByProvider(provider, model, settings, text, url, promptFn) {
+  // Fallback for legacy "gem" provider
+  if (provider === "gem") {
+    console.warn("[TB-AI] Legacy provider 'gem' detected, falling back to 'gemini'");
+    provider = TB.PROVIDERS.GEMINI;
+  }
+
   if (provider === TB.PROVIDERS.GEMINI) {
     // Use settings models if available, otherwise use all official models, otherwise fallback to the passed model
     let models = [];
@@ -255,54 +254,8 @@ async function callAIsByProvider(provider, model, settings, text, url, promptFn)
     return await callCerebrasAPI(settings.cerebrasApiKey, text, model, promptFn, url);
   } else if (provider === TB.PROVIDERS.GROQ) {
     return await callGroqAPI(settings.groqApiKey, text, model, promptFn);
-  } else if (provider === TB.PROVIDERS.GEM) {
-    return await callGemAPI(settings.gemEndpoint, settings.gemApiKey, text, model, promptFn);
   }
   throw new Error(`Unknown provider: ${provider}`);
-}
-
-async function callGemAPI(endpoint, apiKey, commentText, model, promptFn = TB.PROMPTS.USER) {
-  const headers = {
-    "Content-Type": "application/json",
-  };
-  if (apiKey) {
-    headers.Authorization = `Bearer ${apiKey}`;
-  }
-
-  const response = await timeoutFetch(
-    endpoint,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        model: model || "custom-gem",
-        messages: [
-          { role: "system", content: TB.PROMPTS.SYSTEM },
-          { role: "user", content: promptFn(commentText) },
-        ],
-        temperature: 0.2,
-        max_tokens: 2048,
-      }),
-    },
-    15000
-  ); // 15s timeout
-
-  if (!response.ok) {
-    const errorMsg = await readErrorMessage(response);
-    throw new Error(`Custom GEM (${model}): ${sanitizeErrorMessage(errorMsg, response.status)}`);
-  }
-
-  const data = await safeReadJson(response);
-  const rawText = data?.choices?.[0]?.message?.content?.trim();
-  if (!rawText) {
-    throw new Error("Custom GEM returned no content.");
-  }
-
-  const cleaned = normalizeTranslationOutput(rawText);
-  if (promptFn === TB.PROMPTS.USER) {
-    return formatTranslation(commentText, cleaned, null);
-  }
-  return cleaned;
 }
 
 async function translateWithGemini(

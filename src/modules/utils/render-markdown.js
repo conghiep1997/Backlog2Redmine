@@ -8,7 +8,7 @@
  * @param {string} str - String to escape
  * @returns {string} - Escaped string
  */
-export function escapeHtml(str) {
+function escapeHtml(str) {
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -22,7 +22,7 @@ export function escapeHtml(str) {
  * @param {string} text - Markdown text to render
  * @returns {string} - HTML string
  */
-export function renderMarkdownHtml(text) {
+function renderMarkdownHtml(text) {
   let html = escapeHtml(text);
 
   // Convert blockquotes first (before line breaks)
@@ -41,3 +41,5 @@ export function renderMarkdownHtml(text) {
 
   return html;
 }
+window.escapeHtml = escapeHtml;
+window.renderMarkdownHtml = renderMarkdownHtml;

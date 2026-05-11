@@ -5,20 +5,16 @@
   const GEMINI_MODELS = [
     {
       value: "gemini-3.1-flash-lite-preview",
-      label: "Gemini 3.1 Flash Lite (RPD 500) ⭐ Mặc định",
+      label: "Gemini 3.1 Flash Lite (RPD 500) \u2B50 M\u1EB7c \u0111\u1ECBnh",
       default: true,
     },
     {
-      value: "gemma-3-27b-it",
-      label: "Gemma 3 27B IT (RPD 14.4K) 🚀 Hạn mức cực cao",
-    },
-    {
       value: "gemma-4-31b-it",
-      label: "Gemma 4 31B IT (RPD 1.5K) ✨ Chất lượng cao",
+      label: "Gemma 4 31B IT (RPD 1.5K) \u2728 Ch\u1EA5t l\u01B0\u1EE3ng cao",
     },
     {
       value: "gemma-4-26b-a4b-it",
-      label: "Gemma 4 26B A4B IT (RPD 1.5K) 💎 MoE Stable",
+      label: "Gemma 4 26B A4B IT (RPD 1.5K) \uD83D\uDC8E MoE Stable",
     },
   ];
 
@@ -42,13 +38,10 @@
     { value: "openai/gpt-oss-20b", label: "GPT OSS 20B (Balanced & Fast)" },
   ];
 
-  const GEM_MODELS = [{ value: "custom-gem", label: "Custom GEM Model", default: true }];
-
   global.TB_PROVIDERS = {
     GEMINI: "gemini",
     CEREBRAS: "cerebras",
     GROQ: "groq",
-    GEM: "gem",
     NONE: "none",
   };
 
@@ -56,13 +49,9 @@
     GEMINI_MODELS,
     CEREBRAS_MODELS,
     GROQ_MODELS,
-    GEM_MODELS,
     GEMINI: "gemini-3.1-flash-lite-preview",
-    GEMINI_FALLBACK: "gemma-3-27b-it",
+    GEMINI_FALLBACK: "gemma-4-31b-it",
     CEREBRAS: "gpt-oss-120b",
     GROQ: "llama-3.3-70b-versatile",
-    GEM: "custom-gem",
   };
-
-  global.TB_DEFAULT_GEM_ENDPOINT = "http://localhost:11434/v1/chat/completions";
 })(globalThis);
