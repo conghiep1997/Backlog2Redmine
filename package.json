@@ -33,5 +33,13 @@
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/conghiep1997/Backlog2Redmine.git"
+  },
+  "bugs": {
+    "url": "https://github.com/conghiep1997/Backlog2Redmine/issues"
+  },
+  "homepage": "https://github.com/conghiep1997/Backlog2Redmine#readme"
 }

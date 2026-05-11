@@ -85,11 +85,11 @@ async function deriveKey() {
   );
 
   // Cache the key material for reuse
-  cachedKeyMaterial = crypto.subtle.deriveKey(
+  cachedKeyMaterial = await crypto.subtle.deriveKey(
     {
       name: "PBKDF2",
       salt: encoder.encode("additional-pepper-salt"),
-      iterations: 100000,
+      iterations: 300000,
       hash: "SHA-256",
     },
     keyMaterial,

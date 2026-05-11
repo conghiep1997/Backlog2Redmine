@@ -89,6 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (value !== "**********") {
       settings[keyName] = await encryptData(value);
     }
+    // If value is "**********", don't modify settings[keyName] - keep existing value
   }
 
   function loadOptions() {
@@ -120,20 +121,38 @@ document.addEventListener("DOMContentLoaded", () => {
       updateFallbackOptions();
 
       if (items.redmineApiKey) {
-        const decryptedKey = await decryptData(items.redmineApiKey);
-        fetchProjects(decryptedKey, items.defaultProjectId, items.reportProjectId);
+        try {
+          const decryptedKey = await decryptData(items.redmineApiKey);
+          if (decryptedKey) {
+            fetchProjects(decryptedKey, items.defaultProjectId, items.reportProjectId);
+          } else {
+            console.warn("[OPTIONS] Failed to decrypt redmineApiKey");
+          }
+        } catch (e) {
+          console.error("[OPTIONS] Error decrypting redmineApiKey:", e);
+        }
       }
 
       if (items.geminiModels) {
-        const modelsStr = await decryptData(items.geminiModels);
-        renderGeminiModelsTags(modelsStr ? modelsStr.split("\n").filter(Boolean) : []);
+        try {
+          const modelsStr = await decryptData(items.geminiModels);
+          renderGeminiModelsTags(modelsStr ? modelsStr.split("\n").filter(Boolean) : []);
+        } catch (e) {
+          console.error("[OPTIONS] Error decrypting geminiModels:", e);
+          renderGeminiModelsTags([]);
+        }
       } else {
         renderGeminiModelsTags([]);
       }
 
       if (items.geminiApiKeys) {
-        const keysStr = await decryptData(items.geminiApiKeys);
-        renderGeminiKeysButtons(keysStr ? keysStr.split("\n").filter(Boolean) : []);
+        try {
+          const keysStr = await decryptData(items.geminiApiKeys);
+          renderGeminiKeysButtons(keysStr ? keysStr.split("\n").filter(Boolean) : []);
+        } catch (e) {
+          console.error("[OPTIONS] Error decrypting geminiApiKeys:", e);
+          renderGeminiKeysButtons([]);
+        }
       }
     });
   }
@@ -333,8 +352,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const keys = Array.from(document.querySelectorAll("#geminiKeysList button")).map((b) => b.title);
     return keys[0] || "";
   }
-
-
 
   async function handleRedmineKeyBlur() {
     const key = redmineApiKeyInput.value.trim();

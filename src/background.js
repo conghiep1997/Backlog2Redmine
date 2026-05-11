@@ -326,7 +326,7 @@ async function handleFetchMetadata(endpoint) {
   const url = buildRedmineUrl(settings.redmineDomain, endpoint);
   const response = await timeoutFetch(url, {
     headers: { "X-Redmine-API-Key": settings.redmineApiKey, Accept: "application/json" },
-  }, 10000);
+  }, 30000);
 
   if (!response.ok) {
     throw new Error(`${TB.MESSAGES.REDMINE.API_REQUEST_FAILED} (${response.status}) for ${endpoint}`);

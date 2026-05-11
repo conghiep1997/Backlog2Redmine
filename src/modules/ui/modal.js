@@ -1,8 +1,10 @@
 /**
  * Modal UI management for Backlog2Redmine Extension.
+ * Uses escapeHtml, renderMarkdownHtml from render-markdown.js (loaded globally via manifest).
  */
 
-import { escapeHtml, renderMarkdownHtml } from "../utils/render-markdown.js";
+/* global escapeHtml, renderMarkdownHtml */
+
 let modalElements = null;
 let customFieldsMetadata = [];
 let redmineSettings = null;

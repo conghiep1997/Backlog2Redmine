@@ -329,7 +329,7 @@ async function callGeminiAPI(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     },
-    10000
+    30000
   ); // 15s timeout cho Gemini
 
   if (!response.ok) {
@@ -390,7 +390,7 @@ async function callCerebrasAPI(
         max_tokens: 2048,
       }),
     },
-    10000
+    30000
   ); // 15s timeout cho Cerebras
 
   if (!response.ok) {
@@ -431,7 +431,7 @@ async function callGroqAPI(apiKey, commentText, model, promptFn = TB.PROMPTS.USE
         max_tokens: 2048,
       }),
     },
-    10000
+    30000
   );
 
   if (!response.ok) {
