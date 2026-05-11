@@ -124,10 +124,10 @@ function sendRuntimeMessage(payload) {
  * Fetch with timeout support.
  * @param {string} url - URL to fetch
  * @param {object} options - Fetch options
- * @param {number} timeoutMs - Timeout in milliseconds (default: 30000)
+ * @param {number} timeoutMs - Timeout in milliseconds (default: 10000)
  * @returns {Promise<Response>} Fetch response
  */
-async function timeoutFetch(url, options = {}, timeoutMs = 30000) {
+async function timeoutFetch(url, options = {}, timeoutMs = 10000) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 

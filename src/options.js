@@ -14,6 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const groqApiKeyInput = document.getElementById("groqApiKey");
   const cerebrasApiKeyInput = document.getElementById("cerebrasApiKey");
   const openrouterApiKeyInput = document.getElementById("openrouterApiKey");
+  const fallbackGroqApiKeyInput = document.getElementById("fallbackGroqApiKey");
+  const fallbackCerebrasApiKeyInput = document.getElementById("fallbackCerebrasApiKey");
+  const fallbackOpenrouterApiKeyInput = document.getElementById("fallbackOpenrouterApiKey");
   const primaryProviderSelect = document.getElementById("primaryProvider");
   const fallbackProviderSelect = document.getElementById("fallbackProvider");
   const statusEl = document.getElementById("status");
@@ -65,6 +68,9 @@ document.addEventListener("DOMContentLoaded", () => {
       handleApiKeyUpdate(settings, "groqApiKey", groqApiKeyInput),
       handleApiKeyUpdate(settings, "cerebrasApiKey", cerebrasApiKeyInput),
       handleApiKeyUpdate(settings, "openrouterApiKey", openrouterApiKeyInput),
+      handleApiKeyUpdate(settings, "fallbackGroqApiKey", fallbackGroqApiKeyInput),
+      handleApiKeyUpdate(settings, "fallbackCerebrasApiKey", fallbackCerebrasApiKeyInput),
+      handleApiKeyUpdate(settings, "fallbackOpenrouterApiKey", fallbackOpenrouterApiKeyInput),
     ]);
 
     const selectedGeminiModels = Array.from(document.querySelectorAll("#geminiModelsList button.selected")).map(b => b.dataset.modelId);
