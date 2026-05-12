@@ -1,288 +1,256 @@
-# Nhật ký thay đổi (Changelog)
+# Changelog - Backlog2Redmine
 
 ## [1.8.06] - 2026-05-11
-- **🔧 Fixed**: 
-  - Sửa lỗi cập nhật model trong trang Options (model `gemma-3-27b-it` không hỗ trợ trên Google AI Studio API).
-- **♻️ Refactored**:
-  - Sửa lại hàm test model cho tương thích API mới.
-  - Xóa tính năng "Làm mới Model" không còn sử dụng được.
-  - Cập nhật danh sách model mặc định: `gemini-3.1-flash-lite-preview` (mặc định), `gemma-4-31b-it`, `gemma-4-26b-a4b-it`.
-  - Cập nhật fallback model: `gemma-4-31b-it`.
+### Added
+- Thêm regex để phân tách notes trong modal, cải thiện parsing cho batch notes
+- Thêm hỗ trợ multi-select cho fallback models và keys trong trang Options
+- Thêm các function quản lý provider models và keys với mã hóa/giải mã
+### Changed
+- Cập nhật options.html: xóa dropdown model cũ, thêm cấu hình fallback Gemini mới
+- Cải thiện UX với cập nhật UI động dựa trên provider và models được chọn
+### Refactored
+- Refactor logic xử lý notes trong openConfirmModal để sử dụng function parsing mới
+- Cải thiện options.js để hỗ trợ multi-select và render models/keys được chọn
 
 ## [1.8.05] - 2026-05-08
-- **🗑️ Đã xóa (Removed)**:
-  - **xóa(redmine):** Xóa bỏ hoàn toàn chức năng "Đồng bộ tất cả comments sang Backlog" do lỗi hiển thị và không cần thiết ở thời điểm hiện tại.
-
+### Removed
+- Xóa bỏ hoàn toàn chức năng "Đồng bộ tất cả comments sang Backlog" do lỗi hiển thị và không cần thiết ở thời điểm hiện tại
 
 ## [1.8.04] - 2024-05-24
-
-### ✨ Tính năng mới
-
-*   **tính năng(gem):** Thêm hỗ trợ cho các mô hình "Generative Enhanced Models" (GEM) tùy chỉnh, hoạt động như một nhà cung cấp AI mới.
-*   **tính năng(ui):** Tạo một mục cấu hình riêng cho "Custom GEM", cho phép người dùng chỉ định API endpoint và API key.
-
-### 🐛 Sửa lỗi
-
-*   **sửa lỗi(migrate):** Sửa một lỗi nghiêm trọng trong chức năng "Migrate Issue". Lỗi này xảy ra khi quá trình xử lý file đính kèm bị thất bại do không lấy đúng domain của Backlog. Logic mới sẽ luôn lấy domain từ phần cài đặt một cách chính xác.
-*   **sửa lỗi(migrate):** Cải thiện việc ghi log lỗi cho chức năng migrate. Giờ đây, toàn bộ dữ liệu request (payload) sẽ được ghi lại nếu Redmine không thể tạo issue, giúp việc chẩn đoán các lỗi liên quan đến trường tùy chỉnh (custom field) trở nên dễ dàng hơn.
-*   **sửa lỗi(options):** Khắc phục lỗi nghiêm trọng trong việc lưu API key. Logic mới đảm bảo các key được lưu, cập nhật và xóa một cách chính xác, ngăn chặn việc vô tình lưu giá trị `**********`.
-
-### ♻️ Tái cấu trúc (Refactoring)
-
-*   **tái cấu trúc(background):** Dọn dẹp và tái cấu trúc lại file `background.js` để loại bỏ các khối code bị trùng lặp liên quan đến cơ chế kiểm tra cập nhật, giúp cải thiện sự ổn định và khả năng bảo trì.
-
-### 🔨 Công việc khác (Chore)
-
-*   **chore(lint):** Sửa tất cả các lỗi và cảnh báo từ ESLint để cải thiện chất lượng và tính nhất quán của code.
+### Added
+- Thêm hỗ trợ cho các mô hình "Generative Enhanced Models" (GEM) tùy chỉnh
+- Tạo mục cấu hình riêng cho "Custom GEM", cho phép chỉ định API endpoint và API key
+### Fixed
+- Sửa lỗi nghiêm trọng trong chức năng "Migrate Issue" khi xử lý file đính kèm
+- Cải thiện ghi log lỗi cho chức năng migrate với đầy đủ payload
+- Khắc phục lỗi lưu API key, ngăn lưu giá trị ******
+### Refactored
+- Dọn dẹp và tái cấu trúc file background.js để loại bỏ code trùng lặp
+### Chore
+- Sửa tất cả lỗi và cảnh báo từ ESLint
 
 ## [1.8.03] - 2024-04-26
-
-### ✨ Tính năng mới
-- **Flow Redmine → Backlog**: Hoàn thiện tính năng đồng bộ ngược từ Redmine sang Backlog
-- **Attachment handling**: Tự động extract và upload file đính kèm từ Redmine sang Backlog
-- **Batch sync**: Nút "🔄 Đồng bộ tất cả comments" để sync hàng loạt với progress tracking
-- **Smart @mentions**: 
-  - Hiển thị dropdown gợi ý users khi gõ `@` trong preview
-  - Hỗ trợ cả `userId` (login ID) và fallback sang name khi không có userId
-  - Tự động detect mentions từ preview text để gửi notification
-  - Gửi danh sách numeric IDs qua `notifiedUserId[]` để Backlog gửi notification đúng
-- **Project-specific user loading**: Dùng API `/api/v2/projects/{key}/users` (cần Project Member, không cần Admin)
-- **Lazy user loading**: Chỉ load users khi nhập issue key hợp lệ, tránh gọi API sai project
-
-### 🔧 Sửa lỗi
-- Sửa lỗi `userId: null` khiến không tag được một số users trong Backlog
-- Sửa lỗi modal không hiển thị user suggestions khi gõ `@`
-- Sửa lỗi auto-load users với project key sai (COUIX_PJ vs CTRIAL)
-- Thêm null checks cho user data để tránh crash khi API trả về data không đầy đủ
-- Sửa duplicate code trong `updateAutoNotify()` function
-
-### 🔄 Thay đổi
-- Không auto-load users khi mở modal → tránh gọi API với project key sai
-- Hiển thị hint rõ ràng khi chưa có issue key hoặc không load được users
-- Cải thiện UX: chỉ hiển thị suggestion dropdown khi có data users hợp lệ
-
-### 📝 Tài liệu
-- Cập nhật README.md với hướng dẫn sử dụng flow Redmine → Backlog
-- Thêm logging chi tiết để debug API calls
-
+### Added
+- Flow Redmine → Backlog: đồng bộ ngược từ Redmine sang Backlog
+- Attachment handling: tự động extract và upload file đính kèm
+- Batch sync: nút "Đồng bộ tất cả comments" với progress tracking
+- Smart @mentions với dropdown gợi ý users khi gõ @
+- Project-specific user loading từ API /api/v2/projects/{key}/users
+- Lazy user loading chỉ khi nhập issue key hợp lệ
+### Fixed
+- Sửa lỗi userId: null khiến không tag được users
+- Sửa lỗi modal không hiển thị user suggestions khi gõ @
+- Sửa lỗi auto-load users với project key sai
+- Thêm null checks cho user data
+### Changed
+- Không auto-load users khi mở modal
+- Hiển thị hint rõ ràng khi chưa có issue key
+- Cải thiện UX: chỉ hiển thị dropdown khi có data users hợp lệ
+### Docs
+- Cập nhật README.md với hướng dẫn flow Redmine → Backlog
 
 ## [1.8.02] - 2024-04-23
-
-### 🚀 Cải thiện hiệu năng
-- Tối ưu `translateBatch` với `Promise.all()` batch 5 thay vì gọi tuần tự, giảm thời gian dịch batch comments
-- Thêm cleanup handlers (`beforeunload`) để giải phóng interval và observer khi rời trang, tránh memory leak
-- Giới hạn MutationObserver scope vào container cụ thể (`.comments`, `.comment-list`) thay vì `document.body` để giảm CPU usage
-- Thêm projects caching (5 phút) và debounce (500ms) cho `fetchProjects` trong Options page
-- Thêm `debounce()` và `throttle()` utility functions trong helpers.js
-
-### 🔧 Sửa lỗi
-- Sửa `reportProjectId` dropdown không được populate data tương tự `defaultProjectId`
-- Sửa lỗi status message bị mất sau khi lưu cấu hình (thêm `setTimeout` trước `loadOptions`)
-
-### 🔄 Thay đổi
+### Improved
+- Tối ưu translateBatch với Promise.all batch 5
+- Thêm cleanup handlers để tránh memory leak
+- Giới hạn MutationObserver scope vào container cụ thể
+- Thêm projects caching 5 phút và debounce 500ms
+- Thêm debounce và throttle utility functions
+### Fixed
+- Sửa reportProjectId dropdown không populate data
+- Sửa lỗi status message bị mất sau khi lưu cấu hình
+### Changed
 - Chuẩn hóa code style: đổi single quotes sang double quotes
 
-
 ## [1.8.01] - 2024-04-23
-
-### ✨ Tính năng mới
-- Triển khai danh sách "Tứ trụ" AI mạnh mẽ (Gemma 3/4, Gemini 3.1) với RPD cao
-- Cơ chế **Load Balancing**: Xáo trộn ngẫu nhiên Model & Key để tối ưu hóa hạn mức
-- Tự động nhận diện Gemma để sửa lỗi **Error 400** (Developer instruction support)
-
-### 🔧 Sửa lỗi
-- Khôi phục logic tìm kiếm Redmine ổn định (Chuẩn hóa normalizeLoose & fallback search)
-- Sửa lỗi hiển thị "Model ma" và cải thiện UI nút chọn model (màu sắc rõ ràng hơn)
-- Vá các lỗi cú pháp HTML trong trang Options và dọn dẹp code thừa (`fallbackModel`)
-
+### Added
+- Triển khai danh sách "Tứ trụ" AI mạnh mẽ (Gemma 3/4, Gemini 3.1)
+- Cơ chế Load Balancing: xáo trộn random Model & Key
+- Tự động nhận diện Gemma để sửa lỗi Error 400
+### Fixed
+- Khôi phục logic tìm kiếm Redmine ổn định
+- Sửa lỗi hiển thị "Model ma" và cải thiện UI chọn model
+- Vá lỗi cú pháp HTML trong trang Options
 
 ## [1.8.00] - 2024-04-23
-
-### ✨ Tính năng mới
-- Cải thiện giao diện Options với collapsible sections độc lập (Redmine, Backlog, Primary AI, Fallback AI)
-- **Multiple Gemini Models** hiển thị dạng button clickable, chọn/bỏ bằng click
-- **Multiple Gemini Keys** gộp chung với Multiple Models trong section Primary AI
+### Added
+- Cải thiện giao diện Options với collapsible sections
+- Multiple Gemini Models dạng button clickable
+- Multiple Gemini Keys gộp chung với Models
 - Default chọn 5 models đầu tiên khi chưa có cấu hình
-
-### 🔄 Thay đổi
-- Xóa dropdown Model cũ (trùng lặp với Multiple Models)
-- Fallback provider mặc định là "none" (không dùng dự phòng)
+### Changed
+- Xóa dropdown Model cũ
+- Fallback provider mặc định là "none"
 - Loại bỏ Gemma 12B khỏi danh sách model
-- Tối ưu margin/padding: `.field` margin-bottom: 0, `.grid` gap: 0
-- Đưa Custom Fields vào trong section Redmine
-
-### 🚀 Cải thiện hiệu năng
-- Cải thiện hiệu năng dịch AI bằng caching layer cho settings và Redmine issue lookups
-- Tối ưu batch translation bằng cách giảm API calls và message overhead
-- Default Modal UI ở tab "Preview" để trải nghiệm mượt mà hơn
-- Cải thiện Redmine formatting trong preview (Headings, Tables, Lists, `{{collapse}}` macro)
-- Refactor AI service để xử lý Gemma models bằng cách merge system instructions vào user prompts
-- Ổn định cấu hình "Tứ trụ" AI models (Gemini 3.1 Flash Lite, Gemma 3/4)
-
-### 🔧 Sửa lỗi
+### Improved
+- Tối ưu margin/padding
+- Đưa Custom Fields vào section Redmine
+- Cải thiện hiệu năng AI với caching layer
+- Tối ưu batch translation
+- Cải thiện Redmine formatting trong preview
+- Refactor AI service cho Gemma models
+- Ổn định cấu hình "Tứ trụ" AI models
+### Fixed
 - Sửa logic load models mặc định khi không có cấu hình
-- Clean up code thừa (primaryModelSelect, initialization duplicate)
-
+- Clean up code thừa
 
 ## [1.7.02] - 2024-04-22
-- **✨ Added**:
-  - Thêm lệnh `npm run bump` để tự tăng patch version và đồng bộ `manifest.json` với `package.json`.
-  - Thêm cơ chế tạo `stub entry` tự động trong `CHANGELOG.md` khi bump sang version mới.
-  - Thêm script `check:version-sync` để kiểm tra đồng bộ version giữa `manifest.json` và `package.json`.
-  - Thêm **Multiple Gemini Models** trong Options (tương tự Multiple Keys), hỗ trợ nhập tối đa 5 model IDs, random chọn model khi gọi API để tăng throughput khi bị rate limit.
-  - Cập nhật danh sách **Gemini models** lên series 2.5: `gemini-2.5-flash-lite` (RPM 15), `gemini-2.5-flash` (RPM 10), `gemini-2.5-pro` (RPM 5).
-  - Cải thiện AI fallback: xử lý thêm lỗi 503, "high demand", "try again later" và cross-provider retry.
-- **🔄 Changed**:
-  - Đổi màu giao diện từ đỏ (#c93b2f) sang xanh (#2563eb) cho đồng nhất với thiết kế Cyan-Flow.
-  - Primary Provider cố định là Gemini để đảm bảo chất lượng dịch mặc định.
-- **🔧 Fixed**:
-  - Khắc phục rủi ro CI/CD tiếp tục dùng version cũ khi `package.json` đã tăng nhưng `manifest.json` chưa được cập nhật.
-  - Thêm bước fail-fast trong workflow để chặn build/release khi version giữa các file metadata bị lệch.
-- **📝 Docs**:
-  - Loại bỏ version hardcoded khỏi `README.md` để giảm nguy cơ lệch version giữa tài liệu và artifact release.
-  - Cập nhật `.skills/agent_workflow.md` và `DEVELOPMENT.md` để xác định rõ `manifest.json` là source of truth cho version phát hành.
+### Added
+- Thêm lệnh npm run bump để tự tăng patch version
+- Tự động tạo stub entry trong CHANGELOG.md khi bump
+- Script check:version-sync kiểm tra đồng bộ version
+- Multiple Gemini Models trong Options
+- Cập nhật danh sách Gemini models lên series 2.5
+- Cải thiện AI fallback cho lỗi 503
+### Changed
+- Đổi màu giao diện từ đỏ sang xanh cho đồng nhất Cyan-Flow
+- Primary Provider cố định là Gemini
+### Fixed
+- Khắc phục rủi ro CI/CD dùng version cũ
+- Thêm fail-fast trong workflow
+### Docs
+- Loại bỏ version hardcoded khỏi README.md
+- Cập nhật .skills/agent_workflow.md và DEVELOPMENT.md
 
 ## [1.7.01] - 2024-04-22
-- **✨ Added**:
-  - Thêm `qwen/qwen3-32b` vào danh sách model của **Groq** dưới dạng lựa chọn preview cho tác vụ đa ngôn ngữ.
-- **🔄 Changed**:
-  - Curate lại danh sách model của **Groq** và **Cerebras** theo hướng ưu tiên chất lượng dịch Nhật -> Việt.
-  - Loại bỏ các model `8B` khỏi dropdown để tránh chọn các model cho chất lượng dịch không ổn định.
-- **🔧 Fixed**:
-  - Sửa model ID của **Cerebras Qwen** theo docs mới thành `qwen-3-235b-a22b-instruct-2507` để tránh lỗi gọi API sai model.
+### Added
+- Thêm qwen/qwen3-32b vào danh sách model của Groq
+### Changed
+- Curate lại danh sách model Groq và Cerebras
+- Loại bỏ model 8B khỏi dropdown
+### Fixed
+- Sửa model ID của Cerebras Qwen thành qwen-3-235b-a22b-instruct-2507
 
 ## [1.7.00] - 2024-04-22
-- **✨ Added**:
-  - Thêm **Groq** làm lựa chọn cho cả AI chính và AI dự phòng.
-  - Bổ sung cấu hình **Multiple Gemini Keys** trong trang Options, hỗ trợ nhập tối đa 10 key và random chọn key để giảm khả năng bị rate limit.
-  - Thêm chế độ **toggle preview** trong modal để chuyển nhanh giữa dạng text editor và HTML preview.
-  - Thêm khối nhập **Groq API Key** cho cả primary và fallback provider.
-  - Bổ sung nút `+ Thêm Key` để nhập nhanh danh sách Gemini API keys nhiều dòng.
-- **🔄 Changed**:
-  - Điều chỉnh lại bố cục form migrate: đưa `Target Version` và `Due Date` lên cùng một hàng, tách `Tracker` và `Priority` sang hàng riêng để dễ thao tác hơn.
-  - Hoàn thiện dropdown model cho **Groq** với danh sách model được curate theo ưu tiên dịch Nhật -> Việt.
-  - Cập nhật lại danh sách **Cerebras** theo docs mới, bao gồm sửa đúng model ID của Qwen preview.
-- **🔧 Fixed**:
-  - Mở rộng validate cấu hình và luồng đọc settings để hỗ trợ đầy đủ `geminiApiKeys` và `groqApiKey`.
-  - Cải thiện logic quét attachment từ comment/changelog của Backlog để nhận diện file ổn định hơn.
-  - Nới giới hạn chuẩn hóa xuống còn tối đa 2 dòng trống liên tiếp, giúp giữ khoảng cách đoạn văn tốt hơn trong Markdown preview/gửi sang Redmine.
+### Added
+- Thêm Groq làm lựa chọn cho cả AI chính và dự phòng
+- Multiple Gemini Keys trong trang Options
+- Toggle preview trong modal
+- Khối nhập Groq API Key cho cả primary và fallback
+- Nút + Thêm Key để nhập nhanh Gemini keys
+### Changed
+- Điều chỉnh bố cục form migrate
+- Hoàn thiện dropdown model Groq
+- Cập nhật danh sách Cerebras theo docs mới
+### Fixed
+- Mở rộng validate cấu hình và luồng đọc settings
+- Cải thiện logic quét attachment
+- Nới giới hạn chuẩn hóa xuống 2 dòng trống liên tiếp
 
 ## [1.6.01] - 2024-04-21
-- **✨ Added**:
-  - Thêm Tên người tạo và Thời gian tạo comment vào đầu mỗi bản ghi gửi sang Redmine.
-  - Tích hợp trường Target Version trong Modal Migrate, tự động map từ Milestone của Backlog.
-  - Triển khai cơ chế "Look-Ahead" để gộp các file media được upload ở các comment tiếp theo vào comment chính.
-  - Tự động tìm và gộp file đính kèm từ comment sau nếu tên file được nhắc đến trong văn bản comment trước.
-- **🔄 Changed**:
-  - Chuyển Gemini sang làm AI chính (Primary) và Cerebras làm AI dự phòng (Fallback) để tối ưu chất lượng dịch thuật ban đầu.
-  - Cập nhật model mặc định:
-    - Gemini: Gemini 3.1 Flash Lite.
-    - Cerebras: GPT OSS 120B.
-  - Giá trị mặc định cho Due Date được tính là 3 ngày làm việc tiếp theo, bỏ qua Thứ Bảy và Chủ Nhật.
-  - AI tự động nhận diện và trả về định dạng 「Nội dung gốc」 (Bản dịch) cho các thuật ngữ quan trọng hoặc nội dung trong ngoặc vuông Nhật Bản.
-- **🔧 Fixed**:
-  - Khắc phục lỗi không hiển thị trạng thái "Saved" khi nhập Cerebras API Key.
-  - Sửa lỗi mất dòng trống trong comment, đảm bảo giữ lại khoảng trắng hợp lý giữa các đoạn văn.
-  - Sửa lỗi hiển thị Ordered List và Blockquotes để khớp hoàn toàn với hiển thị của Redmine.
-  - Đảm bảo mọi đường dẫn tài liệu được render dạng link click được thay vì chỉ hiển thị text.
-  - Fix toàn bộ lỗi linting và parsing error trong `src/redmine_content.js` và `src/modules/services/report-log-time.js`.
-  - Tối ưu hóa khai báo global variables để tương thích với ESLint.
+### Added
+- Thêm tên người tạo và thời gian tạo comment vào bản ghi
+- Tích hợp trường Target Version trong Modal Migrate
+- Cơ chế "Look-Ahead" gộp file media
+- Tự động tìm và gộp file đính kèm
+### Changed
+- Chuyển Gemini làm AI chính và Cerebras làm fallback
+- Cập nhật model mặc định: Gemini 3.1 Flash Lite, Cerebras GPT OSS 120B
+- Giá trị mặc định Due Date là 3 ngày làm việc tiếp theo
+- AI tự động nhận diện định dạng べ cavity original Japanese
+### Fixed
+- Sửa lỗi không hiển thị "Saved" khi nhập Cerebras API Key
+- Sửa lỗi mất dòng trống trong comment
+- Sửa lỗi Ordered List và Blockquotes
+- Đảm bảo đường dẫn dạng link click được
+- Fix linting và parsing error
+- Tối ưu khai báo global variables
 
 ## [1.6.00] - 2024-04-20
-- **✨ Added**:
-  - Thêm hiệu ứng làm mờ và vòng xoay (Spinner) khi đang di chuyển dữ liệu để tránh thao tác nhầm và cung cấp phản hồi trực quan.
-  - Thêm nút **🔄 Đồng bộ Project** giúp cập nhật danh sách dự án từ Redmine bất cứ lúc nào kèm trạng thái hiển thị.
-- **🔄 Changed**:
-  - Tự động đóng Modal sau khi nhấn "Xem trên Redmine" để làm gọn giao diện người dùng.
-  - Việt hóa và làm đẹp khu vực Logs với các tác vụ **📥 Xuất File Lỗi** và **🗑️ Xóa Lịch Sử Lỗi**.
-  - Triển khai cơ chế Cache đính kèm (Deduplication) để tránh tải lên lặp lại cùng một tệp tin trong một phiên làm việc.
-- **🔧 Fixed**:
-  - Xử lý triệt để lỗi AI làm sai định dạng ảnh bằng cơ chế Marker Recovery.
-  - Nhận diện Marker linh hoạt hơn với regex chấp nhận các biến thể có dấu cách dư thừa.
-  - Khắc phục lỗi hiển thị trường Due Date bị tràn dòng hoặc bọc dòng không mong muốn.
+### Added
+- Hiệu ứng làm mờ và Spinner khi đang migrate
+- Nút Đồng bộ Project cập nhật danh sách dự án
+### Changed
+- Tự động đóng Modal sau khi nhấn "Xem trên Redmine"
+- Việt hóa và làm đẹp khu vực Logs
+- Cache attachment (Deduplication)
+### Fixed
+- Xử lý triệt để lỗi AI làm sai định dạng ảnh
+- Nhận diện Marker linh hoạt hơn
+- Khắc phục lỗi hiển thị Due Date tràn dòng
 
 ## [1.5.01] - 2024-04-19
-- **🔧 Fixed**:
-  - Sửa một số lỗi kỹ thuật trong mã nguồn để giúp code sạch hơn, hoạt động ổn định và dễ bảo trì hơn trong tương lai.
+### Fixed
+- Sửa lỗi kỹ thuật trong mã nguồn để code sạch hơn
 
 ## [1.5.00] - 2024-04-19
-- **✨ Added**:
-  - Khi gặp lỗi cấu hình như thiếu API key, extension sẽ hiển thị thông báo lỗi rõ ràng kèm link trực tiếp đến trang Options.
-  - Nhấp vào biểu tượng extension trên thanh công cụ sẽ mở thẳng trang Options để cấu hình nhanh hơn.
-- **🔄 Changed**:
-  - Đổi tên extension thành **B2R** cho ngắn gọn và dễ nhớ.
+### Added
+- Thông báo lỗi cấu hình rõ ràng kèm link Options
+- Nhấp vào biểu tượng extension mở thẳng trang Options
+### Changed
+- Đổi tên extension thành B2R
 
 ## [1.4.07] - 2024-04-19
-- **✨ Added**:
-  - Bổ sung cơ chế tự động đồng bộ API Key giữa các provider nếu dùng chung một loại như Gemini hoặc Cerebras.
-- **🔄 Changed**:
-  - Hợp nhất khối cấu hình Redmine (Domain, API Key, Project, Custom Fields) vào một khung giao diện đồng nhất trong trang Options.
-  - Tối ưu logic hiển thị nút Migrate Issue và tự động hóa việc xác định ID các trường Custom Fields của Redmine.
+### Added
+- Cơ chế tự động đồng bộ API Key giữa các provider
+### Changed
+- Hợp nhất khối cấu hình Redmine vào giao diện đồng nhất
+- Tối ưu logic hiển thị nút Migrate Issue
 
 ## [1.4.06] - 2024-04-18
-- **🚀 CI/CD**:
-  - Chuyển đổi sang cơ chế OAuth2 Refresh Token để khắc phục lỗi quota của Service Account trên Google Drive.
+### Improved
+- Chuyển sang OAuth2 Refresh Token để khắc phục quota Service Account
 
 ## [1.4.05] - 2024-04-18
-- **✨ Added**:
-  - Hỗ trợ đính kèm Video (`.mp4`, `.mov`, `.webm`) và các loại tệp tin khác như `.pdf`, `.zip`.
-  - Video được hiển thị bằng trình phát nội bộ trên Redmine.
-- **🔄 Changed**:
-  - Nâng cấp hệ thống quét đính kèm tự động từ phần Changelog của Backlog.
-  - Khôi phục và bổ sung đầy đủ hướng dẫn lấy API key trong trang Options.
-- **🔧 Fixed**:
-  - Fix toàn bộ lỗi linting, chuẩn hóa code style và bổ sung quy trình `npm run lint` bắt buộc vào Agent Workflow.
+### Added
+- Hỗ trợ đính kèm Video (.mp4, .mov, .webm) và các loại tệp tin
+- Video hiển thị bằng trình phát nội bộ
+### Changed
+- Nâng cấp hệ thống quét attachment tự động
+- Khôi phục và bổ sung hướng dẫn lấy API key
+### Fixed
+- Fix toàn bộ lỗi linting
 
 ## [1.4.04] - 2024-04-18
-- **🔧 Fixed**:
-  - Điều chỉnh cấu trúc thư mục trong bản build để khớp với Manifest, giúp extension có thể cài đặt và chạy bình thường.
+### Fixed
+- Điều chỉnh cấu trúc thư mục trong bản build khớp với Manifest
 
 ## [1.4.03] - 2024-04-18
-- **✨ Added**:
-  - Thêm Qwen 3 235B và GPT OSS 120B vào danh sách model của Cerebras để thay thế model Llama 70B bị giới hạn trên Free Tier.
-- **🔄 Changed**:
-  - Chuyển Primary Model mặc định về Llama 3.1 8B để tránh lỗi 404.
+### Added
+- Thêm Qwen 3 235B và GPT OSS 120B vào danh sách Cerebras
+### Changed
+- Chuyển Primary Model mặc định về Llama 3.1 8B
 
 ## [1.4.02] - 2024-04-18
-- **🔄 Changed**:
-  - Chuyển model chính mặc định sang Llama 3.1 70B để đảm bảo chất lượng dịch thuật tốt nhất.
-  - Thêm quy tắc nghiêm ngặt để AI không làm thay đổi tag ảnh `[[TB_IMG:id]]` và code blocks.
-- **🔧 Fixed**:
-  - Mở rộng quyền truy cập và gửi kèm session cookies giúp hiển thị ảnh đầy đủ trên Redmine.
+### Changed
+- Chuyển model chính mặc định sang Llama 3.1 70B
+- Thêm quy tắc AI không thay đổi tag ảnh và code blocks
+### Fixed
+- Mở rộng quyền truy cập và gửi kèm session cookies
 
 ## [1.4.01] - 2024-04-18
-- **🔄 Changed**:
-  - Đặt Llama 3.1 70B (Cerebras) làm model chính và Gemma 3 27B IT (Gemini) làm model dự phòng.
-  - Nâng cấp prompt và logic để giữ nguyên các khối code (```)
-- **📝 Docs**:
-  - Viết lại Changelog súc tích và cập nhật README với thông tin model mới.
+### Changed
+- Đặt Llama 3.1 70B làm model chính và Gemma 3 27B IT làm fallback
+- Nâng cấp prompt và logic giữ nguyên code blocks
+### Docs
+- Viết lại Changelog súc tích và cập nhật README
 
 ## [1.4.00] - 2024-04-18
-- **✨ Added**:
-  - Thêm nút tạo nhanh Issue Redmine từ Header của Backlog.
-  - Cho phép chọn nhà cung cấp AI chính/phụ độc lập với logic tự động failover.
-- **🔄 Changed**:
-  - Áp dụng giao diện Cyan-Flow hiện đại, tùy chỉnh linh hoạt và tự động tải tiêu đề Redmine.
-  - Tái cấu trúc theo hướng service-based để dễ bảo trì.
+### Added
+- Nút tạo nhanh Issue Redmine từ Header của Backlog
+- Chọn nhà cung cấp AI chính/phụ độc lập với failover
+### Changed
+- Giao diện Cyan-Flow hiện đại
+- Tái cấu trúc service-based
 
 ## [1.3.00] - 2024-04-18
-- **✨ Added**:
-  - Di chuyển tất cả bình luận cùng lúc với cơ chế gửi tuần tự lên Redmine.
-  - Tự động lấy danh sách Dự án, Tracker, Priority từ Redmine.
+### Added
+- Di chuyển tất cả bình luận cùng lúc
+- Tự động lấy danh sách Dự án, Tracker, Priority từ Redmine
 
-## [1.2.x] - 2024-04-17
-- **✨ Added**:
-  - Thiết lập hệ thống kỹ năng cho AI Agent và chuẩn hóa đánh số phiên bản.
-- **🔧 Fixed**:
-  - Sửa lỗi hiển thị Blockquote và định dạng tag tên người dùng.
-  - Khắc phục lỗi UI liên quan đến hiệu ứng hover và hiển thị Modal.
+## [1.2.00] - 2024-04-17
+### Added
+- Thiết lập hệ thống kỹ năng cho AI Agent
+### Fixed
+- Sửa lỗi hiển thị Blockquote và định dạng tag tên người dùng
+- Khắc phục lỗi UI hover và modal
 
 ## [1.1.00] - 2024-04-16
-- **✨ Added**:
-  - Thêm bộ chọn model và cải thiện tìm kiếm Issue Redmine.
-- **🔒 Security**:
-  - Mã hóa API key khi lưu trữ cục bộ.
+### Added
+- Thêm bộ chọn model và cải thiện tìm kiếm Issue Redmine
+### Security
+- Mã hóa API key khi lưu trữ cục bộ
 
 ## [1.0.01] - 2024-04-15
-- **✨ Added**:
-  - Phiên bản đầu tiên: dịch tiếng Nhật sang Việt và đồng bộ Backlog → Redmine.
+### Added
+- Phiên bản đầu tiên: dịch tiếng Nhật sang Việt và đồng bộ Backlog → Redmine
