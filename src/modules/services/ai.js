@@ -4,6 +4,11 @@
 
 // Global state for round-robin index. This persists for the service worker's lifetime.
 let lastUsedGeminiIndex = 0;
+const geminiCooldownUntilByCombination = new Map();
+const lastUsedProviderIndexByProvider = {};
+const providerCooldownUntilByCombination = new Map();
+const GEMINI_RATE_LIMIT_COOLDOWN_MS = 60 * 1000;
+const GEMINI_OVERLOAD_COOLDOWN_MS = 30 * 1000;
 
 /**
  * Fetches the list of available models from a provider.
@@ -20,6 +25,8 @@ async function listProviderModels(provider, apiKey) {
   case TB.PROVIDERS.CEREBRAS:
     // Cerebras does not have a public model listing API, return hardcoded list.
     return Promise.resolve(TB.CEREBRAS_MODELS);
+  case TB.PROVIDERS.OPENROUTER:
+    return _listOpenRouterModels(apiKey);
   default:
     return Promise.resolve([]);
   }
@@ -30,7 +37,9 @@ async function _listGeminiModels(apiKey) {
   const response = await timeoutFetch(url, { method: "GET" }, 5000);
   if (!response.ok) {
     const errorMsg = await readErrorMessage(response);
-    throw new Error(`Failed to fetch Gemini models: ${sanitizeErrorMessage(errorMsg, response.status)}`);
+    throw new Error(
+      `Failed to fetch Gemini models: ${sanitizeErrorMessage(errorMsg, response.status)}`
+    );
   }
   const data = await safeReadJson(response);
   return data.models
@@ -54,13 +63,39 @@ async function _listGroqModels(apiKey) {
   );
   if (!response.ok) {
     const errorMsg = await readErrorMessage(response);
-    throw new Error(`Failed to fetch Groq models: ${sanitizeErrorMessage(errorMsg, response.status)}`);
+    throw new Error(
+      `Failed to fetch Groq models: ${sanitizeErrorMessage(errorMsg, response.status)}`
+    );
   }
   const data = await safeReadJson(response);
   return data.data
     .map((model) => ({
       value: model.id,
       label: model.id,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+async function _listOpenRouterModels(apiKey) {
+  const response = await timeoutFetch(
+    "https://openrouter.ai/api/v1/models",
+    {
+      method: "GET",
+      headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+    },
+    5000
+  );
+  if (!response.ok) {
+    const errorMsg = await readErrorMessage(response);
+    throw new Error(
+      `Failed to fetch OpenRouter models: ${sanitizeErrorMessage(errorMsg, response.status)}`
+    );
+  }
+  const data = await safeReadJson(response);
+  return (data.data || [])
+    .map((model) => ({
+      value: model.id,
+      label: model.name || model.id,
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 }
@@ -90,6 +125,15 @@ async function testModelAvailability(provider, modelId, settings) {
     case TB.PROVIDERS.CEREBRAS:
       if (!settings.cerebrasApiKey) throw new Error("No Cerebras API key found for testing.");
       await callCerebrasAPI(settings.cerebrasApiKey, testText, modelId, () => "Just say \"ok\"");
+      break;
+    case TB.PROVIDERS.OPENROUTER:
+      if (!settings.openrouterApiKey) throw new Error("No OpenRouter API key found for testing.");
+      await callOpenRouterAPI(
+        settings.openrouterApiKey,
+        testText,
+        modelId,
+        () => "Just say \"ok\""
+      );
       break;
     default:
       throw new Error(`Unsupported provider for testing: ${provider}`);
@@ -127,12 +171,7 @@ async function translateText(commentText, settings, commentUrl = null, promptFn 
     );
   } catch (error) {
     // Fallback on rate limit and temporary provider overloads such as Gemini 503 high demand.
-    const isRetryableProviderFailure =
-      error.message.includes("429") ||
-      error.message.includes("rate limit") ||
-      error.message.includes("503") ||
-      error.message.toLowerCase().includes("high demand") ||
-      error.message.toLowerCase().includes("try again later");
+    const isRetryableProviderFailure = isRetryableProviderError(error);
     const hasFallback = fallbackProvider && fallbackProvider !== TB.PROVIDERS.NONE;
 
     if (isRetryableProviderFailure && hasFallback) {
@@ -190,7 +229,9 @@ async function callAIsByProvider(provider, model, settings, text, url, promptFn)
   if (provider === TB.PROVIDERS.GEMINI) {
     // Use settings models if available, otherwise use all official models, otherwise fallback to the passed model
     let models = [];
-    if (settings.geminiModels?.length > 0) {
+    if (provider === settings.fallbackProvider && settings.fallbackGeminiModels?.length > 0) {
+      models = settings.fallbackGeminiModels;
+    } else if (settings.geminiModels?.length > 0) {
       models = settings.geminiModels;
     } else if (TB.GEMINI_MODELS?.length > 0) {
       models = TB.GEMINI_MODELS.map((m) => m.value);
@@ -198,11 +239,13 @@ async function callAIsByProvider(provider, model, settings, text, url, promptFn)
       models = [model];
     }
 
-    const apiKeys =
-      (settings.geminiApiKeys?.length > 0
-        ? settings.geminiApiKeys
-        : [settings.geminiApiKey]
-      ).filter(Boolean);
+    const apiKeys = (
+      provider === settings.fallbackProvider && settings.fallbackGeminiApiKeys?.length > 0
+        ? settings.fallbackGeminiApiKeys
+        : settings.geminiApiKeys?.length > 0
+          ? settings.geminiApiKeys
+          : [settings.geminiApiKey]
+    ).filter(Boolean);
 
     // Create a flat list of all [model, key] combinations
     const combinations = [];
@@ -217,45 +260,226 @@ async function callAIsByProvider(provider, model, settings, text, url, promptFn)
     }
 
     let lastError = null;
+    let skippedCooldowns = 0;
+    let nextCooldownReadyAt = Infinity;
     const startIndex = lastUsedGeminiIndex % combinations.length;
 
     // Iterate through combinations in a round-robin fashion for failover
     for (let i = 0; i < combinations.length; i++) {
       const currentIndex = (startIndex + i) % combinations.length;
       const { model: currentModel, key: currentKey } = combinations[currentIndex];
+      const combinationId = getGeminiCombinationId(currentModel, currentKey);
+      const cooldownUntil = geminiCooldownUntilByCombination.get(combinationId) || 0;
+
+      if (cooldownUntil > Date.now()) {
+        skippedCooldowns++;
+        nextCooldownReadyAt = Math.min(nextCooldownReadyAt, cooldownUntil);
+        console.warn(
+          `[TB-AI] Skipping Gemini ${currentModel} (${maskApiKey(currentKey)}), cooling down for ${Math.ceil(
+            (cooldownUntil - Date.now()) / 1000
+          )}s`
+        );
+        continue;
+      }
+      geminiCooldownUntilByCombination.delete(combinationId);
 
       try {
-        console.log(`[TB-AI] Attempting call with model: ${currentModel} (Round-Robin)`);
+        console.log(
+          `[TB-AI] Attempting Gemini call with model: ${currentModel}, key: ${maskApiKey(
+            currentKey
+          )} (Round-Robin)`
+        );
         const result = await callGeminiAPI(currentKey, text, currentModel, promptFn, url);
 
         // Success! Update the index for the next call and return.
         lastUsedGeminiIndex = (currentIndex + 1) % combinations.length;
         return result;
       } catch (error) {
-        const isRetryable =
-          error.message.includes("429") ||
-          error.message.includes("rate limit") ||
-          error.message.includes("503") ||
-          error.message.toLowerCase().includes("high demand") ||
-          error.message.toLowerCase().includes("try again later");
+        const isRetryable = isRetryableProviderError(error);
 
         if (!isRetryable) {
           // For non-retryable errors, fail immediately.
           throw error;
         }
         lastError = error;
-        console.warn(`[TB-AI] Gemini (${currentModel}) failed with ${error.message}, trying next...`);
+        const cooldownMs = getGeminiCooldownDuration(error);
+        geminiCooldownUntilByCombination.set(combinationId, Date.now() + cooldownMs);
+        console.warn(
+          `[TB-AI] Gemini ${currentModel} (${maskApiKey(
+            currentKey
+          )}) failed with ${error.message}. Cooling down ${Math.ceil(cooldownMs / 1000)}s, trying next...`
+        );
       }
+    }
+
+    if (skippedCooldowns === combinations.length && Number.isFinite(nextCooldownReadyAt)) {
+      const waitSeconds = Math.max(1, Math.ceil((nextCooldownReadyAt - Date.now()) / 1000));
+      throw new Error(`All Gemini model/key combinations are cooling down. Try again in ${waitSeconds}s.`);
     }
 
     // If all combinations were exhausted, throw the last captured error.
     throw lastError || new Error("All Gemini model/key combinations failed.");
   } else if (provider === TB.PROVIDERS.CEREBRAS) {
-    return await callCerebrasAPI(settings.cerebrasApiKey, text, model, promptFn, url);
+    return await callProviderWithFailover(provider, model, settings, text, url, promptFn);
   } else if (provider === TB.PROVIDERS.GROQ) {
-    return await callGroqAPI(settings.groqApiKey, text, model, promptFn);
+    return await callProviderWithFailover(provider, model, settings, text, url, promptFn);
+  } else if (provider === TB.PROVIDERS.OPENROUTER) {
+    return await callProviderWithFailover(provider, model, settings, text, url, promptFn);
   }
   throw new Error(`Unknown provider: ${provider}`);
+}
+
+async function callProviderWithFailover(provider, model, settings, text, url, promptFn) {
+  const models = getProviderModelsForCall(settings, provider, model);
+  const apiKeys = getProviderApiKeysForCall(settings, provider);
+  const combinations = [];
+  for (const currentModel of models) {
+    for (const key of apiKeys) {
+      combinations.push({ model: currentModel, key });
+    }
+  }
+
+  if (combinations.length === 0) {
+    throw new Error(`No ${provider} models or API keys are configured.`);
+  }
+
+  let lastError = null;
+  let skippedCooldowns = 0;
+  let nextCooldownReadyAt = Infinity;
+  const startIndex = (lastUsedProviderIndexByProvider[provider] || 0) % combinations.length;
+
+  for (let i = 0; i < combinations.length; i++) {
+    const currentIndex = (startIndex + i) % combinations.length;
+    const { model: currentModel, key: currentKey } = combinations[currentIndex];
+    const combinationId = `${provider}\u0000${currentModel}\u0000${currentKey}`;
+    const cooldownUntil = providerCooldownUntilByCombination.get(combinationId) || 0;
+
+    if (cooldownUntil > Date.now()) {
+      skippedCooldowns++;
+      nextCooldownReadyAt = Math.min(nextCooldownReadyAt, cooldownUntil);
+      continue;
+    }
+    providerCooldownUntilByCombination.delete(combinationId);
+
+    try {
+      const result = await callProviderAPI(provider, currentKey, text, currentModel, promptFn, url);
+      lastUsedProviderIndexByProvider[provider] = (currentIndex + 1) % combinations.length;
+      return result;
+    } catch (error) {
+      if (!isRetryableProviderError(error)) {
+        throw error;
+      }
+      lastError = error;
+      const cooldownMs = getGeminiCooldownDuration(error);
+      providerCooldownUntilByCombination.set(combinationId, Date.now() + cooldownMs);
+      console.warn(
+        `[TB-AI] ${provider} ${currentModel} (${maskApiKey(
+          currentKey
+        )}) failed with ${error.message}. Cooling down ${Math.ceil(cooldownMs / 1000)}s, trying next...`
+      );
+    }
+  }
+
+  if (skippedCooldowns === combinations.length && Number.isFinite(nextCooldownReadyAt)) {
+    const waitSeconds = Math.max(1, Math.ceil((nextCooldownReadyAt - Date.now()) / 1000));
+    throw new Error(`All ${provider} model/key combinations are cooling down. Try again in ${waitSeconds}s.`);
+  }
+
+  throw lastError || new Error(`All ${provider} model/key combinations failed.`);
+}
+
+function getProviderModelsForCall(settings, provider, selectedModel) {
+  if (provider === settings.fallbackProvider) {
+    const fallbackModels = settings[`fallback${capitalize(provider)}Models`] || [];
+    if (fallbackModels.length > 0) {
+      return fallbackModels;
+    }
+  }
+  const selectedModels = settings[`${provider}Models`] || [];
+  if (selectedModels.length > 0) {
+    return selectedModels;
+  }
+  if (selectedModel) {
+    return [selectedModel];
+  }
+  const key = `${provider.toUpperCase()}_MODELS`;
+  const defaultModels = TB[key] || [];
+  return defaultModels.map((item) => item.value).filter(Boolean);
+}
+
+function getProviderApiKeysForCall(settings, provider) {
+  if (provider === settings.fallbackProvider) {
+    const fallbackKeys = settings[`fallback${capitalize(provider)}ApiKeys`] || [];
+    if (fallbackKeys.length > 0) return fallbackKeys;
+    const fallbackKey = settings[`fallback${capitalize(provider)}ApiKey`];
+    if (fallbackKey) return [fallbackKey];
+  }
+  const apiKeys = settings[`${provider}ApiKeys`] || [];
+  const legacyKey = settings[`${provider}ApiKey`];
+  return (apiKeys.length > 0 ? apiKeys : [legacyKey]).filter(Boolean);
+}
+
+function callProviderAPI(provider, apiKey, text, model, promptFn, url) {
+  if (provider === TB.PROVIDERS.CEREBRAS) {
+    return callCerebrasAPI(apiKey, text, model, promptFn, url);
+  }
+  if (provider === TB.PROVIDERS.GROQ) {
+    return callGroqAPI(apiKey, text, model, promptFn, url);
+  }
+  if (provider === TB.PROVIDERS.OPENROUTER) {
+    return callOpenRouterAPI(apiKey, text, model, promptFn, url);
+  }
+  throw new Error(`Unsupported provider: ${provider}`);
+}
+
+function isRetryableProviderError(error) {
+  const message = (error?.message || "").toLowerCase();
+  return (
+    message.includes("429") ||
+    message.includes("rate limit") ||
+    message.includes("503") ||
+    message.includes("high demand") ||
+    message.includes("try again later")
+  );
+}
+
+function getGeminiCooldownDuration(error) {
+  const message = (error?.message || "").toLowerCase();
+  if (message.includes("429") || message.includes("rate limit")) {
+    return GEMINI_RATE_LIMIT_COOLDOWN_MS;
+  }
+  return GEMINI_OVERLOAD_COOLDOWN_MS;
+}
+
+function getGeminiCombinationId(model, apiKey) {
+  return `${model}\u0000${apiKey}`;
+}
+
+function maskApiKey(apiKey) {
+  if (!apiKey) return "(empty key)";
+  return `...${apiKey.slice(-6)}`;
+}
+
+function capitalize(value) {
+  return value ? `${value.charAt(0).toUpperCase()}${value.slice(1)}` : "";
+}
+
+function getProviderApiKey(settings, provider) {
+  if (provider === settings.fallbackProvider) {
+    if (provider === TB.PROVIDERS.CEREBRAS) {
+      return settings.fallbackCerebrasApiKey || settings.cerebrasApiKey;
+    }
+    if (provider === TB.PROVIDERS.GROQ) {
+      return settings.fallbackGroqApiKey || settings.groqApiKey;
+    }
+    if (provider === TB.PROVIDERS.OPENROUTER) {
+      return settings.fallbackOpenrouterApiKey || settings.openrouterApiKey;
+    }
+  }
+  if (provider === TB.PROVIDERS.CEREBRAS) return settings.cerebrasApiKey;
+  if (provider === TB.PROVIDERS.GROQ) return settings.groqApiKey;
+  if (provider === TB.PROVIDERS.OPENROUTER) return settings.openrouterApiKey;
+  return "";
 }
 
 async function translateWithGemini(
@@ -411,7 +635,13 @@ async function callCerebrasAPI(
   return cleaned;
 }
 
-async function callGroqAPI(apiKey, commentText, model, promptFn = TB.PROMPTS.USER) {
+async function callGroqAPI(
+  apiKey,
+  commentText,
+  model,
+  promptFn = TB.PROMPTS.USER,
+  commentUrl = null
+) {
   // Call Groq API with timeout
   const response = await timeoutFetch(
     "https://api.groq.com/openai/v1/chat/completions",
@@ -447,7 +677,53 @@ async function callGroqAPI(apiKey, commentText, model, promptFn = TB.PROMPTS.USE
 
   const cleaned = normalizeTranslationOutput(rawText);
   if (promptFn === TB.PROMPTS.USER) {
-    return formatTranslation(commentText, cleaned, null);
+    return formatTranslation(commentText, cleaned, commentUrl);
+  }
+  return cleaned;
+}
+
+async function callOpenRouterAPI(
+  apiKey,
+  commentText,
+  model,
+  promptFn = TB.PROMPTS.USER,
+  commentUrl = null
+) {
+  const response = await timeoutFetch(
+    "https://openrouter.ai/api/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: model || "openai/gpt-4o-mini",
+        messages: [
+          { role: "system", content: TB.PROMPTS.SYSTEM },
+          { role: "user", content: promptFn(commentText) },
+        ],
+        temperature: 0.2,
+        max_tokens: 2048,
+      }),
+    },
+    10000
+  );
+
+  if (!response.ok) {
+    const errorMsg = await readErrorMessage(response);
+    throw new Error(`OpenRouter (${model}): ${sanitizeErrorMessage(errorMsg, response.status)}`);
+  }
+
+  const data = await safeReadJson(response);
+  const rawText = data?.choices?.[0]?.message?.content?.trim();
+  if (!rawText) {
+    throw new Error("AI returned no content.");
+  }
+
+  const cleaned = normalizeTranslationOutput(rawText);
+  if (promptFn === TB.PROMPTS.USER) {
+    return formatTranslation(commentText, cleaned, commentUrl);
   }
   return cleaned;
 }

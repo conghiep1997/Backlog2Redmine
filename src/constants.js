@@ -101,6 +101,7 @@
       GEMINI: "gemini",
       GROQ: "groq",
       CEREBRAS: "cerebras",
+      OPENROUTER: "openrouter",
       NONE: "none",
     },
 
@@ -115,6 +116,7 @@
     GEMINI_MODELS: global.TB_MODELS?.GEMINI_MODELS || [],
     CEREBRAS_MODELS: global.TB_MODELS?.CEREBRAS_MODELS || [],
     GROQ_MODELS: global.TB_MODELS?.GROQ_MODELS || [],
+    OPENROUTER_MODELS: global.TB_MODELS?.OPENROUTER_MODELS || [],
 
     ICONS: global.TB_ICONS || {},
 

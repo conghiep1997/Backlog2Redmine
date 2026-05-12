@@ -16,6 +16,7 @@ const DEFAULT_MANUAL_FIELDS = {
   "QC Activity": 8,
   "Q&A Category": 58,
 };
+const NOTE_SEPARATOR_REGEX = /^--- Note \d+ ---\s*\n/gm;
 
 function ensureModalShell() {
   let overlay = document.getElementById("tb-redmine-overlay");
@@ -432,10 +433,7 @@ function openConfirmModal(options) {
     if (currentMode) {
       // Batch mode: textarea contains previewText + batch notes separated by markers
       // We need to split back into individual notes.
-      const separatorRegex = /\n\n--- Note \d+ ---\n/;
-      const parts = val.split(separatorRegex);
-      // Remove empty strings from split
-      const notes = parts.map((p) => p.trim()).filter((p) => p.length > 0);
+      const notes = parseNotePreviewText(val);
       if (notes.length === 0) {
         memoizedBatchNotes = [];
         currentNotesList = [val]; // fallback
@@ -567,9 +565,12 @@ function openConfirmModal(options) {
           confirmButton.disabled = false;
           return;
         }
+        const comments = batchOptionCheckbox.checked
+          ? parseNotePreviewText(commentsPreviewTextarea.value)
+          : [];
         await onConfirm({
           issueData,
-          comments: batchOptionCheckbox.checked ? memoizedBatchNotes : [],
+          comments,
         });
       } else {
         const id = issueIdInput.value.trim();
@@ -594,6 +595,20 @@ function openConfirmModal(options) {
   modalElements.successModal.style.display = "none";
   overlay.style.display = "flex";
   document.body.classList.add("tb-modal-open");
+}
+
+function parseNotePreviewText(value) {
+  const text = (value || "").trim();
+  if (!text) return [];
+  NOTE_SEPARATOR_REGEX.lastIndex = 0;
+  if (!NOTE_SEPARATOR_REGEX.test(text)) {
+    return [text];
+  }
+  NOTE_SEPARATOR_REGEX.lastIndex = 0;
+  return text
+    .split(NOTE_SEPARATOR_REGEX)
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 function openBacklogModal({

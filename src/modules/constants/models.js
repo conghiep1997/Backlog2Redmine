@@ -28,10 +28,16 @@
   ];
 
   const OPENROUTER_MODELS = [
-    { value: "gpt-4o-mini", label: "GPT-4o Mini (Fast, multilingual)", default: true },
-    { value: "meta-llama-3.1-70b", label: "Meta Llama 3.1 70B (Strong multilingual)" },
+    { value: "openrouter/free", label: "OpenRouter Free Router (auto free model)", default: true },
+    { value: "qwen/qwen3-coder:free", label: "Qwen3 Coder 480B A35B (Free, long context)" },
+    { value: "meta-llama/llama-3.2-3b-instruct:free", label: "Llama 3.2 3B Instruct (Free)" },
+    { value: "openai/gpt-4o-mini", label: "GPT-4o Mini (Paid, fast multilingual)" },
+    {
+      value: "meta-llama/llama-3.1-70b-instruct",
+      label: "Meta Llama 3.1 70B (Paid, strong multilingual)",
+    },
     { value: "mistralai/mistral-7b-instruct-v0.3", label: "Mistral 7B Instruct v0.3 (Efficient)" },
-    { value: "anthropic/claude-3-haiku", label: "Claude 3 Haiku (Lightweight)" }
+    { value: "anthropic/claude-3-haiku", label: "Claude 3 Haiku (Lightweight)" },
   ];
 
   const GROQ_MODELS = [
@@ -40,8 +46,13 @@
       label: "Llama 3.3 70B Versatile (Best Multilingual)",
       default: true,
     },
+    { value: "llama-3.1-8b-instant", label: "Llama 3.1 8B Instant (High free RPD)" },
+    {
+      value: "meta-llama/llama-4-scout-17b-16e-instruct",
+      label: "Llama 4 Scout 17B 16E (Good free RPD)",
+    },
+    { value: "qwen/qwen3-32b", label: "Qwen 3 32B (Higher RPM, multilingual)" },
     { value: "openai/gpt-oss-120b", label: "GPT OSS 120B (High Quality)" },
-    { value: "qwen/qwen3-32b", label: "Qwen 3 32B (Good Multilingual, Preview)" },
     { value: "openai/gpt-oss-20b", label: "GPT OSS 20B (Balanced & Fast)" },
   ];
 
@@ -62,6 +73,6 @@
     GEMINI_FALLBACK: "gemma-4-31b-it",
     CEREBRAS: "gpt-oss-120b",
     GROQ: "llama-3.3-70b-versatile",
-    OPENROUTER: "gpt-4o-mini"
+    OPENROUTER: "openrouter/free",
   };
 })(globalThis);

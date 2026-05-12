@@ -267,8 +267,9 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
           const batchResults = await Promise.all(
             batch.map(async (c) => {
               const r = await sendRuntimeMessageWithResponse({
-                type: "TRANSLATE_TEXT_SIMPLE",
-                text: c.text,
+                type: "TRANSLATE_COMMENT_FULL",
+                commentText: c.text,
+                commentUrl: c.url,
               });
               return c.userInfo ? `${c.userInfo}\n${r.data.translatedText}` : r.data.translatedText;
             })
@@ -383,8 +384,9 @@ async function handleIssueMigration(button) {
           const batchResults = await Promise.all(
             batch.map(async (c) => {
               const r = await sendRuntimeMessageWithResponse({
-                type: "TRANSLATE_TEXT_SIMPLE",
-                text: c.text,
+                type: "TRANSLATE_COMMENT_FULL",
+                commentText: c.text,
+                commentUrl: c.url,
               });
               return c.userInfo ? `${c.userInfo}\n${r.data.translatedText}` : r.data.translatedText;
             })

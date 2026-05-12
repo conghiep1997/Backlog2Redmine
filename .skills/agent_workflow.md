@@ -1,73 +1,108 @@
-# AI Agent Workflow & Contribution Guide 🤖
+# AI Agent Workflow & Contribution Guide
 
-File này quy định quy trình làm việc bắt buộc dành cho các AI Agent (như Antigravity, Claude, v.v.) khi tham gia chỉnh sửa hoặc phát triển dự án này. Việc tuân thủ quy trình này giúp đảm bảo dự án luôn nhất quán và tài liệu luôn đi đôi với code thực tế.
+File này quy định quy trình làm việc dành cho các AI Agent khi chỉnh sửa hoặc phát triển dự án Backlog2Redmine. Mục tiêu là giữ code, tài liệu, version và quy trình release nhất quán với trạng thái thực tế của repo.
 
-## 🛠 Quy tắc bắt buộc (Mandatory Rules)
+## Nguyên Tắc Chung
 
-Khi thực hiện bất kỳ thay đổi nào đối với logic hoặc tính năng, Agent **PHẢI** thực hiện các bước sau:
+1. **Đọc ngữ cảnh trước khi sửa**
+   - Kiểm tra file liên quan, luồng gọi hàm và manifest/script load order trước khi thay đổi.
+   - Không đoán vị trí logic chỉ dựa trên tên file. Ví dụ: `extractBacklogContent` hiện nằm trong `src/modules/utils/markdown.js`, không nằm trực tiếp trong `src/content.js`.
 
-1.  **Cập nhật Version với `manifest.json` là nguồn chính (source of truth)**:
-     *   **Patch (`1.2.x`)**: Dùng cho các bản sửa lỗi (bug fix) hoặc cải tiến tính năng nhỏ.
-     *   **Minor (`1.x.0`)**: Dùng cho các chức năng lớn, quan trọng hoặc thay đổi đáng kể về kiến trúc.
-     *   **Nhóm thay đổi (Grouping)**: Các thay đổi nhỏ thực hiện trong cùng một ngày có thể được gộp chung vào một lần tăng version duy nhất để giữ Log ngắn gọn.
-     *   Ví dụ: `1.2.1` -> `1.2.2` (gộp nhiều fix bug trong ngày).
-     *   **Quan trọng**: CI/CD, tên file ZIP, GitHub Release tag và bước upload Google Drive hiện đều đọc version từ `manifest.json`, không phải từ `package.json`.
-     *   **Bắt buộc đồng bộ**: Khi tăng version, Agent phải cập nhật ít nhất `manifest.json`, `package.json`, `CHANGELOG.md` và thông tin version trong `README.md` nếu có hiển thị.
-     *   Nếu `package.json` và `manifest.json` lệch nhau, hãy coi `manifest.json` là chuẩn release và sửa các file còn lại để khớp.
-     *   **Lệnh chuẩn để bump version**: Dùng `npm run bump` để tự tăng patch version, hoặc `npm run bump -- 1.7.2` để chỉ định version cụ thể. Lệnh này sẽ cập nhật đồng bộ `manifest.json`, `package.json` và tạo stub entry mới trong `CHANGELOG.md` nếu chưa có.
+2. **Giữ phạm vi thay đổi nhỏ**
+   - Chỉ sửa các file cần thiết cho yêu cầu hiện tại.
+   - Không format hoặc refactor file không liên quan nếu không cần thiết.
+   - Nếu tool format làm thay đổi ngoài phạm vi, phải kiểm tra `git diff` và loại bỏ thay đổi không liên quan trước khi bàn giao.
 
-2.  **Ghi chép vào `CHANGELOG.md`**:
-    *   Thêm mục mới cho version vừa tăng.
-    *   Mô tả ngắn gọn nhưng đầy đủ các thay đổi (✨ Added, 🔧 Fixed, 🏗️ Refactored).
-    *   Sử dụng tiếng Việt cho nội dung log.
+3. **Tôn trọng worktree hiện tại**
+   - Luôn kiểm tra `git status --short` trước và sau khi sửa.
+   - Không revert thay đổi của người khác nếu không được yêu cầu.
+   - Khi gặp file đang có thay đổi ngoài nhiệm vụ, chỉ làm việc với phần cần thiết và nêu rõ trong báo cáo nếu có rủi ro.
 
-3.  **Cập nhật `README.md`**:
-    *   Nếu thay đổi ảnh hưởng đến cách sử dụng, giao diện hoặc kiến trúc, hãy cập nhật mục tương ứng trong README.
-    *   Đảm bảo badge version (nếu có) hoặc thông tin phiên bản trong README khớp với `manifest.json`.
+## Quy Trình Khi Sửa Code
 
-4.  **Kiến trúc & Cấu trúc file (Architecture & File Size)**:
-    *   **Tính Module**: Ưu tiên tách code thành các module chuyên biệt trong thư mục `src/modules/` (ui, services, utils).
-    *   **Giới hạn dòng (Line Limits)**: 
-        *   Mục tiêu: Dưới **500 dòng** mỗi file.
-        *   Ngoại lệ: Các tệp có tính đặc thù cao (như Parser Markdown) có thể lên tới **1000 dòng**, nhưng phải được giữ ở mức tối thiểu.
-    *   **Giao tiếp**: Sử dụng `chrome.runtime.sendMessage` để phối hợp giữa Content Script và Background Script.
+Khi thay đổi logic hoặc tính năng, Agent phải thực hiện tối thiểu các bước sau:
 
-5.  **Kiểm tra tính năng (Verification)**:
-    *   Luôn chạy thử script test nội bộ hoặc giải thích cách kiểm tra thủ công trong `walkthrough`.
+1. **Xác định luồng ảnh hưởng**
+   - Content script, background service worker, options page và service modules giao tiếp chủ yếu qua `chrome.runtime.sendMessage`.
+   - Nếu thêm message type mới, phải kiểm tra cả nơi gửi, nơi nhận và dữ liệu trả về.
+   - Nếu thêm file module mới cho content script hoặc options page, phải cập nhật đúng thứ tự trong `manifest.json` hoặc HTML tương ứng.
 
-6.  **Review & Verify sau mỗi lần chỉnh sửa (Post-Edit Audit)**:
-    *   **Syntax Integrity**: Ngay sau khi dùng `replace_file_content`, Agent **PHẢI** kiểm tra lại sự cân bằng của các dấu ngoặc `{}`, `()`, `[]` và tính toàn vẹn của chuỗi template literals (backticks).
-    *   **Namespace Collision**: Đảm bảo không sử dụng `const` cho các biến đã tồn tại trong không gian tên toàn cục (như `TB`).
-    *   **Function Availability**: Nếu file chứa các hàm khởi tạo (như `injectStyles`), phải xác nhận file không bị cắt cụt (Unexpected end of input).
-    *   **Tail-end Check**: Luôn kiểm tra phần cuối của file sau khi sửa để đảm bảo không có ký tự rác hoặc bị mất code.
+2. **Kiến trúc và kích thước file**
+   - Ưu tiên tách code theo module trong `src/modules/`:
+     - `ui/`: modal, toast, styles.
+     - `services/`: API Redmine, Backlog, AI, version checker.
+     - `utils/`: helper, markdown, crypto, logger.
+     - `constants/`: model, prompt, icon.
+   - Mục tiêu: mỗi file dưới 500 dòng.
+   - Ngoại lệ: file xử lý UI/phân tích markdown có thể lớn hơn, nhưng nếu vượt 1000 dòng phải đề xuất hướng tách module.
 
-## ⚙️ Quy trình Hậu kiểm bắt buộc (Mandatory Final Audit)
+3. **Post-edit audit**
+   - Sau mọi thao tác edit file, kiểm tra nhanh syntax, dấu ngoặc `{}`, `()`, `[]`, template literal và phần cuối file.
+   - Với extension scripts dùng global namespace, tránh khai báo lại các global như `TB`, `TB_LOGGER`, `openConfirmModal`.
+   - Kiểm tra các hàm init quan trọng không bị mất hoặc bị cắt cụt, ví dụ `injectStyles`, `scanAndInjectButtons`, `openConfirmModal`.
 
-TRƯỚC khi báo cáo hoàn thành nhiệm vụ hoặc một phiên bản, Agent **PHẢI** thực hiện Audit nội bộ:
+4. **Verification**
+   - Chạy lint sau khi sửa code:
+     - Windows/PowerShell: dùng `npm.cmd run lint` nếu `npm run lint` bị chặn bởi ExecutionPolicy.
+     - Môi trường khác: dùng `npm run lint`.
+   - Nếu thay đổi HTML/CSS hoặc chuẩn format, chạy thêm `npm run format:check` hoặc `npx prettier --check <file>`.
+   - Trước khi release/build, chạy `npm run build`.
+   - Nếu không chạy được lệnh nào, phải ghi rõ lý do và hướng kiểm tra thủ công.
 
-1.  **Version Consistency Check**:
-     *   Đối chiếu `version` trong `manifest.json` với mục mới nhất trong `CHANGELOG.md`.
-     *   Đảm bảo badge version hoặc thông tin version trong `README.md` (nếu có) cũng phải khớp hoặc đã được loại bỏ hoàn toàn để tránh lệch.
-     *   Đối chiếu thêm `package.json.version` với `manifest.json.version`.
-     *   Nếu có thay đổi version mà chưa sửa `manifest.json`, coi như chưa sẵn sàng release vì workflow `.github/workflows/deploy.yml` sẽ tiếp tục dùng version cũ để tạo `TAG`.
-2.  **File Size & Modularity Audit**:
-    *   Kiểm tra số dòng (LoC) của tất cả các file đã chỉnh sửa/tạo mới. 
-    *   Nếu file > 500 dòng (trừ Parser), **PHẢI** đề xuất refactor ngay lập tức thay vì bỏ qua.
-3.  **Project Cleanup**:
-    *   Xóa toàn bộ Dead Code, Comment out không cần thiết.
-    *   Xóa các file legacy, file backup hoặc resource không còn sử dụng (như `.css` cũ).
-4.  **Manifest Integrity**:
-    *   Đảm bảo tất cả các file module mới được liệt kê đúng thứ tự trong `manifest.json`.
-5.  **Linting Check (Kiểm tra lỗi trình bày)**:
-    *   **PHẢI** chạy lệnh `npm run lint` ngay sau khi hoàn thành code.
-    *   **PHẢI** sửa toàn bộ các lỗi (Errors) và cảnh báo (Warnings) trước khi bàn giao nhiệm vụ hoặc báo cáo hoàn thành.
+## Quy Trình Release
 
-## ⚙️ Logic Chuyển đổi (Conversion Logic)
+Chỉ thực hiện các bước này khi người dùng yêu cầu release, build bản phát hành, hoặc thay đổi đã sẵn sàng đóng gói. Không bắt buộc bump version cho mọi fix nhỏ trong lúc đang review.
 
-Agent cần đặc biệt lưu ý logic trong `src/content.js` (hàm `extractBacklogContent`):
-- Sử dụng đệ quy để duyệt DOM.
-- Không thêm marker `> ` bên trong các tag con của blockquote; hãy để trình xử lý node cha thực hiện việc này sau khi thu thập toàn bộ text.
-- Cẩn thận với các regex xử lý khoảng trắng để không làm mất dữ liệu.
+1. **Version source of truth**
+   - `manifest.json` là source of truth cho release.
+   - `package.json.version` phải khớp với `manifest.json.version`.
+   - CI/CD, tên file ZIP, GitHub Release tag và upload Google Drive đọc version từ `manifest.json`.
+
+2. **Bump version**
+   - Patch (`1.2.x`): bug fix hoặc cải tiến nhỏ.
+   - Minor (`1.x.0`): tính năng lớn hoặc thay đổi kiến trúc đáng kể.
+   - Có thể gom nhiều thay đổi nhỏ trong cùng một ngày vào một lần bump.
+   - Lệnh chuẩn:
+     - `npm run bump` để tăng patch version.
+     - `npm run bump -- 1.7.2` để chỉ định version cụ thể.
+   - Script bump sẽ đồng bộ `manifest.json`, `package.json` và tạo stub trong `CHANGELOG.md` nếu chưa có.
+
+3. **CHANGELOG.md**
+   - Hoàn thiện entry version mới sau khi chạy bump.
+   - Nội dung log dùng tiếng Việt, ngắn gọn nhưng đủ ý.
+   - Gợi ý nhóm mục:
+     - `Added`: tính năng mới.
+     - `Fixed`: sửa lỗi.
+     - `Changed`: thay đổi hành vi hoặc UI.
+     - `Docs`: cập nhật tài liệu.
+
+4. **README.md**
+   - Cập nhật nếu thay đổi ảnh hưởng cách dùng, UI, cấu hình, quyền extension hoặc kiến trúc.
+   - Nếu README có badge/version text, phải khớp với `manifest.json`.
+
+5. **Final release audit**
+   - `npm run check:version-sync` phải pass.
+   - `npm run lint` hoặc `npm.cmd run lint` phải pass không error.
+   - `npm run build` phải pass trước khi đóng gói.
+   - Kiểm tra `git diff --stat` để đảm bảo chỉ có file liên quan.
+
+## Logic Chuyển Đổi Nội Dung
+
+Agent cần đặc biệt cẩn thận với logic chuyển nội dung Backlog sang Markdown trong `src/modules/utils/markdown.js`, đặc biệt là hàm `extractBacklogContent`.
+
+- Hàm này duyệt DOM để giữ Markdown tương thích với Redmine.
+- Không thêm marker `> ` bên trong tag con của blockquote; để node cha xử lý blockquote sau khi thu thập toàn bộ text.
+- Cẩn thận với regex xử lý khoảng trắng để không làm mất dữ liệu, link, code block hoặc marker attachment.
+- Các marker nội bộ như `[[TB_IMG:id]]` và `[[TB_FILE:id:filename]]` phải được giữ nguyên cho bước upload/replace attachment.
+
+## Checklist Trước Khi Bàn Giao
+
+- Đã kiểm tra `git diff` và loại bỏ thay đổi không liên quan.
+- Đã chạy lint hoặc nêu rõ vì sao không chạy được.
+- Đã kiểm tra build/format nếu thay đổi có ảnh hưởng tới release hoặc HTML/CSS.
+- Đã ghi rõ file đã sửa và hành vi đã thay đổi.
+- Nếu có rủi ro còn lại hoặc cần kiểm thử thủ công trên Chrome extension, phải nêu cụ thể.
 
 ---
-*Tài liệu này là một "Skill" giúp các AI Agent hiểu rõ ngữ cảnh và kỳ vọng của Maintainer dự án.*
+
+Tài liệu này là workflow nội bộ giúp các AI Agent hiểu đúng kỳ vọng của maintainer khi làm việc trong repo.

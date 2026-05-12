@@ -192,6 +192,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       assertSettings(settings, ["ai"]);
       return { translatedText: await translateText(msg.text, settings, null, TB.PROMPTS.SIMPLE_TRANSLATE) };
     },
+    TRANSLATE_COMMENT_FULL: async (msg) => {
+      const settings = await getSettings();
+      assertSettings(settings, ["ai"]);
+      return {
+        translatedText: await translateText(
+          msg.commentText,
+          settings,
+          msg.commentUrl || null,
+          TB.PROMPTS.USER
+        ),
+      };
+    },
   };
 
   const handler = handlers[message.type];
@@ -229,13 +241,37 @@ async function getSettings() {
 
   const keys = [
     "redmineApiKey", "backlogDomain", "backlogApiKey", "geminiApiKey", "geminiApiKeys",
-    "geminiModels", "cerebrasApiKey", "groqApiKey", "openrouterApiKey",
+    "geminiModels", "cerebrasApiKey", "cerebrasApiKeys", "cerebrasModels",
+    "groqApiKey", "groqApiKeys", "groqModels",
+    "openrouterApiKey", "openrouterApiKeys", "openrouterModels",
+    "fallbackGeminiApiKeys", "fallbackGeminiModels",
+    "fallbackCerebrasApiKey", "fallbackCerebrasApiKeys", "fallbackCerebrasModels",
+    "fallbackGroqApiKey", "fallbackGroqApiKeys", "fallbackGroqModels",
+    "fallbackOpenrouterApiKey", "fallbackOpenrouterApiKeys", "fallbackOpenrouterModels",
     "primaryProvider", "primaryModel", "fallbackProvider", "fallbackModel", "defaultProjectId",
   ];
   const items = await chrome.storage.local.get(keys);
 
   const geminiApiKeysStr = items.geminiApiKeys ? await decryptData(items.geminiApiKeys) : "";
   const geminiModelsStr = items.geminiModels ? await decryptData(items.geminiModels) : "";
+  const cerebrasApiKeysStr = items.cerebrasApiKeys ? await decryptData(items.cerebrasApiKeys) : "";
+  const cerebrasModelsStr = items.cerebrasModels ? await decryptData(items.cerebrasModels) : "";
+  const groqApiKeysStr = items.groqApiKeys ? await decryptData(items.groqApiKeys) : "";
+  const groqModelsStr = items.groqModels ? await decryptData(items.groqModels) : "";
+  const openrouterApiKeysStr = items.openrouterApiKeys ? await decryptData(items.openrouterApiKeys) : "";
+  const openrouterModelsStr = items.openrouterModels ? await decryptData(items.openrouterModels) : "";
+  const fallbackCerebrasApiKeysStr = items.fallbackCerebrasApiKeys ? await decryptData(items.fallbackCerebrasApiKeys) : "";
+  const fallbackCerebrasModelsStr = items.fallbackCerebrasModels ? await decryptData(items.fallbackCerebrasModels) : "";
+  const fallbackGeminiApiKeysStr = items.fallbackGeminiApiKeys ? await decryptData(items.fallbackGeminiApiKeys) : "";
+  const fallbackGeminiModelsStr = items.fallbackGeminiModels ? await decryptData(items.fallbackGeminiModels) : "";
+  const fallbackGroqApiKeysStr = items.fallbackGroqApiKeys ? await decryptData(items.fallbackGroqApiKeys) : "";
+  const fallbackGroqModelsStr = items.fallbackGroqModels ? await decryptData(items.fallbackGroqModels) : "";
+  const fallbackOpenrouterApiKeysStr = items.fallbackOpenrouterApiKeys
+    ? await decryptData(items.fallbackOpenrouterApiKeys)
+    : "";
+  const fallbackOpenrouterModelsStr = items.fallbackOpenrouterModels
+    ? await decryptData(items.fallbackOpenrouterModels)
+    : "";
 
   const decryptedSettings = {
     redmineDomain: TB.REDMINE_DOMAIN,
@@ -250,8 +286,25 @@ async function getSettings() {
     geminiApiKeys: geminiApiKeysStr.split("\n").filter(Boolean),
     geminiModels: geminiModelsStr.split("\n").filter(Boolean),
     cerebrasApiKey: await decryptData(items.cerebrasApiKey ?? ""),
+    cerebrasApiKeys: cerebrasApiKeysStr.split("\n").filter(Boolean),
+    cerebrasModels: cerebrasModelsStr.split("\n").filter(Boolean),
     groqApiKey: await decryptData(items.groqApiKey ?? ""),
+    groqApiKeys: groqApiKeysStr.split("\n").filter(Boolean),
+    groqModels: groqModelsStr.split("\n").filter(Boolean),
     openrouterApiKey: await decryptData(items.openrouterApiKey ?? ""),
+    openrouterApiKeys: openrouterApiKeysStr.split("\n").filter(Boolean),
+    openrouterModels: openrouterModelsStr.split("\n").filter(Boolean),
+    fallbackCerebrasApiKey: await decryptData(items.fallbackCerebrasApiKey ?? ""),
+    fallbackGeminiApiKeys: fallbackGeminiApiKeysStr.split("\n").filter(Boolean),
+    fallbackGeminiModels: fallbackGeminiModelsStr.split("\n").filter(Boolean),
+    fallbackCerebrasApiKeys: fallbackCerebrasApiKeysStr.split("\n").filter(Boolean),
+    fallbackCerebrasModels: fallbackCerebrasModelsStr.split("\n").filter(Boolean),
+    fallbackGroqApiKey: await decryptData(items.fallbackGroqApiKey ?? ""),
+    fallbackGroqApiKeys: fallbackGroqApiKeysStr.split("\n").filter(Boolean),
+    fallbackGroqModels: fallbackGroqModelsStr.split("\n").filter(Boolean),
+    fallbackOpenrouterApiKey: await decryptData(items.fallbackOpenrouterApiKey ?? ""),
+    fallbackOpenrouterApiKeys: fallbackOpenrouterApiKeysStr.split("\n").filter(Boolean),
+    fallbackOpenrouterModels: fallbackOpenrouterModelsStr.split("\n").filter(Boolean),
     defaultProjectId: items.defaultProjectId || "",
   };
 
@@ -286,13 +339,17 @@ function assertSettings(settings, required = []) {
     if (provider === TB.PROVIDERS.GEMINI && (!settings.geminiApiKey && settings.geminiApiKeys.length === 0)) {
       throw new Error(TB.MESSAGES.SETTINGS.GEMINI_API_KEY_REQUIRED);
     }
-    if (provider === TB.PROVIDERS.GROQ && !settings.groqApiKey) {
+    if (provider === TB.PROVIDERS.GROQ && !settings.groqApiKey && settings.groqApiKeys.length === 0) {
       throw new Error("Missing Groq API Key.");
     }
-    if (provider === TB.PROVIDERS.CEREBRAS && !settings.cerebrasApiKey) {
+    if (provider === TB.PROVIDERS.CEREBRAS && !settings.cerebrasApiKey && settings.cerebrasApiKeys.length === 0) {
       throw new Error("Missing Cerebras API Key.");
     }
-    if (provider === TB.PROVIDERS.OPENROUTER && !settings.openrouterApiKey) {
+    if (
+      provider === TB.PROVIDERS.OPENROUTER &&
+      !settings.openrouterApiKey &&
+      settings.openrouterApiKeys.length === 0
+    ) {
       throw new Error("Missing OpenRouter API Key.");
     }
   }

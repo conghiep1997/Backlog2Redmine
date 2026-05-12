@@ -17,25 +17,78 @@ document.addEventListener("DOMContentLoaded", () => {
   const fallbackGroqApiKeyInput = document.getElementById("fallbackGroqApiKey");
   const fallbackCerebrasApiKeyInput = document.getElementById("fallbackCerebrasApiKey");
   const fallbackOpenrouterApiKeyInput = document.getElementById("fallbackOpenrouterApiKey");
+  const fallbackGeminiApiKeysInput = document.getElementById("fallbackGeminiApiKeys");
   const primaryProviderSelect = document.getElementById("primaryProvider");
   const fallbackProviderSelect = document.getElementById("fallbackProvider");
   const statusEl = document.getElementById("status");
+  const PRIMARY_PROVIDER_CONFIGS = [
+    {
+      provider: "groq",
+      keyInput: groqApiKeyInput,
+      keysStorage: "groqApiKeys",
+      modelsStorage: "groqModels",
+    },
+    {
+      provider: "cerebras",
+      keyInput: cerebrasApiKeyInput,
+      keysStorage: "cerebrasApiKeys",
+      modelsStorage: "cerebrasModels",
+    },
+    {
+      provider: "openrouter",
+      keyInput: openrouterApiKeyInput,
+      keysStorage: "openrouterApiKeys",
+      modelsStorage: "openrouterModels",
+    },
+  ];
+  const FALLBACK_PROVIDER_CONFIGS = [
+    {
+      provider: "groq",
+      keyInput: fallbackGroqApiKeyInput,
+      keysStorage: "fallbackGroqApiKeys",
+      modelsStorage: "fallbackGroqModels",
+    },
+    {
+      provider: "cerebras",
+      keyInput: fallbackCerebrasApiKeyInput,
+      keysStorage: "fallbackCerebrasApiKeys",
+      modelsStorage: "fallbackCerebrasModels",
+    },
+    {
+      provider: "openrouter",
+      keyInput: fallbackOpenrouterApiKeyInput,
+      keysStorage: "fallbackOpenrouterApiKeys",
+      modelsStorage: "fallbackOpenrouterModels",
+    },
+  ];
 
   if (!form || !primaryProviderSelect || !fallbackProviderSelect || !statusEl) {
     console.error("[OPTIONS] Thiếu các phần tử DOM cần thiết");
     return;
   }
 
+  initProviderMultiControls();
   loadOptions();
 
-  primaryProviderSelect.addEventListener("change", () => handleProviderChange(primaryProviderSelect));
-  fallbackProviderSelect.addEventListener("change", () => handleProviderChange(fallbackProviderSelect));
+  primaryProviderSelect.addEventListener("change", () =>
+    handleProviderChange(primaryProviderSelect)
+  );
+  fallbackProviderSelect.addEventListener("change", () =>
+    handleProviderChange(fallbackProviderSelect)
+  );
   redmineApiKeyInput.addEventListener("blur", handleRedmineKeyBlur);
   document.getElementById("syncProjectsBtn")?.addEventListener("click", handleSyncProjects);
 
   document.getElementById("geminiApiKeys")?.addEventListener("keydown", handleGeminiKeyInput);
-  document.getElementById("checkUpdateBtn")?.addEventListener("click", () => console.log("TODO: Check for updates"));
-  document.getElementById("goToDashboardBtn")?.addEventListener("click", () => chrome.tabs.create({ url: "https://dev-tool-platform.vercel.app/" }));
+  fallbackGeminiApiKeysInput?.addEventListener("keydown", handleFallbackGeminiKeyInput);
+  document
+    .getElementById("checkUpdateBtn")
+    ?.addEventListener("click", () => console.log("TODO: Check for updates"));
+  document
+    .getElementById("goToDashboardBtn")
+    ?.addEventListener("click", () =>
+      chrome.tabs.create({ url: "https://dev-tool-platform.vercel.app/" })
+    );
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -51,12 +104,14 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   async function gatherSettings() {
+    const primaryModels = getSelectedModelsForProvider("primary", primaryProviderSelect.value);
+    const fallbackModels = getSelectedModelsForProvider("fallback", fallbackProviderSelect.value);
     const settings = {
       backlogDomain: document.getElementById("backlogDomain").value.trim() || TB.BACKLOG_DOMAIN,
       primaryProvider: primaryProviderSelect.value,
-      primaryModel: document.getElementById("primaryModel").value,
+      primaryModel: primaryModels[0] || getDefaultModel(primaryProviderSelect.value),
       fallbackProvider: fallbackProviderSelect.value,
-      fallbackModel: document.getElementById("fallbackModel").value,
+      fallbackModel: fallbackModels[0] || getDefaultModel(fallbackProviderSelect.value),
       defaultProjectId: document.getElementById("defaultProjectId").value,
       reportProjectId: document.getElementById("reportProjectId").value,
       manualFields: document.getElementById("manualFields").value.trim(),
@@ -73,15 +128,70 @@ document.addEventListener("DOMContentLoaded", () => {
       handleApiKeyUpdate(settings, "fallbackOpenrouterApiKey", fallbackOpenrouterApiKeyInput),
     ]);
 
-    const selectedGeminiModels = Array.from(document.querySelectorAll("#geminiModelsList button.selected")).map(b => b.dataset.modelId);
-    if (selectedGeminiModels.length > 0) {
-      settings.geminiModels = await encryptData(selectedGeminiModels.join("\n"));
+    const selectedFallbackGeminiModels = Array.from(
+      document.querySelectorAll("#fallbackGeminiModelsList button.selected")
+    ).map((button) => button.dataset.modelId);
+    settings.fallbackGeminiModels =
+      selectedFallbackGeminiModels.length > 0
+        ? await encryptData(selectedFallbackGeminiModels.join("\n"))
+        : "";
+
+    const selectedFallbackGeminiKeys = Array.from(
+      document.querySelectorAll("#fallbackGeminiKeysList button")
+    ).map((button) => button.title);
+    if (selectedFallbackGeminiKeys.length > 0) {
+      settings.fallbackGeminiApiKeys = await encryptData(selectedFallbackGeminiKeys.join("\n"));
+    } else {
+      settings.fallbackGeminiApiKeys = "";
     }
 
-    const selectedGeminiKeys = Array.from(document.querySelectorAll("#geminiKeysList button")).map(b => b.title);
+    for (const config of PRIMARY_PROVIDER_CONFIGS) {
+      const selectedModels = getSelectedProviderModels("primary", config.provider);
+      settings[config.modelsStorage] =
+        selectedModels.length > 0 ? await encryptData(selectedModels.join("\n")) : "";
+
+      const selectedKeys = getProviderKeys("primary", config.provider, config.keyInput);
+      if (selectedKeys.length > 0) {
+        settings[config.keysStorage] = await encryptData(selectedKeys.join("\n"));
+        settings[`${config.provider}ApiKey`] = await encryptData(selectedKeys[0]);
+      } else if (!config.keyInput?.value.trim() || config.keyInput.value.trim() === "**********") {
+        settings[config.keysStorage] = "";
+      }
+    }
+
+    for (const config of FALLBACK_PROVIDER_CONFIGS) {
+      const selectedModels = getSelectedProviderModels("fallback", config.provider);
+      settings[config.modelsStorage] =
+        selectedModels.length > 0 ? await encryptData(selectedModels.join("\n")) : "";
+
+      const selectedKeys = getProviderKeys("fallback", config.provider, config.keyInput);
+      const legacyKeyName = `fallback${capitalize(config.provider)}ApiKey`;
+      if (selectedKeys.length > 0) {
+        settings[config.keysStorage] = await encryptData(selectedKeys.join("\n"));
+        settings[legacyKeyName] = await encryptData(selectedKeys[0]);
+      } else if (!config.keyInput?.value.trim() || config.keyInput.value.trim() === "**********") {
+        settings[config.keysStorage] = "";
+      }
+    }
+
+    const selectedGeminiModels = Array.from(
+      document.querySelectorAll("#geminiModelsList button.selected")
+    ).map((b) => b.dataset.modelId);
+    if (selectedGeminiModels.length > 0) {
+      settings.geminiModels = await encryptData(selectedGeminiModels.join("\n"));
+    } else {
+      settings.geminiModels = "";
+    }
+
+    const selectedGeminiKeys = Array.from(document.querySelectorAll("#geminiKeysList button")).map(
+      (b) => b.title
+    );
     if (selectedGeminiKeys.length > 0) {
       settings.geminiApiKeys = await encryptData(selectedGeminiKeys.join("\n"));
       settings.geminiApiKey = await encryptData(selectedGeminiKeys[0]);
+    } else {
+      settings.geminiApiKeys = "";
+      settings.geminiApiKey = "";
     }
 
     return settings;
@@ -100,31 +210,78 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function loadOptions() {
     const keys = [
-      "redmineApiKey", "backlogDomain", "backlogApiKey",
-      "geminiApiKey", "geminiApiKeys", "geminiModels",
-      "cerebrasApiKey", "groqApiKey", "openrouterApiKey",
-      "primaryProvider", "primaryModel", "fallbackProvider", "fallbackModel",
-      "defaultProjectId", "reportProjectId", "manualFields",
+      "redmineApiKey",
+      "backlogDomain",
+      "backlogApiKey",
+      "geminiApiKey",
+      "geminiApiKeys",
+      "geminiModels",
+      "cerebrasApiKey",
+      "cerebrasApiKeys",
+      "cerebrasModels",
+      "groqApiKey",
+      "groqApiKeys",
+      "groqModels",
+      "openrouterApiKey",
+      "openrouterApiKeys",
+      "openrouterModels",
+      "fallbackCerebrasApiKey",
+      "fallbackGeminiApiKeys",
+      "fallbackGeminiModels",
+      "fallbackCerebrasApiKeys",
+      "fallbackCerebrasModels",
+      "fallbackGroqApiKey",
+      "fallbackGroqApiKeys",
+      "fallbackGroqModels",
+      "fallbackOpenrouterApiKey",
+      "fallbackOpenrouterApiKeys",
+      "fallbackOpenrouterModels",
+      "primaryProvider",
+      "primaryModel",
+      "fallbackProvider",
+      "fallbackModel",
+      "defaultProjectId",
+      "reportProjectId",
+      "manualFields",
     ];
 
     chrome.storage.local.get(keys, async (items) => {
       document.getElementById("redmineDomain").value = TB.REDMINE_DOMAIN;
       document.getElementById("backlogDomain").value = items.backlogDomain || TB.BACKLOG_DOMAIN;
-      document.getElementById("manualFields").value = items.manualFields || JSON.stringify({ "Severity": 46, "Role": 11 }, null, 2);
+      document.getElementById("manualFields").value =
+        items.manualFields || JSON.stringify({ Severity: 46, Role: 11 }, null, 2);
 
       redmineApiKeyInput.value = items.redmineApiKey ? "**********" : "";
       backlogApiKeyInput.value = items.backlogApiKey ? "**********" : "";
       groqApiKeyInput.value = items.groqApiKey ? "**********" : "";
       cerebrasApiKeyInput.value = items.cerebrasApiKey ? "**********" : "";
       openrouterApiKeyInput.value = items.openrouterApiKey ? "**********" : "";
+      fallbackGroqApiKeyInput.value = items.fallbackGroqApiKey ? "**********" : "";
+      fallbackCerebrasApiKeyInput.value = items.fallbackCerebrasApiKey ? "**********" : "";
+      fallbackOpenrouterApiKeyInput.value = items.fallbackOpenrouterApiKey ? "**********" : "";
 
       const primaryProvider = items.primaryProvider || TB.DEFAULT_PRIMARY_PROVIDER;
       primaryProviderSelect.value = primaryProvider;
-      handleProviderChange(primaryProviderSelect, items.primaryModel || TB.DEFAULT_PRIMARY_MODEL);
+      handleProviderChange(primaryProviderSelect, items.primaryModel);
 
       fallbackProviderSelect.value = items.fallbackProvider || TB.DEFAULT_FALLBACK_PROVIDER;
-      handleProviderChange(fallbackProviderSelect, items.fallbackModel || TB.DEFAULT_FALLBACK_MODEL);
       updateFallbackOptions();
+      renderFallbackGeminiModelsTags(await decryptStoredList(items.fallbackGeminiModels));
+      renderFallbackGeminiKeysButtons(await decryptStoredList(items.fallbackGeminiApiKeys));
+
+      for (const config of PRIMARY_PROVIDER_CONFIGS) {
+        const models = await decryptStoredList(items[config.modelsStorage]);
+        const providerKeys = await decryptStoredList(items[config.keysStorage]);
+        renderProviderModelsTags("primary", config.provider, models);
+        renderProviderKeysButtons("primary", config.provider, providerKeys);
+      }
+
+      for (const config of FALLBACK_PROVIDER_CONFIGS) {
+        const models = await decryptStoredList(items[config.modelsStorage]);
+        const providerKeys = await decryptStoredList(items[config.keysStorage]);
+        renderProviderModelsTags("fallback", config.provider, models);
+        renderProviderKeysButtons("fallback", config.provider, providerKeys);
+      }
 
       if (items.redmineApiKey) {
         try {
@@ -163,6 +320,42 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function initProviderMultiControls() {
+    [...PRIMARY_PROVIDER_CONFIGS, ...FALLBACK_PROVIDER_CONFIGS].forEach((config) => {
+      const isFallback = config.keysStorage.startsWith("fallback");
+      const scope = isFallback ? "fallback" : "primary";
+      const { provider, keyInput } = config;
+      const configEl = document.getElementById(`${scope}${capitalize(provider)}Config`);
+      if (!configEl || configEl.dataset.multiReady === "1") return;
+
+      const modelsBlock = document.createElement("div");
+      modelsBlock.style.margin = "0 0 12px";
+      modelsBlock.innerHTML = `
+        <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">Models (click chọn/bỏ, dùng round-robin)</p>
+        <div id="${scope}${capitalize(provider)}ModelsList" class="provider-models-list" style="display: flex; flex-wrap: wrap; gap: 6px"></div>
+        <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">Đã chọn: <span id="${scope}${capitalize(provider)}SelectedModelCount">0</span></p>
+      `;
+      configEl.prepend(modelsBlock);
+
+      const keysBlock = document.createElement("div");
+      keysBlock.style.margin = "8px 0 0";
+      keysBlock.innerHTML = `
+        <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">Keys (nhập + Enter để thêm, click để xóa)</p>
+        <div id="${scope}${capitalize(provider)}KeysList" class="provider-keys-list" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px"></div>
+        <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">Đã thêm: <span id="${scope}${capitalize(provider)}SelectedKeyCount">0</span>/10</p>
+      `;
+      configEl.appendChild(keysBlock);
+
+      if (keyInput) {
+        keyInput.placeholder = "Nhập key + Enter để thêm";
+        keyInput.addEventListener("keydown", (event) => handleProviderKeyInput(event, scope, provider));
+      }
+      renderProviderModelsTags(scope, provider, []);
+      renderProviderKeysButtons(scope, provider, []);
+      configEl.dataset.multiReady = "1";
+    });
+  }
+
   async function fetchProjects(apiKey, selectedId = "", selectedReportId = "") {
     if (!apiKey) return;
     const now = Date.now();
@@ -174,7 +367,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const defaultProjectSelect = document.getElementById("defaultProjectId");
     const reportProjectSelect = document.getElementById("reportProjectId");
     try {
-      if (syncBtn) { syncBtn.disabled = true; syncBtn.textContent = "⌛ Đang tải..."; }
+      if (syncBtn) {
+        syncBtn.disabled = true;
+        syncBtn.textContent = "⌛ Đang tải...";
+      }
       defaultProjectSelect.innerHTML = "<option value=\"\">Đang tải...</option>";
       reportProjectSelect.innerHTML = "<option value=\"\">Đang tải...</option>";
       const response = await fetch(`${TB.REDMINE_DOMAIN}/projects.json?limit=100`, {
@@ -189,7 +385,10 @@ document.addEventListener("DOMContentLoaded", () => {
       defaultProjectSelect.innerHTML = "<option value=\"\">Lỗi tải (Kiểm tra Key)</option>";
       reportProjectSelect.innerHTML = "<option value=\"\">Lỗi tải (Kiểm tra Key)</option>";
     } finally {
-      if (syncBtn) { syncBtn.disabled = false; syncBtn.textContent = "🔄 Đồng bộ Project"; }
+      if (syncBtn) {
+        syncBtn.disabled = false;
+        syncBtn.textContent = "🔄 Đồng bộ Project";
+      }
     }
   }
 
@@ -210,19 +409,12 @@ document.addEventListener("DOMContentLoaded", () => {
   function handleProviderChange(selectElement, selectedModel = null) {
     const isPrimary = selectElement.id === "primaryProvider";
     const provider = selectElement.value;
-    const modelField = document.getElementById(isPrimary ? "primaryModelField" : "fallbackModelField");
-    const modelSelect = document.getElementById(isPrimary ? "primaryModel" : "fallbackModel");
-
-    const showModel = provider !== TB.PROVIDERS.GEMINI && provider !== TB.PROVIDERS.NONE;
-    modelField.style.display = showModel ? "block" : "none";
-    if (showModel) {
-      updateModelDropdown(modelSelect, provider);
-      if (selectedModel) modelSelect.value = selectedModel;
-    }
 
     if (isPrimary) {
       updateProviderKeyVisibility(provider);
       updateFallbackOptions();
+    } else {
+      updateFallbackKeyVisibility(provider);
     }
   }
 
@@ -238,11 +430,27 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function updateModelDropdown(selectElement, provider) {
+  function updateFallbackKeyVisibility(provider) {
+    const sections = {
+      gemini: document.getElementById("fallbackGeminiConfig"),
+      groq: document.getElementById("fallbackGroqConfig"),
+      cerebras: document.getElementById("fallbackCerebrasConfig"),
+      openrouter: document.getElementById("fallbackOpenrouterConfig"),
+    };
+    Object.entries(sections).forEach(([key, el]) => {
+      if (el) el.style.display = provider === key ? "block" : "none";
+    });
+  }
+
+  function getDefaultModel(provider) {
     const key = `${provider.toUpperCase()}_MODELS`;
-    const models = TB.MODELS?.[key] || [];
-    selectElement.innerHTML = "";
-    models.forEach(model => selectElement.add(new Option(model.label, model.value)));
+    const models = TB[key] || globalThis.TB_MODELS?.[key] || [];
+    return models.find((model) => model.default)?.value || models[0]?.value || "";
+  }
+
+  function getProviderModels(provider) {
+    const key = `${provider.toUpperCase()}_MODELS`;
+    return TB[key] || globalThis.TB_MODELS?.[key] || [];
   }
 
   function updateFallbackOptions() {
@@ -254,24 +462,29 @@ document.addEventListener("DOMContentLoaded", () => {
       { value: "groq", label: "Groq Cloud" },
       { value: "cerebras", label: "Cerebras" },
       { value: "openrouter", label: "OpenRouter" },
-    ].filter(opt => opt.value === "none" || opt.value !== primary);
+    ].filter((opt) => opt.value === "none" || opt.value !== primary);
 
     fallbackProviderSelect.innerHTML = "";
-    options.forEach(opt => fallbackProviderSelect.add(new Option(opt.label, opt.value)));
-    fallbackProviderSelect.value = options.some(opt => opt.value === currentFallback) ? currentFallback : "none";
+    options.forEach((opt) => fallbackProviderSelect.add(new Option(opt.label, opt.value)));
+    fallbackProviderSelect.value = options.some((opt) => opt.value === currentFallback)
+      ? currentFallback
+      : "none";
     handleProviderChange(fallbackProviderSelect);
   }
 
   function setStatus(message, isError = false) {
     statusEl.textContent = message;
     statusEl.className = isError ? "status status-error" : "status status-success";
-    setTimeout(() => { statusEl.textContent = ""; statusEl.className = "status"; }, 3000);
+    setTimeout(() => {
+      statusEl.textContent = "";
+      statusEl.className = "status";
+    }, 3000);
   }
 
   function renderGeminiModelsTags(selectedModels = []) {
     const listEl = document.getElementById("geminiModelsList");
     listEl.innerHTML = "";
-    (TB.GEMINI_MODELS || []).forEach(model => {
+    (TB.GEMINI_MODELS || []).forEach((model) => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.dataset.modelId = model.value;
@@ -284,12 +497,157 @@ document.addEventListener("DOMContentLoaded", () => {
           handleTestSingleModel(model.value, model.label, btn);
         } else {
           btn.classList.toggle("selected");
-          document.getElementById("selectedModelCount").textContent = listEl.querySelectorAll(".selected").length;
+          document.getElementById("selectedModelCount").textContent =
+            listEl.querySelectorAll(".selected").length;
         }
       };
       listEl.appendChild(btn);
     });
     document.getElementById("selectedModelCount").textContent = selectedModels.length;
+  }
+
+  function renderProviderModelsTags(scope, provider, selectedModels = []) {
+    const idPrefix = `${scope}${capitalize(provider)}`;
+    const listEl = document.getElementById(`${idPrefix}ModelsList`);
+    const countEl = document.getElementById(`${idPrefix}SelectedModelCount`);
+    if (!listEl || !countEl) return;
+
+    const models = getProviderModels(provider);
+    listEl.innerHTML = "";
+    models.forEach((model) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.dataset.provider = provider;
+      btn.dataset.modelId = model.value;
+      btn.className = selectedModels.includes(model.value) ? "selected" : "";
+      btn.textContent = model.label;
+      Object.assign(btn.style, {
+        background: btn.classList.contains("selected") ? "#10b981" : "#dbeafe",
+        color: btn.classList.contains("selected") ? "#fff" : "#1e40af",
+        border: `1px solid ${btn.classList.contains("selected") ? "#059669" : "#bfdbfe"}`,
+        borderRadius: "8px",
+        padding: "6px 12px",
+        cursor: "pointer",
+        fontSize: "12px",
+      });
+      btn.onclick = () => {
+        btn.classList.toggle("selected");
+        const isSelected = btn.classList.contains("selected");
+        btn.style.background = isSelected ? "#10b981" : "#dbeafe";
+        btn.style.color = isSelected ? "#fff" : "#1e40af";
+        btn.style.borderColor = isSelected ? "#059669" : "#bfdbfe";
+        countEl.textContent = listEl.querySelectorAll(".selected").length;
+      };
+      listEl.appendChild(btn);
+    });
+    countEl.textContent = selectedModels.length;
+  }
+
+  function getSelectedProviderModels(scope, provider) {
+    const idPrefix = `${scope}${capitalize(provider)}`;
+    return Array.from(document.querySelectorAll(`#${idPrefix}ModelsList button.selected`)).map(
+      (button) => button.dataset.modelId
+    );
+  }
+
+  function getSelectedModelsForProvider(scope, provider) {
+    if (provider === TB.PROVIDERS.GEMINI) {
+      if (scope === "fallback") {
+        return Array.from(document.querySelectorAll("#fallbackGeminiModelsList button.selected")).map(
+          (button) => button.dataset.modelId
+        );
+      }
+      return Array.from(document.querySelectorAll("#geminiModelsList button.selected")).map(
+        (button) => button.dataset.modelId
+      );
+    }
+    return getSelectedProviderModels(scope, provider);
+  }
+
+  function renderProviderKeysButtons(scope, provider, keys = []) {
+    const idPrefix = `${scope}${capitalize(provider)}`;
+    const listEl = document.getElementById(`${idPrefix}KeysList`);
+    const countEl = document.getElementById(`${idPrefix}SelectedKeyCount`);
+    if (!listEl || !countEl) return;
+
+    listEl.innerHTML = "";
+    keys.forEach((key) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.title = key;
+      btn.textContent = `${key.slice(0, 8)}...`;
+      Object.assign(btn.style, {
+        background: "#dbeafe",
+        color: "#1e40af",
+        border: "1px solid #bfdbfe",
+        borderRadius: "8px",
+        padding: "6px 12px",
+        cursor: "pointer",
+        fontFamily: "monospace",
+        fontSize: "12px",
+      });
+      btn.onclick = () => {
+        btn.remove();
+        countEl.textContent = listEl.children.length;
+      };
+      listEl.appendChild(btn);
+    });
+    countEl.textContent = keys.length;
+  }
+
+  function getProviderChipStyle(isSelected) {
+    return {
+      background: isSelected ? "#10b981" : "#dbeafe",
+      color: isSelected ? "#fff" : "#1e40af",
+      border: `1px solid ${isSelected ? "#059669" : "#bfdbfe"}`,
+      borderRadius: "8px",
+      padding: "6px 12px",
+      cursor: "pointer",
+      fontSize: "12px",
+    };
+  }
+
+  function handleProviderKeyInput(event, scope, provider) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const input = event.target;
+    const key = input.value.trim();
+    if (!key || key === "**********") return;
+
+    const currentKeys = getProviderKeys(scope, provider);
+    if (currentKeys.length >= 10 || currentKeys.includes(key)) {
+      input.value = "";
+      return;
+    }
+    renderProviderKeysButtons(scope, provider, [...currentKeys, key]);
+    input.value = "";
+  }
+
+  function getProviderKeys(scope, provider, inputElement = null) {
+    const idPrefix = `${scope}${capitalize(provider)}`;
+    const keys = Array.from(document.querySelectorAll(`#${idPrefix}KeysList button`)).map(
+      (button) => button.title
+    );
+    const inputValue = inputElement?.value?.trim();
+    if (inputValue && inputValue !== "**********" && !keys.includes(inputValue)) {
+      keys.push(inputValue);
+    }
+    return keys;
+  }
+
+  async function decryptStoredList(value) {
+    if (!value) return [];
+    try {
+      const listStr = await decryptData(value);
+      return listStr ? listStr.split("\n").filter(Boolean) : [];
+    } catch (error) {
+      console.error("[OPTIONS] Error decrypting list:", error);
+      return [];
+    }
+  }
+
+  function capitalize(value) {
+    return value ? `${value.charAt(0).toUpperCase()}${value.slice(1)}` : "";
   }
 
   async function handleTestSingleModel(modelId, modelLabel, btn) {
@@ -300,14 +658,17 @@ document.addEventListener("DOMContentLoaded", () => {
     icon.style.animation = "spin 1s linear infinite";
     setStatus(`Đang test: ${modelLabel}...`);
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: "ok" }] }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 10 },
-        }),
-      });
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: "ok" }] }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 10 },
+          }),
+        }
+      );
       if (res.ok) {
         icon.textContent = "✅";
         icon.style.animation = "";
@@ -328,7 +689,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderGeminiKeysButtons(keys = []) {
     const listEl = document.getElementById("geminiKeysList");
     listEl.innerHTML = "";
-    keys.forEach(key => {
+    keys.forEach((key) => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.title = key;
@@ -342,20 +703,82 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("selectedKeyCount").textContent = keys.length;
   }
 
+  function renderFallbackGeminiModelsTags(selectedModels = []) {
+    const listEl = document.getElementById("fallbackGeminiModelsList");
+    const countEl = document.getElementById("fallbackGeminiSelectedModelCount");
+    if (!listEl || !countEl) return;
+    listEl.innerHTML = "";
+    (TB.GEMINI_MODELS || []).forEach((model) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.dataset.modelId = model.value;
+      btn.className = selectedModels.includes(model.value) ? "selected" : "";
+      btn.textContent = model.label;
+      Object.assign(btn.style, getProviderChipStyle(btn.classList.contains("selected")));
+      btn.onclick = () => {
+        btn.classList.toggle("selected");
+        Object.assign(btn.style, getProviderChipStyle(btn.classList.contains("selected")));
+        countEl.textContent = listEl.querySelectorAll(".selected").length;
+      };
+      listEl.appendChild(btn);
+    });
+    countEl.textContent = selectedModels.length;
+  }
+
+  function renderFallbackGeminiKeysButtons(keys = []) {
+    const listEl = document.getElementById("fallbackGeminiKeysList");
+    const countEl = document.getElementById("fallbackGeminiSelectedKeyCount");
+    if (!listEl || !countEl) return;
+    listEl.innerHTML = "";
+    keys.forEach((key) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.title = key;
+      btn.textContent = `${key.slice(0, 8)}...`;
+      Object.assign(btn.style, getProviderChipStyle(false), { fontFamily: "monospace" });
+      btn.onclick = () => {
+        btn.remove();
+        countEl.textContent = listEl.children.length;
+      };
+      listEl.appendChild(btn);
+    });
+    countEl.textContent = keys.length;
+  }
+
+  function handleFallbackGeminiKeyInput(event) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const key = event.target.value.trim();
+    if (!key) return;
+    const currentKeys = Array.from(document.querySelectorAll("#fallbackGeminiKeysList button")).map(
+      (button) => button.title
+    );
+    if (currentKeys.length < 10 && !currentKeys.includes(key)) {
+      renderFallbackGeminiKeysButtons([...currentKeys, key]);
+    }
+    event.target.value = "";
+  }
+
   function handleGeminiKeyInput(e) {
     if (e.key !== "Enter") return;
     e.preventDefault();
     const input = e.target;
     const key = input.value.trim();
     const listEl = document.getElementById("geminiKeysList");
-    if (key && listEl.children.length < 10 && !Array.from(listEl.children).some(b => b.title === key)) {
-      renderGeminiKeysButtons([...Array.from(listEl.children).map(b => b.title), key]);
+    if (
+      key &&
+      listEl.children.length < 10 &&
+      !Array.from(listEl.children).some((b) => b.title === key)
+    ) {
+      renderGeminiKeysButtons([...Array.from(listEl.children).map((b) => b.title), key]);
       input.value = "";
     }
   }
 
   function getFirstGeminiKey() {
-    const keys = Array.from(document.querySelectorAll("#geminiKeysList button")).map((b) => b.title);
+    const keys = Array.from(document.querySelectorAll("#geminiKeysList button")).map(
+      (b) => b.title
+    );
     return keys[0] || "";
   }
 
@@ -372,7 +795,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const stored = await chrome.storage.local.get("redmineApiKey");
     const key = stored.redmineApiKey ? await decryptData(stored.redmineApiKey) : null;
     if (key) {
-      fetchProjects(key, document.getElementById("defaultProjectId").value, document.getElementById("reportProjectId").value);
+      fetchProjects(
+        key,
+        document.getElementById("defaultProjectId").value,
+        document.getElementById("reportProjectId").value
+      );
     } else {
       alert("Vui lòng lưu Redmine API Key trước.");
     }
