@@ -101,6 +101,7 @@
       GEMINI: "gemini",
       GROQ: "groq",
       CEREBRAS: "cerebras",
+      OPENROUTER: "openrouter",
       NONE: "none",
     },
 

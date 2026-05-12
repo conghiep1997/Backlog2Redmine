@@ -223,6 +223,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isPrimary) {
       updateProviderKeyVisibility(provider);
       updateFallbackOptions();
+    } else {
+      updateFallbackKeyVisibility(provider);
     }
   }
 
@@ -232,6 +234,18 @@ document.addEventListener("DOMContentLoaded", () => {
       groq: document.getElementById("primaryGroqConfig"),
       cerebras: document.getElementById("primaryCerebrasConfig"),
       openrouter: document.getElementById("primaryOpenrouterConfig"),
+    };
+    Object.entries(sections).forEach(([key, el]) => {
+      if (el) el.style.display = provider === key ? "block" : "none";
+    });
+  }
+
+  function updateFallbackKeyVisibility(provider) {
+    const sections = {
+      gemini: document.getElementById("fallbackGeminiConfig"),
+      groq: document.getElementById("fallbackGroqConfig"),
+      cerebras: document.getElementById("fallbackCerebrasConfig"),
+      openrouter: document.getElementById("fallbackOpenrouterConfig"),
     };
     Object.entries(sections).forEach(([key, el]) => {
       if (el) el.style.display = provider === key ? "block" : "none";
@@ -277,7 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.dataset.modelId = model.value;
       btn.dataset.modelLabel = model.label;
       btn.className = selectedModels.includes(model.value) ? "selected" : "";
-      btn.innerHTML = `${model.label} <span class="test-icon" style="margin-left:6px;opacity:0.6;cursor:pointer;">🧪</span>`;
+      btn.innerHTML = `${model.label} <span class="test-icon" style="margin-left:6px;opacity:0.6;cursor:pointer;">?</span>`;
       btn.onclick = (e) => {
         if (e.target.classList.contains("test-icon")) {
           e.stopPropagation();
@@ -309,19 +323,19 @@ document.addEventListener("DOMContentLoaded", () => {
         }),
       });
       if (res.ok) {
-        icon.textContent = "✅";
+        icon.textContent = "OK";
         icon.style.animation = "";
-        setStatus(`✅ Model ${modelLabel} hoạt động tốt`);
+        setStatus(`OK: Model ${modelLabel} hoạt động tốt`);
       } else {
-        icon.textContent = "❌";
+        icon.textContent = "X";
         icon.style.animation = "";
         const errorData = await res.json();
-        setStatus(`❌ ${errorData?.error?.message || "Lỗi không xác định"}`, true);
+        setStatus(`X: ${errorData?.error?.message || "Lỗi không xác định"}`, true);
       }
     } catch (e) {
-      icon.textContent = "❌";
+      icon.textContent = "X";
       icon.style.animation = "";
-      setStatus(`❌ Lỗi kiểm tra model: ${e.message}`, true);
+      setStatus(`X: Lỗi kiểm tra model: ${e.message}`, true);
     }
   }
 

@@ -27,13 +27,6 @@
     { value: "zai-glm-4.7", label: "ZAI GLM 4.7 (Strong Multilingual, Preview)" },
   ];
 
-  const OPENROUTER_MODELS = [
-    { value: "gpt-4o-mini", label: "GPT-4o Mini (Fast, multilingual)", default: true },
-    { value: "meta-llama-3.1-70b", label: "Meta Llama 3.1 70B (Strong multilingual)" },
-    { value: "mistralai/mistral-7b-instruct-v0.3", label: "Mistral 7B Instruct v0.3 (Efficient)" },
-    { value: "anthropic/claude-3-haiku", label: "Claude 3 Haiku (Lightweight)" }
-  ];
-
   const GROQ_MODELS = [
     {
       value: "llama-3.3-70b-versatile",
@@ -43,6 +36,13 @@
     { value: "openai/gpt-oss-120b", label: "GPT OSS 120B (High Quality)" },
     { value: "qwen/qwen3-32b", label: "Qwen 3 32B (Good Multilingual, Preview)" },
     { value: "openai/gpt-oss-20b", label: "GPT OSS 20B (Balanced & Fast)" },
+  ];
+
+  const OPENROUTER_MODELS = [
+    { value: "gpt-4o-mini", label: "GPT-4o Mini (Fast, multilingual)", default: true },
+    { value: "meta-llama-3.1-70b", label: "Meta Llama 3.1 70B (Strong multilingual)" },
+    { value: "mistralai/mistral-7b-instruct-v0.3", label: "Mistral 7B Instruct v0.3 (Efficient)" },
+    { value: "anthropic/claude-3-haiku", label: "Claude 3 Haiku (Lightweight)" }
   ];
 
   global.TB_PROVIDERS = {
@@ -62,6 +62,6 @@
     GEMINI_FALLBACK: "gemma-4-31b-it",
     CEREBRAS: "gpt-oss-120b",
     GROQ: "llama-3.3-70b-versatile",
-    OPENROUTER: "gpt-4o-mini"
+    OPENROUTER: "google/gemma-3-27b-it:free",
   };
 })(globalThis);
