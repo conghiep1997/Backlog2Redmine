@@ -4,7 +4,7 @@
 (function (global) {
   const GEMINI_MODELS = [
     {
-      value: "gemini-3.1-flash-lite-preview",
+      value: "gemini-3.1-flash-lite",
       label: "Gemini 3.1 Flash Lite (RPD 500) \u2B50 M\u1EB7c \u0111\u1ECBnh",
       default: true,
     },

@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Google Sheet Testcase Converter</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f7fb;
+        --panel: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --border: #d7dde7;
+        --primary: #2563eb;
+        --primary-strong: #1d4ed8;
+        --success-bg: #ecfdf3;
+        --success-border: #86efac;
+        --success-text: #166534;
+        --danger-bg: #fef2f2;
+        --danger-border: #fecaca;
+        --danger-text: #991b1b;
+        --warning-bg: #fff7ed;
+        --warning-border: #fed7aa;
+        --warning-text: #9a3412;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: #f8fafc;
+        color: var(--text);
+      }
+
+      .wrap {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 32px 20px 48px;
+      }
+
+      .header-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+      }
+
+      .hero {
+        margin: 0;
+      }
+
+      .hero h1 {
+        margin: 0 0 8px;
+        font-size: clamp(24px, 3.5vw, 36px);
+      }
+
+      .hero p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid rgba(215, 221, 231, 0.85);
+        border-radius: 18px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(31, 41, 55, 0.08);
+        margin-bottom: 24px;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      @media (max-width: 640px) {
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .section-title {
+        font-size: 16px;
+        font-weight: 700;
+        margin-top: 0;
+        margin-bottom: 16px;
+        color: var(--primary-strong);
+        border-bottom: 2px solid #eff6ff;
+        padding-bottom: 8px;
+      }
+
+      .field {
+        margin-bottom: 16px;
+      }
+
+      .field label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      .field input[type="text"],
+      .field input[type="number"] {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px 14px;
+        font: inherit;
+      }
+
+      .field input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+      }
+
+      .checkbox-field {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 20px;
+      }
+
+      .checkbox-field input {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 12px;
+        padding: 12px 20px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .primary {
+        background: linear-gradient(180deg, #3b82f6, var(--primary));
+        color: white;
+        box-shadow: 0 10px 20px rgba(37, 99, 235, 0.18);
+      }
+
+      .primary:hover {
+        background: linear-gradient(180deg, #2563eb, var(--primary-strong));
+      }
+
+      .secondary {
+        background: #f8fafc;
+        color: #475569;
+        border: 1px solid var(--border);
+      }
+
+      .secondary:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+      }
+
+      .oauth-btn {
+        background: #fff;
+        border: 1px solid var(--border);
+        color: #3c4043;
+      }
+      .oauth-btn:hover {
+        background: #f8fafc;
+      }
+      .oauth-btn.connected {
+        background: #e6f4ea;
+        border-color: #a8dab5;
+        color: #137333;
+      }
+
+      .log-card {
+        background: #0f172a;
+        color: #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        font-family: monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        max-height: 300px;
+        overflow-y: auto;
+        margin-top: 20px;
+        border: 1px solid #1e293b;
+      }
+
+      .log-line {
+        margin: 4px 0;
+      }
+      .log-info {
+        color: #38bdf8;
+      }
+      .log-success {
+        color: #4ade80;
+      }
+      .log-warning {
+        color: #fbbf24;
+      }
+      .log-error {
+        color: #f87171;
+      }
+
+      .back-btn {
+        text-decoration: none;
+        color: #475569;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #fff;
+      }
+      .back-btn:hover {
+        background: #f1f5f9;
+        color: var(--primary);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="header-bar">
+        <div class="hero">
+          <h1>Google Sheet Testcase Converter</h1>
+          <p>Chuyển đổi và chuẩn hóa định dạng testcase giữa hai Google Sheet</p>
+        </div>
+        <a href="options.html" class="back-btn">⬅️ Quay lại Cấu hình</a>
+      </div>
+
+      <!-- Google Authentication Status Card -->
+      <div
+        class="card"
+        style="
+          padding: 16px 24px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          flex-wrap: wrap;
+        "
+      >
+        <div>
+          <span style="font-weight: 700; font-size: 15px">Google API Connection:</span>
+          <span id="oauthStatus" style="margin-left: 8px; font-weight: 600; color: var(--muted)"
+            >Đang kiểm tra...</span
+          >
+        </div>
+        <button id="oauthBtn" class="oauth-btn">🔑 Kết nối Google</button>
+      </div>
+
+      <!-- OAuth2 Setup Guide -->
+      <details
+        class="card"
+        style="padding: 0 20px 16px 20px; border-color: #fed7aa; background-color: #fffbeb"
+      >
+        <summary
+          style="
+            font-weight: 700;
+            font-size: 14px;
+            padding: 14px 0;
+            cursor: pointer;
+            color: #c2410c;
+          "
+        >
+          ⚠️ HƯỚNG DẪN THIẾT LẬP OAUTH2 (CẦN LÀM 1 LẦN)
+        </summary>
+        <div style="padding-top: 8px; font-size: 12px; line-height: 1.5; color: #9a3412">
+          <p style="margin: 0 0 8px 0; font-weight: 600">
+            Vì chính sách bảo mật Google, Chrome Extension bắt buộc phải khai báo Client ID trong
+            file manifest.json.
+          </p>
+          <ol style="margin: 0; padding-left: 16px">
+            <li style="margin-bottom: 6px">
+              Truy cập
+              <a
+                href="https://console.cloud.google.com/"
+                target="_blank"
+                style="color: #1d4ed8; font-weight: 600"
+                >Google Cloud Console</a
+              >, tạo/chọn project.
+            </li>
+            <li style="margin-bottom: 6px">
+              Vào <b>Library</b> → Enable <b>Google Sheets API</b>.
+            </li>
+            <li style="margin-bottom: 6px">
+              Vào <b>Credentials</b> → Click <b>Create Credentials > OAuth client ID</b>.
+            </li>
+            <li style="margin-bottom: 6px">
+              Chọn loại <b>Chrome Extension</b>. Copy chính xác ID extension này: <br />
+              <code
+                id="extIdDisplay"
+                style="
+                  background: #ffedd5;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  font-weight: bold;
+                  font-size: 12px;
+                "
+                >đang tải...</code
+              >
+            </li>
+            <li style="margin-bottom: 6px">Click <b>Create</b> → Copy Client ID nhận được.</li>
+            <li style="margin-bottom: 6px">
+              Mở file <b>manifest.json</b> trong code của extension và cập nhật block sau:
+              <pre
+                id="manifestSnippet"
+                style="
+                  background: #1e293b;
+                  color: #e2e8f0;
+                  padding: 10px;
+                  border-radius: 8px;
+                  font-size: 11px;
+                  overflow-x: auto;
+                  white-space: pre-wrap;
+                  margin: 6px 0 0 0;
+                "
+              >
+đang tải...</pre
+              >
+            </li>
+            <li style="margin-top: 10px; font-weight: 700; color: #c2410c">
+              Sau khi lưu manifest.json, vào chrome://extensions và Reload extension!
+            </li>
+          </ol>
+        </div>
+      </details>
+
+      <div class="card">
+        <form id="converterForm">
+          <div class="grid-2">
+            <!-- Nguồn -->
+            <div>
+              <h3 class="section-title">📂 Google Sheet Nguồn (Source)</h3>
+
+              <div class="field">
+                <label for="sourceSpreadsheet">Spreadsheet URL hoặc ID</label>
+                <input
+                  id="sourceSpreadsheet"
+                  type="text"
+                  placeholder="https://docs.google.com/spreadsheets/d/..."
+                  required
+                />
+              </div>
+
+              <div class="field">
+                <label for="sourceSheetName">Tên Sheet (Sheet Name)</label>
+                <input id="sourceSheetName" type="text" placeholder="Ví dụ: Sheet1" required />
+              </div>
+
+              <div class="field">
+                <label for="sourceStartRow">Dòng bắt đầu đọc dữ liệu (Start Row)</label>
+                <input id="sourceStartRow" type="number" min="1" value="2" required />
+              </div>
+            </div>
+
+            <!-- Đích -->
+            <div>
+              <h3 class="section-title">🎯 Google Sheet Đích (Destination)</h3>
+
+              <div class="field">
+                <label for="destSpreadsheet">Spreadsheet URL hoặc ID</label>
+                <input
+                  id="destSpreadsheet"
+                  type="text"
+                  placeholder="https://docs.google.com/spreadsheets/d/..."
+                  required
+                />
+              </div>
+
+              <div class="field">
+                <label for="destSheetName">Tên Sheet (Sheet Name)</label>
+                <input id="destSheetName" type="text" placeholder="Ví dụ: Sheet1" required />
+              </div>
+
+              <div class="field">
+                <label for="destStartRow">Dòng bắt đầu ghi dữ liệu (Start Row)</label>
+                <input id="destStartRow" type="number" min="1" value="3" required />
+              </div>
+            </div>
+          </div>
+
+          <label class="checkbox-field">
+            <input type="checkbox" id="clearDest" checked />
+            Xóa dữ liệu cũ ở sheet đích trước khi ghi (Phạm vi A:J từ dòng bắt đầu)
+          </label>
+
+          <div class="actions">
+            <button type="button" id="testConnBtn" class="secondary">🔌 Kiểm tra kết nối</button>
+            <button type="submit" id="convertBtn" class="primary">⚡ Bắt đầu chuyển đổi</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Log Area -->
+      <h3 style="margin: 24px 0 8px 4px; font-size: 16px; font-weight: 700">Tiến trình xử lý</h3>
+      <div id="logArea" class="log-card">
+        <div class="log-line log-info">
+          Hệ thống đã sẵn sàng. Vui lòng kiểm tra kết nối Google và điền các thông tin để bắt đầu.
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="modules/services/sheetsApi.js"></script>
+    <script src="modules/services/testcaseConverter.js"></script>
+    <script src="testcase-converter.js"></script>
+  </body>
+</html>

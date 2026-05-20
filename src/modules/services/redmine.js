@@ -242,11 +242,10 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
     };
   } catch (error) {
     if (typeof TB_LOGGER !== "undefined") {
-      TB_LOGGER.logError("RedmineService", `API Error during issue creation: ${error.message}`,
-        {
-          requestPayload: payload,
-          redmineResponse: error.message,
-        });
+      TB_LOGGER.logError("RedmineService", `API Error during issue creation: ${error.message}`, {
+        requestPayload: payload,
+        redmineResponse: error.message,
+      });
     }
     // Rethrow a user-friendly error
     throw new Error(
@@ -436,7 +435,6 @@ async function processNotesAttachments(
 
   return { updatedNotes: finalNotes, uploads };
 }
-
 
 /**
  * Upload file to Redmine and get token.

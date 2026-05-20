@@ -18,17 +18,17 @@ const GEMINI_OVERLOAD_COOLDOWN_MS = 30 * 1000;
  */
 async function listProviderModels(provider, apiKey) {
   switch (provider) {
-  case TB.PROVIDERS.GEMINI:
-    return _listGeminiModels(apiKey);
-  case TB.PROVIDERS.GROQ:
-    return _listGroqModels(apiKey);
-  case TB.PROVIDERS.CEREBRAS:
-    // Cerebras does not have a public model listing API, return hardcoded list.
-    return Promise.resolve(TB.CEREBRAS_MODELS);
-  case TB.PROVIDERS.OPENROUTER:
-    return _listOpenRouterModels(apiKey);
-  default:
-    return Promise.resolve([]);
+    case TB.PROVIDERS.GEMINI:
+      return _listGeminiModels(apiKey);
+    case TB.PROVIDERS.GROQ:
+      return _listGroqModels(apiKey);
+    case TB.PROVIDERS.CEREBRAS:
+      // Cerebras does not have a public model listing API, return hardcoded list.
+      return Promise.resolve(TB.CEREBRAS_MODELS);
+    case TB.PROVIDERS.OPENROUTER:
+      return _listOpenRouterModels(apiKey);
+    default:
+      return Promise.resolve([]);
   }
 }
 
@@ -111,32 +111,32 @@ async function testModelAvailability(provider, modelId, settings) {
   const testText = "Hello";
   try {
     switch (provider) {
-    case TB.PROVIDERS.GEMINI: {
-      // Find any valid Gemini key to use for testing
-      const apiKey = settings.geminiApiKeys?.[0] || settings.geminiApiKey;
-      if (!apiKey) throw new Error("No Gemini API key found for testing.");
-      await callGeminiAPI(apiKey, testText, modelId, () => "Just say \"ok\"");
-      break;
-    }
-    case TB.PROVIDERS.GROQ:
-      if (!settings.groqApiKey) throw new Error("No Groq API key found for testing.");
-      await callGroqAPI(settings.groqApiKey, testText, modelId, () => "Just say \"ok\"");
-      break;
-    case TB.PROVIDERS.CEREBRAS:
-      if (!settings.cerebrasApiKey) throw new Error("No Cerebras API key found for testing.");
-      await callCerebrasAPI(settings.cerebrasApiKey, testText, modelId, () => "Just say \"ok\"");
-      break;
-    case TB.PROVIDERS.OPENROUTER:
-      if (!settings.openrouterApiKey) throw new Error("No OpenRouter API key found for testing.");
-      await callOpenRouterAPI(
-        settings.openrouterApiKey,
-        testText,
-        modelId,
-        () => "Just say \"ok\""
-      );
-      break;
-    default:
-      throw new Error(`Unsupported provider for testing: ${provider}`);
+      case TB.PROVIDERS.GEMINI: {
+        // Find any valid Gemini key to use for testing
+        const apiKey = settings.geminiApiKeys?.[0] || settings.geminiApiKey;
+        if (!apiKey) throw new Error("No Gemini API key found for testing.");
+        await callGeminiAPI(apiKey, testText, modelId, () => 'Just say "ok"');
+        break;
+      }
+      case TB.PROVIDERS.GROQ:
+        if (!settings.groqApiKey) throw new Error("No Groq API key found for testing.");
+        await callGroqAPI(settings.groqApiKey, testText, modelId, () => 'Just say "ok"');
+        break;
+      case TB.PROVIDERS.CEREBRAS:
+        if (!settings.cerebrasApiKey) throw new Error("No Cerebras API key found for testing.");
+        await callCerebrasAPI(settings.cerebrasApiKey, testText, modelId, () => 'Just say "ok"');
+        break;
+      case TB.PROVIDERS.OPENROUTER:
+        if (!settings.openrouterApiKey) throw new Error("No OpenRouter API key found for testing.");
+        await callOpenRouterAPI(
+          settings.openrouterApiKey,
+          testText,
+          modelId,
+          () => 'Just say "ok"'
+        );
+        break;
+      default:
+        throw new Error(`Unsupported provider for testing: ${provider}`);
     }
     return { ok: true, message: "Model is responsive." };
   } catch (error) {
@@ -314,7 +314,9 @@ async function callAIsByProvider(provider, model, settings, text, url, promptFn)
 
     if (skippedCooldowns === combinations.length && Number.isFinite(nextCooldownReadyAt)) {
       const waitSeconds = Math.max(1, Math.ceil((nextCooldownReadyAt - Date.now()) / 1000));
-      throw new Error(`All Gemini model/key combinations are cooling down. Try again in ${waitSeconds}s.`);
+      throw new Error(
+        `All Gemini model/key combinations are cooling down. Try again in ${waitSeconds}s.`
+      );
     }
 
     // If all combinations were exhausted, throw the last captured error.
@@ -382,7 +384,9 @@ async function callProviderWithFailover(provider, model, settings, text, url, pr
 
   if (skippedCooldowns === combinations.length && Number.isFinite(nextCooldownReadyAt)) {
     const waitSeconds = Math.max(1, Math.ceil((nextCooldownReadyAt - Date.now()) / 1000));
-    throw new Error(`All ${provider} model/key combinations are cooling down. Try again in ${waitSeconds}s.`);
+    throw new Error(
+      `All ${provider} model/key combinations are cooling down. Try again in ${waitSeconds}s.`
+    );
   }
 
   throw lastError || new Error(`All ${provider} model/key combinations failed.`);

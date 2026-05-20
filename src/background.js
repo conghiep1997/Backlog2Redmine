@@ -73,7 +73,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
  */
 chrome.notifications.onClicked.addListener((notificationId) => {
   chrome.notifications.clear(notificationId);
-  chrome.tabs.create({ url: "https://dev-tool-platform.vercel.app/" });
+  chrome.tabs.create({ url: "https://hipppo.vercel.app/" });
 });
 
 /**
@@ -81,8 +81,9 @@ chrome.notifications.onClicked.addListener((notificationId) => {
  */
 chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
   chrome.notifications.clear(notificationId);
-  if (buttonIndex === 0) { // "Download ngay" button
-    chrome.tabs.create({ url: "https://dev-tool-platform.vercel.app/" });
+  if (buttonIndex === 0) {
+    // "Download ngay" button
+    chrome.tabs.create({ url: "https://hipppo.vercel.app/" });
   }
 });
 
@@ -133,7 +134,6 @@ async function checkForUpdates() {
     }
 
     await chrome.storage.local.set({ lastUpdateCheck: new Date().toISOString() });
-
   } catch (error) {
     console.error(`${DEBUG_PREFIX} Update check failed:`, error.message);
   }
@@ -159,10 +159,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     LOOKUP_AND_TRANSLATE_COMMENT: async (msg) => {
       const settings = await getSettings();
       assertSettings(settings, ["redmineApiKey", "ai"]);
-      const redmineIssue = await findRedmineIssueWithCache(settings.redmineDomain, settings.redmineApiKey, msg.issueKey, msg.issueSummary);
+      const redmineIssue = await findRedmineIssueWithCache(
+        settings.redmineDomain,
+        settings.redmineApiKey,
+        msg.issueKey,
+        msg.issueSummary
+      );
       const translated = await translateText(msg.commentText, settings, msg.commentUrl);
       const finalPreview = msg.userInfo ? `${msg.userInfo}\n${translated}` : translated;
-      return { redmineIssueId: redmineIssue?.id || "", issueTitle: redmineIssue?.title || msg.issueSummary, previewText: finalPreview };
+      return {
+        redmineIssueId: redmineIssue?.id || "",
+        issueTitle: redmineIssue?.title || msg.issueSummary,
+        previewText: finalPreview,
+      };
     },
     SEND_TO_REDMINE: (msg) => handleSendToRedmine(msg, sender),
     SEND_TO_BACKLOG: (msg) => handleSendToBacklog(msg),
@@ -185,12 +194,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     EXTRACT_JAPANESE_CONTENT: async (msg) => {
       const settings = await getSettings();
       assertSettings(settings, ["ai"]);
-      return { previewText: await translateText(msg.commentText, settings, null, TB.PROMPTS.EXTRACT_JAPANESE) };
+      return {
+        previewText: await translateText(
+          msg.commentText,
+          settings,
+          null,
+          TB.PROMPTS.EXTRACT_JAPANESE
+        ),
+      };
     },
     TRANSLATE_TEXT_SIMPLE: async (msg) => {
       const settings = await getSettings();
       assertSettings(settings, ["ai"]);
-      return { translatedText: await translateText(msg.text, settings, null, TB.PROMPTS.SIMPLE_TRANSLATE) };
+      return {
+        translatedText: await translateText(msg.text, settings, null, TB.PROMPTS.SIMPLE_TRANSLATE),
+      };
     },
     TRANSLATE_COMMENT_FULL: async (msg) => {
       const settings = await getSettings();
@@ -240,15 +258,37 @@ async function getSettings() {
   }
 
   const keys = [
-    "redmineApiKey", "backlogDomain", "backlogApiKey", "geminiApiKey", "geminiApiKeys",
-    "geminiModels", "cerebrasApiKey", "cerebrasApiKeys", "cerebrasModels",
-    "groqApiKey", "groqApiKeys", "groqModels",
-    "openrouterApiKey", "openrouterApiKeys", "openrouterModels",
-    "fallbackGeminiApiKeys", "fallbackGeminiModels",
-    "fallbackCerebrasApiKey", "fallbackCerebrasApiKeys", "fallbackCerebrasModels",
-    "fallbackGroqApiKey", "fallbackGroqApiKeys", "fallbackGroqModels",
-    "fallbackOpenrouterApiKey", "fallbackOpenrouterApiKeys", "fallbackOpenrouterModels",
-    "primaryProvider", "primaryModel", "fallbackProvider", "fallbackModel", "defaultProjectId",
+    "redmineApiKey",
+    "backlogDomain",
+    "backlogApiKey",
+    "geminiApiKey",
+    "geminiApiKeys",
+    "geminiModels",
+    "cerebrasApiKey",
+    "cerebrasApiKeys",
+    "cerebrasModels",
+    "groqApiKey",
+    "groqApiKeys",
+    "groqModels",
+    "openrouterApiKey",
+    "openrouterApiKeys",
+    "openrouterModels",
+    "fallbackGeminiApiKeys",
+    "fallbackGeminiModels",
+    "fallbackCerebrasApiKey",
+    "fallbackCerebrasApiKeys",
+    "fallbackCerebrasModels",
+    "fallbackGroqApiKey",
+    "fallbackGroqApiKeys",
+    "fallbackGroqModels",
+    "fallbackOpenrouterApiKey",
+    "fallbackOpenrouterApiKeys",
+    "fallbackOpenrouterModels",
+    "primaryProvider",
+    "primaryModel",
+    "fallbackProvider",
+    "fallbackModel",
+    "defaultProjectId",
   ];
   const items = await chrome.storage.local.get(keys);
 
@@ -258,14 +298,30 @@ async function getSettings() {
   const cerebrasModelsStr = items.cerebrasModels ? await decryptData(items.cerebrasModels) : "";
   const groqApiKeysStr = items.groqApiKeys ? await decryptData(items.groqApiKeys) : "";
   const groqModelsStr = items.groqModels ? await decryptData(items.groqModels) : "";
-  const openrouterApiKeysStr = items.openrouterApiKeys ? await decryptData(items.openrouterApiKeys) : "";
-  const openrouterModelsStr = items.openrouterModels ? await decryptData(items.openrouterModels) : "";
-  const fallbackCerebrasApiKeysStr = items.fallbackCerebrasApiKeys ? await decryptData(items.fallbackCerebrasApiKeys) : "";
-  const fallbackCerebrasModelsStr = items.fallbackCerebrasModels ? await decryptData(items.fallbackCerebrasModels) : "";
-  const fallbackGeminiApiKeysStr = items.fallbackGeminiApiKeys ? await decryptData(items.fallbackGeminiApiKeys) : "";
-  const fallbackGeminiModelsStr = items.fallbackGeminiModels ? await decryptData(items.fallbackGeminiModels) : "";
-  const fallbackGroqApiKeysStr = items.fallbackGroqApiKeys ? await decryptData(items.fallbackGroqApiKeys) : "";
-  const fallbackGroqModelsStr = items.fallbackGroqModels ? await decryptData(items.fallbackGroqModels) : "";
+  const openrouterApiKeysStr = items.openrouterApiKeys
+    ? await decryptData(items.openrouterApiKeys)
+    : "";
+  const openrouterModelsStr = items.openrouterModels
+    ? await decryptData(items.openrouterModels)
+    : "";
+  const fallbackCerebrasApiKeysStr = items.fallbackCerebrasApiKeys
+    ? await decryptData(items.fallbackCerebrasApiKeys)
+    : "";
+  const fallbackCerebrasModelsStr = items.fallbackCerebrasModels
+    ? await decryptData(items.fallbackCerebrasModels)
+    : "";
+  const fallbackGeminiApiKeysStr = items.fallbackGeminiApiKeys
+    ? await decryptData(items.fallbackGeminiApiKeys)
+    : "";
+  const fallbackGeminiModelsStr = items.fallbackGeminiModels
+    ? await decryptData(items.fallbackGeminiModels)
+    : "";
+  const fallbackGroqApiKeysStr = items.fallbackGroqApiKeys
+    ? await decryptData(items.fallbackGroqApiKeys)
+    : "";
+  const fallbackGroqModelsStr = items.fallbackGroqModels
+    ? await decryptData(items.fallbackGroqModels)
+    : "";
   const fallbackOpenrouterApiKeysStr = items.fallbackOpenrouterApiKeys
     ? await decryptData(items.fallbackOpenrouterApiKeys)
     : "";
@@ -336,13 +392,25 @@ function assertSettings(settings, required = []) {
   }
   if (required.includes("ai")) {
     const provider = settings.primaryProvider;
-    if (provider === TB.PROVIDERS.GEMINI && (!settings.geminiApiKey && settings.geminiApiKeys.length === 0)) {
+    if (
+      provider === TB.PROVIDERS.GEMINI &&
+      !settings.geminiApiKey &&
+      settings.geminiApiKeys.length === 0
+    ) {
       throw new Error(TB.MESSAGES.SETTINGS.GEMINI_API_KEY_REQUIRED);
     }
-    if (provider === TB.PROVIDERS.GROQ && !settings.groqApiKey && settings.groqApiKeys.length === 0) {
+    if (
+      provider === TB.PROVIDERS.GROQ &&
+      !settings.groqApiKey &&
+      settings.groqApiKeys.length === 0
+    ) {
       throw new Error("Missing Groq API Key.");
     }
-    if (provider === TB.PROVIDERS.CEREBRAS && !settings.cerebrasApiKey && settings.cerebrasApiKeys.length === 0) {
+    if (
+      provider === TB.PROVIDERS.CEREBRAS &&
+      !settings.cerebrasApiKey &&
+      settings.cerebrasApiKeys.length === 0
+    ) {
       throw new Error("Missing Cerebras API Key.");
     }
     if (
@@ -354,7 +422,6 @@ function assertSettings(settings, required = []) {
     }
   }
 }
-
 
 // ============================================================================
 // Caching & Utility Functions
@@ -381,12 +448,18 @@ async function handleFetchMetadata(endpoint) {
   const settings = await getSettings();
   assertSettings(settings, ["redmineApiKey"]);
   const url = buildRedmineUrl(settings.redmineDomain, endpoint);
-  const response = await timeoutFetch(url, {
-    headers: { "X-Redmine-API-Key": settings.redmineApiKey, Accept: "application/json" },
-  }, 10000);
+  const response = await timeoutFetch(
+    url,
+    {
+      headers: { "X-Redmine-API-Key": settings.redmineApiKey, Accept: "application/json" },
+    },
+    10000
+  );
 
   if (!response.ok) {
-    throw new Error(`${TB.MESSAGES.REDMINE.API_REQUEST_FAILED} (${response.status}) for ${endpoint}`);
+    throw new Error(
+      `${TB.MESSAGES.REDMINE.API_REQUEST_FAILED} (${response.status}) for ${endpoint}`
+    );
   }
   return await response.json();
 }

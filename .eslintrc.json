@@ -40,7 +40,9 @@
     "callCerebrasAPI": "readonly",
     "normalizeTranslationOutput": "readonly",
     "formatTranslation": "readonly",
-    "sanitizeErrorMessage": "readonly"
+    "sanitizeErrorMessage": "readonly",
+    "TB_SHEETS_API": "readonly",
+    "TB_TESTCASE_CONVERTER": "readonly"
   },
   "extends": "eslint:recommended",
   "parserOptions": {

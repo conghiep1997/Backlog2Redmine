@@ -91,8 +91,8 @@
     LOG_LEVEL: "debug",
 
     // Use values from modular constants if loaded, otherwise defaults
-    GEMINI_MODEL: global.TB_MODELS?.GEMINI || "gemini-3.1-flash-lite-preview",
-    GEMINI_FALLBACK_MODEL: global.TB_MODELS?.GEMINI_FALLBACK || "gemini-3.1-flash-lite-preview",
+    GEMINI_MODEL: global.TB_MODELS?.GEMINI || "gemini-3.1-flash-lite",
+    GEMINI_FALLBACK_MODEL: global.TB_MODELS?.GEMINI_FALLBACK || "gemini-3.1-flash-lite",
     CEREBRAS_MODEL: global.TB_MODELS?.CEREBRAS || "gpt-oss-120b",
     GROQ_MODEL: global.TB_MODELS?.GROQ || "llama-3.3-70b-versatile",
     DEFAULT_PROVIDER: "gemini",
@@ -106,7 +106,7 @@
     },
 
     DEFAULT_PRIMARY_PROVIDER: "gemini",
-    DEFAULT_PRIMARY_MODEL: "gemini-3.1-flash-lite-preview",
+    DEFAULT_PRIMARY_MODEL: "gemini-3.1-flash-lite",
     DEFAULT_FALLBACK_PROVIDER: "none",
     DEFAULT_FALLBACK_MODEL: "",
 

@@ -3,7 +3,7 @@
  * Sends extension version to the webpage for automatic detection
  */
 
-(function() {
+(function () {
   "use strict";
 
   // Get current extension version from manifest
@@ -35,10 +35,7 @@
   // Also send version when navigating to versions/download page
   const observer = new MutationObserver(() => {
     const currentUrl = window.location.href;
-    if (
-      currentUrl.includes("/versions") ||
-      currentUrl.includes("/download")
-    ) {
+    if (currentUrl.includes("/versions") || currentUrl.includes("/download")) {
       sendVersionToPage();
     }
   });

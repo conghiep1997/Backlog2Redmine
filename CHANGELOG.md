@@ -1,5 +1,15 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.07] - 2026-05-20
+- **✨ Added**:
+  - Tích hợp chức năng "Google Sheet Testcase Converter" giúp chuyển đổi dữ liệu testcase sang định dạng mới.
+  - Hỗ trợ giao diện Standalone Page và Sidebar nổi (Floating Sidebar Button) trực tiếp trên Google Sheets.
+  - Cho phép tùy chỉnh Column Mapping (A, B, C, D...) để chuyển đổi cột linh hoạt.
+  - Bổ sung hướng dẫn tự động tạo OAuth2 Client ID và chèn snippet manifest động trên giao diện.
+- **🔧 Fixed**:
+  - Khắc phục cảnh báo ESLint, whitelisted các biến toàn cục Sheets API và Testcase Converter.
+
+
 ## [1.8.06] - 2026-05-11
 ### Added
 - Thêm regex để phân tách notes trong modal, cải thiện parsing cho batch notes

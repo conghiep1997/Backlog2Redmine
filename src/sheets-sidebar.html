@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>B2R - Testcase Converter Sidebar</title>
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --panel: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --border: #d7dde7;
+        --primary: #2563eb;
+        --primary-strong: #1d4ed8;
+        --success-bg: #ecfdf3;
+        --success-text: #166534;
+        --danger-bg: #fef2f2;
+        --danger-text: #991b1b;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 13px;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .header {
+        background: #ffffff;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--primary-strong);
+      }
+
+      .content {
+        padding: 16px;
+        overflow-y: auto;
+        flex: 1;
+      }
+
+      .section {
+        background: #ffffff;
+        border: 1px solid rgba(215, 221, 231, 0.85);
+        border-radius: 12px;
+        padding: 14px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 6px rgba(31, 41, 55, 0.04);
+      }
+
+      .section-title {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin: 0 0 12px 0;
+        color: #475569;
+        letter-spacing: 0.05em;
+      }
+
+      .field {
+        margin-bottom: 10px;
+      }
+
+      .field label {
+        display: block;
+        margin-bottom: 4px;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .field input[type="text"],
+      .field input[type="number"] {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font: inherit;
+      }
+
+      .field input:focus {
+        outline: none;
+        border-color: var(--primary);
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .checkbox-field {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        margin-bottom: 14px;
+      }
+
+      .checkbox-field input {
+        width: 16px;
+        height: 16px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      button {
+        flex: 1;
+        border: 0;
+        border-radius: 8px;
+        padding: 10px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .primary {
+        background: linear-gradient(180deg, #3b82f6, var(--primary));
+        color: white;
+      }
+
+      .primary:hover {
+        background: linear-gradient(180deg, #2563eb, var(--primary-strong));
+      }
+
+      .secondary {
+        background: #f8fafc;
+        color: #475569;
+        border: 1px solid var(--border);
+      }
+
+      .secondary:hover {
+        background: #f1f5f9;
+      }
+
+      .oauth-status {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: #f1f5f9;
+        color: var(--muted);
+      }
+
+      .oauth-status.connected {
+        background: var(--success-bg);
+        color: var(--success-text);
+      }
+
+      .log-area {
+        background: #0f172a;
+        color: #e2e8f0;
+        border-radius: 8px;
+        padding: 10px;
+        font-family: monospace;
+        font-size: 11px;
+        max-height: 120px;
+        overflow-y: auto;
+        border: 1px solid #1e293b;
+        margin-top: 10px;
+      }
+
+      .log-line {
+        margin: 2px 0;
+      }
+      .log-info {
+        color: #38bdf8;
+      }
+      .log-success {
+        color: #4ade80;
+      }
+      .log-warning {
+        color: #fbbf24;
+      }
+      .log-error {
+        color: #f87171;
+      }
+
+      .get-url-btn {
+        background: #eff6ff;
+        color: var(--primary-strong);
+        border: 1px solid #bfdbfe;
+        font-size: 11px;
+        padding: 4px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        float: right;
+        margin-top: -2px;
+      }
+      .get-url-btn:hover {
+        background: #dbeafe;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>📋 B2R Testcase Converter</h1>
+      <span id="oauthStatus" class="oauth-status">Đang check...</span>
+    </div>
+
+    <div class="content">
+      <!-- Connection Section -->
+      <div
+        class="section"
+        style="
+          padding: 10px 14px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        "
+      >
+        <span style="font-weight: 600">Xác thực Google:</span>
+        <button
+          id="oauthBtn"
+          class="secondary"
+          style="padding: 6px 12px; font-size: 12px; width: auto; flex: none"
+        >
+          🔑 Kết nối
+        </button>
+      </div>
+
+      <!-- OAuth2 Setup Guide (Collapsible) -->
+      <details
+        class="section"
+        style="padding: 0 14px 10px 14px; border-color: #fed7aa; background-color: #fffbeb"
+      >
+        <summary
+          style="
+            font-weight: 700;
+            font-size: 12px;
+            padding: 12px 0;
+            cursor: pointer;
+            color: #c2410c;
+          "
+        >
+          ⚠️ HƯỚNG DẪN THIẾT LẬP OAUTH2 (CẦN LÀM 1 LẦN)
+        </summary>
+        <div style="padding-top: 8px; font-size: 11px; line-height: 1.5; color: #9a3412">
+          <p style="margin: 0 0 8px 0; font-weight: 600">
+            Vì chính sách bảo mật Google, Chrome Extension bắt buộc phải khai báo Client ID trong
+            file manifest.json.
+          </p>
+          <ol style="margin: 0; padding-left: 16px">
+            <li style="margin-bottom: 6px">
+              Truy cập
+              <a
+                href="https://console.cloud.google.com/"
+                target="_blank"
+                style="color: var(--primary-strong); font-weight: 600"
+                >Google Cloud Console</a
+              >, tạo/chọn project.
+            </li>
+            <li style="margin-bottom: 6px">
+              Vào <b>Library</b> → Enable <b>Google Sheets API</b>.
+            </li>
+            <li style="margin-bottom: 6px">
+              Vào <b>Credentials</b> → Click <b>Create Credentials > OAuth client ID</b>.
+            </li>
+            <li style="margin-bottom: 6px">
+              Chọn loại <b>Chrome Extension</b>. Copy chính xác ID extension này: <br />
+              <code
+                id="extIdDisplay"
+                style="
+                  background: #ffedd5;
+                  padding: 2px 4px;
+                  border-radius: 4px;
+                  font-weight: bold;
+                  font-size: 11px;
+                "
+                >đang tải...</code
+              >
+            </li>
+            <li style="margin-bottom: 6px">Click <b>Create</b> → Copy Client ID nhận được.</li>
+            <li style="margin-bottom: 6px">
+              Mở file <b>manifest.json</b> trong code của extension và cập nhật block sau:
+              <pre
+                id="manifestSnippet"
+                style="
+                  background: #1e293b;
+                  color: #f8fafc;
+                  padding: 8px;
+                  border-radius: 6px;
+                  font-size: 10px;
+                  overflow-x: auto;
+                  white-space: pre-wrap;
+                  margin: 4px 0 0 0;
+                "
+              >
+đang tải...</pre
+              >
+            </li>
+            <li style="margin-top: 8px; font-weight: 600; color: #c2410c">
+              Sau khi lưu file manifest.json, hãy vào chrome://extensions và click nút Reload
+              extension!
+            </li>
+          </ol>
+        </div>
+      </details>
+
+      <!-- Spreadsheets Settings -->
+      <div class="section">
+        <h3 class="section-title">📂 Spreadsheet Config</h3>
+
+        <div class="field">
+          <label for="sourceSpreadsheet">
+            Source URL hoặc ID
+            <span id="getSourceUrlBtn" class="get-url-btn">📍 Lấy URL hiện tại</span>
+          </label>
+          <input id="sourceSpreadsheet" type="text" placeholder="Dán URL sheet nguồn..." />
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="sourceSheetName">Source Sheet Name</label>
+            <input id="sourceSheetName" type="text" placeholder="Sheet1" />
+          </div>
+          <div class="field">
+            <label for="sourceStartRow">Start Row</label>
+            <input id="sourceStartRow" type="number" min="1" value="2" />
+          </div>
+        </div>
+
+        <div class="field" style="margin-top: 12px">
+          <label for="destSpreadsheet">
+            Destination URL hoặc ID
+            <span id="getDestUrlBtn" class="get-url-btn">📍 Lấy URL hiện tại</span>
+          </label>
+          <input id="destSpreadsheet" type="text" placeholder="Dán URL sheet đích..." />
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="destSheetName">Dest Sheet Name</label>
+            <input id="destSheetName" type="text" placeholder="Sheet1" />
+          </div>
+          <div class="field">
+            <label for="destStartRow">Start Row</label>
+            <input id="destStartRow" type="number" min="1" value="3" />
+          </div>
+        </div>
+
+        <label class="checkbox-field" style="margin-top: 10px; margin-bottom: 0">
+          <input type="checkbox" id="clearDest" checked />
+          Clear destination before write (A:J)
+        </label>
+      </div>
+
+      <!-- Custom Mapping Section -->
+      <details class="section" style="padding: 0 14px 10px 14px">
+        <summary
+          style="
+            font-weight: 700;
+            font-size: 12px;
+            padding: 12px 0;
+            cursor: pointer;
+            color: #475569;
+          "
+        >
+          ⚙️ CUSTOM COLUMN MAPPING
+        </summary>
+        <div style="padding-top: 10px">
+          <p style="margin: 0 0 10px 0; color: var(--muted); font-size: 11px; line-height: 1.4">
+            Nhập chữ cái cột của sheet Nguồn tương ứng với các trường đích.
+          </p>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="mapNo">No (Cột cũ)</label>
+              <input
+                id="mapNo"
+                type="text"
+                value="A"
+                style="text-align: center; text-transform: uppercase"
+              />
+            </div>
+            <div class="field">
+              <label for="mapLevel3">Level3 (種別)</label>
+              <input
+                id="mapLevel3"
+                type="text"
+                value="B"
+                style="text-align: center; text-transform: uppercase"
+              />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="mapLevel2_1">Level2 (対象機能)</label>
+              <input
+                id="mapLevel2_1"
+                type="text"
+                value="C"
+                style="text-align: center; text-transform: uppercase"
+              />
+            </div>
+            <div class="field">
+              <label for="mapLevel2_2">Level2 Alt (機能)</label>
+              <input
+                id="mapLevel2_2"
+                type="text"
+                value="D"
+                style="text-align: center; text-transform: uppercase"
+              />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="mapLevel4">Level4 (画面)</label>
+              <input
+                id="mapLevel4"
+                type="text"
+                value="E"
+                style="text-align: center; text-transform: uppercase"
+              />
+            </div>
+            <div class="field">
+              <label for="mapPrecondition">前提条件</label>
+              <input
+                id="mapPrecondition"
+                type="text"
+                value="F"
+                style="text-align: center; text-transform: uppercase"
+              />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="mapScenarios">Level5 (シナリオ 1-4 gộp lại - ngăn cách bởi dấu phẩy)</label>
+            <input
+              id="mapScenarios"
+              type="text"
+              value="G,H,I,J"
+              style="text-align: center; text-transform: uppercase"
+            />
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="mapLevel7">Level7 (期待表示)</label>
+              <input
+                id="mapLevel7"
+                type="text"
+                value="K"
+                style="text-align: center; text-transform: uppercase"
+              />
+            </div>
+            <div class="field">
+              <label for="mapLevel8">Level8 (期待遷移)</label>
+              <input
+                id="mapLevel8"
+                type="text"
+                value="L"
+                style="text-align: center; text-transform: uppercase"
+              />
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Action Buttons -->
+      <div class="actions">
+        <button id="testConnBtn" class="secondary">🔌 Test</button>
+        <button id="convertBtn" class="primary">⚡ Convert</button>
+      </div>
+
+      <!-- Logs -->
+      <div id="logArea" class="log-area">
+        <div class="log-line log-info">Sẵn sàng. Điền thông tin và chạy convert.</div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="modules/services/sheetsApi.js"></script>
+    <script src="modules/services/testcaseConverter.js"></script>
+    <script src="sheets-sidebar.js"></script>
+  </body>
+</html>

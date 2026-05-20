@@ -204,24 +204,47 @@
       }
 
       @keyframes select-pulse {
-        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
-        40% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-        100% { transform: scale(1); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.35); }
+        0% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+        }
+        40% {
+          transform: scale(1.1);
+          box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+        }
+        100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.35);
+        }
       }
 
       @keyframes test-ok {
-        0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-        50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        }
+        50% {
+          box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+        }
       }
 
       @keyframes test-err {
-        0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-        50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+        }
+        50% {
+          box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+        }
       }
 
       @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
       }
 
       #geminiModelsList button {
@@ -460,7 +483,13 @@
           <!-- Primary AI Configuration -->
           <details
             open
-            style="padding: 16px; background: #d1fae5; border: 1px solid #10b981; border-radius: 12px; margin-bottom: 16px;"
+            style="
+              padding: 16px;
+              background: #d1fae5;
+              border: 1px solid #10b981;
+              border-radius: 12px;
+              margin-bottom: 16px;
+            "
           >
             <summary style="padding: 4px 0; font-weight: 600; color: #065f46; cursor: pointer">
               🤖 Cấu hình AI Chính (Primary)
@@ -468,7 +497,18 @@
             <div class="grid" style="padding-top: 12px; gap: 12px">
               <div class="field" style="margin-bottom: 0">
                 <label for="primaryProvider">Nhà cung cấp</label>
-                <select id="primaryProvider" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
+                <select
+                  id="primaryProvider"
+                  style="
+                    width: 100%;
+                    box-sizing: border-box;
+                    border: 1px solid var(--border);
+                    border-radius: 12px;
+                    padding: 12px 14px;
+                    font: inherit;
+                    background: white;
+                  "
+                >
                   <option value="gemini">Google Gemini AI Studio (Miễn phí/Dịch tốt)</option>
                   <option value="groq">Groq Cloud (Siêu nhanh - Llama 3)</option>
                   <option value="cerebras">Cerebras (Hiệu năng cao)</option>
@@ -477,51 +517,92 @@
               </div>
 
               <!-- Gemini Keys & Models (shown when gemini selected) -->
-              <div id="primaryGeminiConfig" style="display: none;">
+              <div id="primaryGeminiConfig" style="display: none">
                 <div style="margin-bottom: 12px">
                   <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">
                     Models (click chọn/bỏ)
-                    
                   </p>
                   <div id="geminiModelsList" style="display: flex; flex-wrap: wrap; gap: 6px"></div>
-                  <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">Đã chọn: <span id="selectedModelCount">0</span>/5</p>
+                  <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">
+                    Đã chọn: <span id="selectedModelCount">0</span>
+                  </p>
                 </div>
                 <div>
-                  <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">Keys (nhập + Enter để thêm, click để xóa)</p>
-                  <div id="geminiKeysList" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px"></div>
-                  <input id="geminiApiKeys" placeholder="Nhập key + Enter để thêm" style="width: 100%; height: 36px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-family: monospace; font-size: 12px;" />
-                  <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">Đã thêm: <span id="selectedKeyCount">0</span>/10</p>
+                  <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">
+                    Keys (nhập + Enter để thêm, click để xóa)
+                  </p>
+                  <div
+                    id="geminiKeysList"
+                    style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px"
+                  ></div>
+                  <input
+                    id="geminiApiKeys"
+                    placeholder="Nhập key + Enter để thêm"
+                    style="
+                      width: 100%;
+                      height: 36px;
+                      box-sizing: border-box;
+                      border: 1px solid var(--border);
+                      border-radius: 8px;
+                      padding: 8px 12px;
+                      font-family: monospace;
+                      font-size: 12px;
+                    "
+                  />
+                  <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">
+                    Đã thêm: <span id="selectedKeyCount">0</span>/10
+                  </p>
                 </div>
               </div>
 
-              <!-- Groq Key (shown when groq selected) -->
-              <div id="primaryGroqConfig" class="field" style="margin-bottom: 0; display: none;">
-                <label for="groqApiKey">Groq API Key</label>
+              <!-- Groq (shown when groq selected) -->
+              <div id="primaryGroqConfig" class="field" style="margin-bottom: 0; display: none">
                 <input id="groqApiKey" type="password" placeholder="Nhập Groq API key" />
-                <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">🔑 Lấy tại: <a href="https://console.groq.com/keys" target="_blank">Groq Console</a>.</p>
+                <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
+                  🔑 Lấy tại:
+                  <a href="https://console.groq.com/keys" target="_blank">Groq Console</a>.
+                </p>
               </div>
 
-              <!-- Cerebras Key (shown when cerebras selected) -->
-              <div id="primaryCerebrasConfig" class="field" style="margin-bottom: 0; display: none;">
-                <label for="cerebrasApiKey">Cerebras API Key</label>
+              <!-- Cerebras (shown when cerebras selected) -->
+              <div id="primaryCerebrasConfig" class="field" style="margin-bottom: 0; display: none">
                 <input id="cerebrasApiKey" type="password" placeholder="Nhập Cerebras API key" />
-                <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">🔑 Lấy tại: <a href="https://cloud.cerebras.ai/" target="_blank">Cerebras Cloud</a>.</p>
+                <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
+                  🔑 Lấy tại:
+                  <a href="https://cloud.cerebras.ai/" target="_blank">Cerebras Cloud</a>.
+                </p>
               </div>
 
-              <!-- OpenRouter Key (shown when openrouter selected) -->
-              <div id="primaryOpenrouterConfig" class="field" style="margin-bottom: 0; display: none;">
-                <label for="openrouterApiKey">OpenRouter API Key</label>
-                <input id="openrouterApiKey" type="password" placeholder="Nhập OpenRouter API key" />
-                <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">🔑 Lấy tại: <a href="https://openrouter.ai/keys" target="_blank">OpenRouter Keys</a>. 💡 Nhiều model miễn phí (suffix :free).</p>
+              <!-- OpenRouter (shown when openrouter selected) -->
+              <div
+                id="primaryOpenrouterConfig"
+                class="field"
+                style="margin-bottom: 0; display: none"
+              >
+                <input
+                  id="openrouterApiKey"
+                  type="password"
+                  placeholder="Nhập OpenRouter API key"
+                />
+                <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
+                  🔑 Lấy tại:
+                  <a href="https://openrouter.ai/keys" target="_blank">OpenRouter Keys</a>. 💡 Nhiều
+                  model miễn phí (suffix :free).
+                </p>
               </div>
-
             </div>
           </details>
 
           <!-- Fallback AI Configuration -->
           <details
             open
-            style="padding: 16px; background: #ede9fe; border: 1px solid #8b5cf6; border-radius: 12px; margin-bottom: 16px;"
+            style="
+              padding: 16px;
+              background: #ede9fe;
+              border: 1px solid #8b5cf6;
+              border-radius: 12px;
+              margin-bottom: 16px;
+            "
           >
             <summary style="padding: 4px 0; font-weight: 600; color: #5b21b6; cursor: pointer">
               🔄 Cấu hình AI Dự phòng (Fallback)
@@ -529,7 +610,18 @@
             <div class="grid" style="padding-top: 12px; gap: 12px">
               <div class="field" style="margin-bottom: 0">
                 <label for="fallbackProvider">Nhà cung cấp dự phòng</label>
-                <select id="fallbackProvider" style="width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; background: white;">
+                <select
+                  id="fallbackProvider"
+                  style="
+                    width: 100%;
+                    box-sizing: border-box;
+                    border: 1px solid var(--border);
+                    border-radius: 12px;
+                    padding: 12px 14px;
+                    font: inherit;
+                    background: white;
+                  "
+                >
                   <option value="none">Không dùng dự phòng</option>
                   <option value="gemini">Google Gemini AI Studio</option>
                   <option value="groq">Groq Cloud</option>
@@ -539,39 +631,95 @@
               </div>
 
               <!-- Fallback Groq Key -->
-              <div id="fallbackGeminiConfig" style="display: none;">
+              <div id="fallbackGeminiConfig" style="display: none">
                 <div style="margin-bottom: 12px">
-                  <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">Models dự phòng (click chọn/bỏ)</p>
-                  <div id="fallbackGeminiModelsList" style="display: flex; flex-wrap: wrap; gap: 6px"></div>
-                  <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">Đã chọn: <span id="fallbackGeminiSelectedModelCount">0</span></p>
+                  <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">
+                    Models dự phòng (click chọn/bỏ)
+                  </p>
+                  <div
+                    id="fallbackGeminiModelsList"
+                    style="display: flex; flex-wrap: wrap; gap: 6px"
+                  ></div>
+                  <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">
+                    Đã chọn: <span id="fallbackGeminiSelectedModelCount">0</span>
+                  </p>
                 </div>
                 <div>
-                  <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">Keys dự phòng (nhập + Enter để thêm, click để xóa)</p>
-                  <div id="fallbackGeminiKeysList" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px"></div>
-                  <input id="fallbackGeminiApiKeys" placeholder="Nhập Gemini key dự phòng + Enter để thêm" style="width: 100%; height: 36px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-family: monospace; font-size: 12px;" />
-                  <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">Đã thêm: <span id="fallbackGeminiSelectedKeyCount">0</span>/10</p>
+                  <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">
+                    Keys dự phòng (nhập + Enter để thêm, click để xóa)
+                  </p>
+                  <div
+                    id="fallbackGeminiKeysList"
+                    style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px"
+                  ></div>
+                  <input
+                    id="fallbackGeminiApiKeys"
+                    placeholder="Nhập Gemini key dự phòng + Enter để thêm"
+                    style="
+                      width: 100%;
+                      height: 36px;
+                      box-sizing: border-box;
+                      border: 1px solid var(--border);
+                      border-radius: 8px;
+                      padding: 8px 12px;
+                      font-family: monospace;
+                      font-size: 12px;
+                    "
+                  />
+                  <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">
+                    Đã thêm: <span id="fallbackGeminiSelectedKeyCount">0</span>/10
+                  </p>
                 </div>
               </div>
 
-              <!-- Fallback Groq Key -->
+              <!-- Fallback Groq -->
               <div id="fallbackGroqConfig" class="field" style="margin-bottom: 0; display: none">
-                <label for="fallbackGroqApiKey">Groq API Key (Dự phòng)</label>
-                <input id="fallbackGroqApiKey" type="password" placeholder="Nhập Groq API key dự phòng" />
-                <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">🔑 <a href="https://console.groq.com/keys" target="_blank">Lấy key tại Groq Console</a></p>
+                <input
+                  id="fallbackGroqApiKey"
+                  type="password"
+                  placeholder="Nhập Groq API key dự phòng"
+                />
+                <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
+                  🔑
+                  <a href="https://console.groq.com/keys" target="_blank"
+                    >Lấy key tại Groq Console</a
+                  >
+                </p>
               </div>
 
-              <!-- Fallback Cerebras Key -->
-              <div id="fallbackCerebrasConfig" class="field" style="margin-bottom: 0; display: none">
-                <label for="fallbackCerebrasApiKey">Cerebras API Key (Dự phòng)</label>
-                <input id="fallbackCerebrasApiKey" type="password" placeholder="Nhập Cerebras API key dự phòng" />
-                <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">🔑 <a href="https://cloud.cerebras.ai/" target="_blank">Lấy key tại Cerebras Cloud</a></p>
+              <!-- Fallback Cerebras -->
+              <div
+                id="fallbackCerebrasConfig"
+                class="field"
+                style="margin-bottom: 0; display: none"
+              >
+                <input
+                  id="fallbackCerebrasApiKey"
+                  type="password"
+                  placeholder="Nhập Cerebras API key dự phòng"
+                />
+                <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
+                  🔑
+                  <a href="https://cloud.cerebras.ai/" target="_blank"
+                    >Lấy key tại Cerebras Cloud</a
+                  >
+                </p>
               </div>
 
-              <!-- Fallback OpenRouter Key -->
-              <div id="fallbackOpenrouterConfig" class="field" style="margin-bottom: 0; display: none">
-                <label for="fallbackOpenrouterApiKey">OpenRouter API Key (Dự phòng)</label>
-                <input id="fallbackOpenrouterApiKey" type="password" placeholder="Nhập OpenRouter API key dự phòng" />
-                <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">🔑 <a href="https://openrouter.ai/keys" target="_blank">Lấy key tại OpenRouter</a></p>
+              <!-- Fallback OpenRouter -->
+              <div
+                id="fallbackOpenrouterConfig"
+                class="field"
+                style="margin-bottom: 0; display: none"
+              >
+                <input
+                  id="fallbackOpenrouterApiKey"
+                  type="password"
+                  placeholder="Nhập OpenRouter API key dự phòng"
+                />
+                <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
+                  🔑 <a href="https://openrouter.ai/keys" target="_blank">Lấy key tại OpenRouter</a>
+                </p>
               </div>
             </div>
           </details>
@@ -594,19 +742,36 @@
           </div>
         </div>
 
+        <!-- Google Sheet Testcase Converter Section -->
+        <div class="card" style="margin-top: 24px; background: #f0fdf4; border-color: #22c55e">
+          <h3 style="margin: 0 0 8px; font-size: 16px; color: #15803d">
+            📋 Google Sheet Testcase Converter
+          </h3>
+          <p style="margin: 0 0 16px; color: #475569; font-size: 14px">
+            Chuyển đổi dữ liệu testcase từ Google Sheet nguồn sang định dạng mới ở sheet đích.
+          </p>
+          <div class="actions">
+            <a
+              href="testcase-converter.html"
+              class="secondary"
+              style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px"
+            >
+              ⚡ Mở Testcase Converter
+            </a>
+          </div>
+        </div>
+
         <!-- Update Check Section -->
-        <div class="card" style="margin-top: 24px; background: #f0f9ff; border-color: #0ea5e9;">
-          <h3 style="margin: 0 0 12px; font-size: 16px; color: #0369a1;">🔔 Cập nhật Extension</h3>
-          <div id="updateStatus" style="margin-bottom: 12px;">
-            <p style="margin: 0; color: #64748b;">Đang kiểm tra phiên bản...</p>
+        <div class="card" style="margin-top: 24px; background: #f0f9ff; border-color: #0ea5e9">
+          <h3 style="margin: 0 0 12px; font-size: 16px; color: #0369a1">🔔 Cập nhật Extension</h3>
+          <div id="updateStatus" style="margin-bottom: 12px">
+            <p style="margin: 0; color: #64748b">Đang kiểm tra phiên bản...</p>
           </div>
           <div class="actions">
             <button type="button" id="checkUpdateBtn" class="secondary">
               🔍 Kiểm tra cập nhật
             </button>
-            <button type="button" id="goToDashboardBtn" class="secondary">
-              📦 Trang Download
-            </button>
+            <button type="button" id="goToDashboardBtn" class="secondary">📦 Trang Download</button>
           </div>
         </div>
 
@@ -616,10 +781,10 @@
         </div>
       </div>
 
-        <div class="disclaimer">
-          Extension này chỉ làm theo ý bạn...nếu có lỗi thì chắc chắc bạn bấm nhầm thôi 👀
-        </div>
+      <div class="disclaimer">
+        Extension này chỉ làm theo ý bạn...nếu có lỗi thì chắc chắc bạn bấm nhầm thôi 👀
       </div>
+    </div>
 
     <script src="modules/constants/models.js"></script>
     <script src="modules/constants/icons.js"></script>

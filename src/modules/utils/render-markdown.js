@@ -36,7 +36,7 @@ function renderMarkdownHtml(text) {
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/`{3}(\w*)\n?([\s\S]*?)`{3}/g, "<pre>$2</pre>")
     .replace(/`(.+?)`/g, "<code>$1</code>")
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "<a href=\"$2\" target=\"_blank\">$1</a>")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
     .replace(/\n/g, "<br>");
 
   return html;

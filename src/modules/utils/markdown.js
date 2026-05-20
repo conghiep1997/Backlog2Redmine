@@ -202,12 +202,12 @@ function extractBacklogContent(element) {
         }
         const quoteText = result.slice(quoteStart);
         result =
-           result.slice(0, quoteStart) +
-           quoteText
-             .trimEnd()
-             .split("\n")
-             .map((line) => "> " + line.trimStart())
-             .join("\n");
+          result.slice(0, quoteStart) +
+          quoteText
+            .trimEnd()
+            .split("\n")
+            .map((line) => "> " + line.trimStart())
+            .join("\n");
         result += "\n\n";
         return;
       }
