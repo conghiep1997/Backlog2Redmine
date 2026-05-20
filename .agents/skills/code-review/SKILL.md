@@ -1,18 +1,28 @@
-# Skill: Focused Code Review
+# name
+code-review
 
-## Purpose
-Review changed files for architecture fit, safety, and project conventions before merge.
+# description
+Focused review guidance for Backlog2Redmine changes, emphasizing changed files, extension architecture, security, and project rules.
 
-## Rules
-- Review changed files first (`git diff`) before broader scan.
-- Match existing module split: `constants`, `services`, `ui`, `utils`.
-- Reject risky refactors that mix provider logic with UI rendering.
-- Flag any plaintext secret handling or key logging.
-- Reuse existing helper/utilities instead of duplicating logic.
+# when to use
+- Always use before finalizing repository guidance or code changes.
+- Reviewing a PR, diff, refactor, or generated change.
+- Validating edits against `AGENTS.md`, relevant skills, source patterns, and security constraints.
 
-## Validation Checklist
-- [ ] No secrets exposed in logs, DOM, or committed files.
-- [ ] New code follows existing naming (`TB_*`, `camelCase`).
-- [ ] Storage schema changes remain backward compatible.
-- [ ] Background/options/content responsibilities remain separated.
-- [ ] Lint + format pass on modified files.
+# concise rules
+- Start with `git status --short` and changed-file diffs before broader scans.
+- Load `AGENTS.md` and only the skill files relevant to changed areas.
+- If `.rules/` exists, load only relevant rule files.
+- Avoid full repo scans unless changed files reveal a cross-cutting risk.
+- Report bugs, regressions, architecture violations, forbidden patterns, and missing validation first.
+- Do not rewrite unrelated files during review.
+- Check for plaintext secrets, unsafe logging, widened permissions, and insecure DOM injection.
+- Validate against module boundaries: background for privileged work, content scripts for DOM, services for APIs, utils for shared helpers.
+
+# validation checklist
+- Changed files follow existing naming, globals, formatting, and module patterns.
+- Manifest load order and permissions still match code needs.
+- Storage schema changes remain backward compatible or clearly migrated.
+- API keys and credentials remain encrypted/masked and are not logged.
+- Existing npm validation commands relevant to the change are identified or run.
+- Findings include file/line references when reporting issues.

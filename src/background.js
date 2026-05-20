@@ -259,6 +259,7 @@ async function getSettings() {
 
   const keys = [
     "redmineApiKey",
+    "redmineDomain",
     "backlogDomain",
     "backlogApiKey",
     "geminiApiKey",
@@ -289,6 +290,8 @@ async function getSettings() {
     "fallbackProvider",
     "fallbackModel",
     "defaultProjectId",
+    "reportProjectId",
+    "manualFields",
   ];
   const items = await chrome.storage.local.get(keys);
 
@@ -330,7 +333,7 @@ async function getSettings() {
     : "";
 
   const decryptedSettings = {
-    redmineDomain: TB.REDMINE_DOMAIN,
+    redmineDomain: items.redmineDomain || TB.REDMINE_DOMAIN,
     redmineApiKey: await decryptData(items.redmineApiKey ?? ""),
     backlogDomain: items.backlogDomain || TB.BACKLOG_DOMAIN,
     backlogApiKey: await decryptData(items.backlogApiKey ?? ""),
@@ -362,6 +365,8 @@ async function getSettings() {
     fallbackOpenrouterApiKeys: fallbackOpenrouterApiKeysStr.split("\n").filter(Boolean),
     fallbackOpenrouterModels: fallbackOpenrouterModelsStr.split("\n").filter(Boolean),
     defaultProjectId: items.defaultProjectId || "",
+    reportProjectId: items.reportProjectId || "",
+    manualFields: items.manualFields || "",
   };
 
   settingsCache = decryptedSettings;
@@ -447,6 +452,7 @@ async function findRedmineIssueWithCache(domain, apiKey, issueKey, summary) {
 async function handleFetchMetadata(endpoint) {
   const settings = await getSettings();
   assertSettings(settings, ["redmineApiKey"]);
+  assertAllowedRedmineMetadataEndpoint(endpoint);
   const url = buildRedmineUrl(settings.redmineDomain, endpoint);
   const response = await timeoutFetch(
     url,
@@ -462,6 +468,38 @@ async function handleFetchMetadata(endpoint) {
     );
   }
   return await response.json();
+}
+
+function assertAllowedRedmineMetadataEndpoint(endpoint) {
+  if (typeof endpoint !== "string" || !endpoint.startsWith("/")) {
+    throw new Error("Unsupported Redmine metadata endpoint.");
+  }
+
+  const parsedEndpoint = new URL(endpoint, "https://redmine.local");
+  const pathname = parsedEndpoint.pathname;
+  const allowedPatterns = [
+    /^\/projects\.json$/,
+    /^\/issues\/\d+\.json$/,
+    /^\/trackers\.json$/,
+    /^\/enumerations\/issue_priorities\.json$/,
+    /^\/projects\/\d+\/versions\.json$/,
+  ];
+
+  if (!allowedPatterns.some((pattern) => pattern.test(pathname))) {
+    throw new Error("Unsupported Redmine metadata endpoint.");
+  }
+
+  if (pathname === "/projects.json") {
+    const limit = parsedEndpoint.searchParams.get("limit");
+    if (limit && !/^\d+$/.test(limit)) {
+      throw new Error("Unsupported Redmine metadata query.");
+    }
+    return;
+  }
+
+  if (parsedEndpoint.search) {
+    throw new Error("Unsupported Redmine metadata query.");
+  }
 }
 
 /**

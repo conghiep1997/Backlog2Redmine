@@ -167,6 +167,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const primaryModels = getSelectedModelsForProvider("primary", primaryProviderSelect.value);
     const fallbackModels = getSelectedModelsForProvider("fallback", fallbackProviderSelect.value);
     const settings = {
+      redmineDomain: document.getElementById("redmineDomain").value.trim() || TB.REDMINE_DOMAIN,
       backlogDomain: document.getElementById("backlogDomain").value.trim() || TB.BACKLOG_DOMAIN,
       primaryProvider: primaryProviderSelect.value,
       primaryModel: primaryModels[0] || getDefaultModel(primaryProviderSelect.value),
@@ -271,6 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function loadOptions() {
     const keys = [
       "redmineApiKey",
+      "redmineDomain",
       "backlogDomain",
       "backlogApiKey",
       "geminiApiKey",
@@ -306,7 +308,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ];
 
     chrome.storage.local.get(keys, async (items) => {
-      document.getElementById("redmineDomain").value = TB.REDMINE_DOMAIN;
+      document.getElementById("redmineDomain").value = items.redmineDomain || TB.REDMINE_DOMAIN;
       document.getElementById("backlogDomain").value = items.backlogDomain || TB.BACKLOG_DOMAIN;
       document.getElementById("manualFields").value =
         items.manualFields || JSON.stringify({ Severity: 46, Role: 11 }, null, 2);
@@ -435,7 +437,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       defaultProjectSelect.innerHTML = '<option value="">Đang tải...</option>';
       reportProjectSelect.innerHTML = '<option value="">Đang tải...</option>';
-      const response = await fetch(`${TB.REDMINE_DOMAIN}/projects.json?limit=100`, {
+      const redmineDomain =
+        document.getElementById("redmineDomain").value.trim() || TB.REDMINE_DOMAIN;
+      const redmineBase = redmineDomain.endsWith("/") ? redmineDomain : `${redmineDomain}/`;
+      const response = await fetch(new URL("projects.json?limit=100", redmineBase).toString(), {
         headers: { "X-Redmine-API-Key": apiKey, Accept: "application/json" },
       });
       if (!response.ok) throw new Error(`API ${response.status}`);

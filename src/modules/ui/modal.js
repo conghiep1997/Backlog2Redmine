@@ -18,6 +18,35 @@ const DEFAULT_MANUAL_FIELDS = {
 };
 const NOTE_SEPARATOR_REGEX = /^--- Note \d+ ---\s*\n/gm;
 
+function escapeUiHtml(value) {
+  if (typeof escapeHtml === "function") {
+    return escapeHtml(String(value ?? ""));
+  }
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function renderBacklogUserSuggestion(user) {
+  const id = escapeUiHtml(user.id);
+  const userId = escapeUiHtml(user.userId || "");
+  const name = escapeUiHtml(user.name);
+  const suffix = user.userId ? ` (@${userId})` : "";
+  return `<div class="tb-suggestion-item" data-user-id="${id}" data-login-id="${userId}" data-username="${name}">${name}${suffix}</div>`;
+}
+
+function replaceSelectOptions(select, items, getLabel, getValue, isSelected = () => false) {
+  select.replaceChildren();
+  items.forEach((item) => {
+    const option = new Option(getLabel(item), String(getValue(item)));
+    option.selected = isSelected(item);
+    select.add(option);
+  });
+}
+
 function ensureModalShell() {
   let overlay = document.getElementById("tb-redmine-overlay");
 
@@ -710,9 +739,7 @@ function openBacklogModal({
       backlogSuggestionsEl.innerHTML = autoNotifyUserIds
         .map((id) => {
           const user = backlogUsers.find((item) => String(item.id) === id);
-          return user
-            ? `<div class="tb-suggestion-item" data-user-id="${user.id}" data-login-id="${user.userId || ""}" data-username="${user.name}">${user.name}${user.userId ? ` (@${user.userId})` : ""}</div>`
-            : "";
+          return user ? renderBacklogUserSuggestion(user) : "";
         })
         .join("");
       return;
@@ -771,12 +798,7 @@ function openBacklogModal({
       return;
     }
 
-    backlogSuggestionsEl.innerHTML = matchedUsers
-      .map(
-        (user) =>
-          `<div class="tb-suggestion-item" data-user-id="${user.id}" data-login-id="${user.userId || ""}" data-username="${user.name}">${user.name}${user.userId ? ` (@${user.userId})` : ""}</div>`
-      )
-      .join("");
+    backlogSuggestionsEl.innerHTML = matchedUsers.map(renderBacklogUserSuggestion).join("");
 
     backlogSuggestionsEl.querySelectorAll(".tb-suggestion-item[data-username]").forEach((item) => {
       item.onclick = () => {
@@ -1005,9 +1027,12 @@ async function fetchRedmineMetadataForModal(backlogIssueType, backlogMilestone) 
     redmineSettings = settings.data || settings;
     customFieldsMetadata = [];
 
-    projectSelect.innerHTML = (projectsRes.data?.projects || [])
-      .map((p) => `<option value="${p.id}">${p.name}</option>`)
-      .join("");
+    replaceSelectOptions(
+      projectSelect,
+      projectsRes.data?.projects || [],
+      (project) => project.name,
+      (project) => project.id
+    );
     if (redmineSettings?.defaultProjectId) projectSelect.value = redmineSettings.defaultProjectId;
 
     // Load versions for the default project
@@ -1016,10 +1041,14 @@ async function fetchRedmineMetadataForModal(backlogIssueType, backlogMilestone) 
     }
 
     const allowedTrackers = ["Task", "Bug", "Issue", "CR", "Q/A", "Q&A"];
-    trackerSelect.innerHTML = (trackersRes.data?.trackers || [])
-      .filter((t) => allowedTrackers.includes(t.name))
-      .map((t) => `<option value="${t.id}">${t.name}</option>`)
-      .join("");
+    replaceSelectOptions(
+      trackerSelect,
+      (trackersRes.data?.trackers || []).filter((tracker) =>
+        allowedTrackers.includes(tracker.name)
+      ),
+      (tracker) => tracker.name,
+      (tracker) => tracker.id
+    );
 
     // Detect tracker from backlogIssueType
     const mappedTracker = getMappedTrackerName(backlogIssueType || "");
@@ -1037,9 +1066,13 @@ async function fetchRedmineMetadataForModal(backlogIssueType, backlogMilestone) 
       }
     }
 
-    prioritySelect.innerHTML = (prioritiesRes.data?.issue_priorities || [])
-      .map((p) => `<option value="${p.id}" ${p.is_default ? "selected" : ""}>${p.name}</option>`)
-      .join("");
+    replaceSelectOptions(
+      prioritySelect,
+      prioritiesRes.data?.issue_priorities || [],
+      (priority) => priority.name,
+      (priority) => priority.id,
+      (priority) => priority.is_default
+    );
   } catch (error) {
     showToast(`${TB.MESSAGES.MODAL.ERROR_METADATA}: ${error.message}`, "error");
   }

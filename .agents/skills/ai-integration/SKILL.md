@@ -1,17 +1,27 @@
-# Skill: AI Provider Integration
+# name
+ai-integration
 
-## Purpose
-Implement and maintain multi-provider AI translation flow (Gemini, Groq, Cerebras, OpenRouter).
+# description
+Guidance for Backlog2Redmine AI translation providers, model selection, prompts, retries, cooldowns, and encrypted provider settings.
 
-## Rules
-- Keep provider config normalized by `provider`, `keysStorage`, `modelsStorage`.
-- Support multiple keys/models with deterministic fallback order.
-- Store keys/models encrypted before writing to storage.
-- Do not hardcode deprecated model IDs.
-- Preserve current provider names and constants (`TB.PROVIDERS`).
+# when to use
+- Editing `src/modules/services/ai.js`.
+- Changing provider constants, model lists, or prompts in `src/modules/constants/` or `src/constants.js`.
+- Updating options UI for Gemini, Groq, Cerebras, OpenRouter, primary/fallback providers, keys, or models.
+- Debugging translation, model listing, provider fallback, or rate-limit behavior.
 
-## Validation Checklist
-- [ ] Primary and fallback providers both support multi-key/multi-model.
-- [ ] Deprecated models removed from defaults and constants.
-- [ ] API key masking (`**********`) logic preserved on options page.
-- [ ] Provider-specific UI sections toggle correctly.
+# concise rules
+- Preserve provider IDs from `TB.PROVIDERS` and existing storage key names.
+- Keep primary/fallback provider flow deterministic except where existing random key/model selection is intentional.
+- Use existing `timeoutFetch`, `safeReadJson`, `readErrorMessage`, and `sanitizeErrorMessage` helpers.
+- Store API keys and selected model lists encrypted before writing to `chrome.storage.local`.
+- Do not log raw API keys, prompts containing secrets, or full provider error payloads with credentials.
+- Keep prompt changes in `src/modules/constants/prompts.js` unless a caller-specific override already exists.
+- Keep model availability checks lightweight and provider-specific.
+
+# validation checklist
+- Existing providers still list/test models through background messaging.
+- Translation fallback triggers only for retryable provider failures.
+- Options page masking and encrypted persistence still work.
+- New provider endpoints are covered by manifest host permissions if needed.
+- User-facing errors are sanitized and actionable.

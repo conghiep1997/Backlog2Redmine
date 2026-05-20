@@ -17,6 +17,11 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
+function isSafeMarkdownHref(href) {
+  const trimmedHref = String(href || "").trim();
+  return /^(https?:|mailto:|#|\/(?!\/))/i.test(trimmedHref);
+}
+
 /**
  * Renders markdown text as HTML.
  * @param {string} text - Markdown text to render
@@ -31,12 +36,20 @@ function renderMarkdownHtml(text) {
   // Convert other markdown
   html = html
     .replace(/(<li>.*<\/li>)(\s*<li>.*<\/li>)*/g, "<ul>$&</ul>")
-    .replace(/^#{1,6}\s+(.+)$/gm, "<h$1>$1</h$1>")
+    .replace(/^(#{1,6})\s+(.+)$/gm, (_match, hashes, content) => {
+      const level = hashes.length;
+      return `<h${level}>${content}</h${level}>`;
+    })
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/`{3}(\w*)\n?([\s\S]*?)`{3}/g, "<pre>$2</pre>")
     .replace(/`(.+?)`/g, "<code>$1</code>")
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label, href) => {
+      if (!isSafeMarkdownHref(href)) {
+        return label;
+      }
+      return `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    })
     .replace(/\n/g, "<br>");
 
   return html;

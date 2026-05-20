@@ -30,7 +30,7 @@ async function getBacklogUsers(projectKeyOrIssueKey = null) {
   const url = new URL(`api/v2/projects/${projectKey}/users`, domain);
   url.searchParams.set("apiKey", settings.backlogApiKey);
 
-  console.log(`[BacklogService] Fetching users from: ${url.toString()}`);
+  console.log(`[BacklogService] Fetching users from: ${redactBacklogApiKey(url.toString())}`);
   console.log(`[BacklogService] Domain: ${domain}, Project: ${projectKey}`);
 
   try {
@@ -155,9 +155,6 @@ async function uploadAttachmentsToBacklog(domain, apiKey, issueKey, commentId, a
 
       const uploadResponse = await fetch(uploadUrl.toString(), {
         method: "POST",
-        headers: {
-          "X-Redmine-API-Key": apiKey,
-        },
         body: formData,
       });
 
@@ -176,6 +173,18 @@ async function downloadRedmineAttachment(url) {
     throw new Error(`Redmine attachment download failed: ${response.status}`);
   }
   return await response.blob();
+}
+
+function redactBacklogApiKey(url) {
+  try {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.searchParams.has("apiKey")) {
+      parsedUrl.searchParams.set("apiKey", "[REDACTED]");
+    }
+    return parsedUrl.toString();
+  } catch (_error) {
+    return String(url).replace(/([?&]apiKey=)[^&]+/i, "$1[REDACTED]");
+  }
 }
 
 async function downloadBacklogFile(domain, attachmentId, filename = "", issueKey = "") {
