@@ -76,6 +76,33 @@ async function findIssues(redmineDomain, apiKey, params) {
 }
 
 /**
+ * Finds time entries based on a set of criteria.
+ * @param {string} redmineDomain - The domain of the Redmine instance.
+ * @param {string} apiKey - The user's Redmine API key.
+ * @param {object} params - Query parameters such as issue_id, spent_on, user_id.
+ * @returns {Promise<Array<object>>} A promise that resolves to an array of time entry objects.
+ */
+async function findTimeEntries(redmineDomain, apiKey, params) {
+  const query = new URLSearchParams(params).toString();
+  const url = buildRedmineUrl(redmineDomain, `/time_entries.json?${query}`);
+
+  const response = await fetch(url, {
+    headers: {
+      "X-Redmine-API-Key": apiKey,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorMsg = await readErrorMessage(response);
+    throw new Error(`Failed to find time entries: ${errorMsg}`);
+  }
+
+  const data = await response.json();
+  return data.time_entries || [];
+}
+
+/**
  * Finds issue via Redmine REST API.
  * Fallback method when HTML search is unsuccessful.
  */
@@ -491,13 +518,23 @@ async function getIssueDetails(redmineDomain, apiKey, issueId) {
  * @param {string} [comments=""] - Optional comments for the time entry.
  * @returns {Promise<object>} The created time entry object from the API.
  */
-async function logTimeEntry(redmineDomain, apiKey, issueId, hours, comments = "") {
+async function logTimeEntry(
+  redmineDomain,
+  apiKey,
+  issueId,
+  hours,
+  comments = "",
+  spentOn = null,
+  activityId = null
+) {
   const url = buildRedmineUrl(redmineDomain, "/time_entries.json");
   const payload = {
     time_entry: {
       issue_id: issueId,
       hours: hours,
       comments: comments,
+      spent_on: spentOn || undefined,
+      activity_id: activityId || undefined,
     },
   };
 
@@ -517,6 +554,81 @@ async function logTimeEntry(redmineDomain, apiKey, issueId, hours, comments = ""
 
   const data = await response.json();
   return data.time_entry;
+}
+
+async function updateTimeEntry(
+  redmineDomain,
+  apiKey,
+  timeEntryId,
+  issueId,
+  hours,
+  comments = "",
+  spentOn = null,
+  activityId = null
+) {
+  const url = buildRedmineUrl(redmineDomain, `/time_entries/${timeEntryId}.json`);
+  const payload = {
+    time_entry: {
+      issue_id: issueId,
+      hours: hours,
+      comments: comments,
+      spent_on: spentOn || undefined,
+      activity_id: activityId || undefined,
+    },
+  };
+
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "X-Redmine-API-Key": apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorMsg = await readErrorMessage(response);
+    throw new Error(`Failed to update time entry #${timeEntryId}: ${errorMsg}`);
+  }
+
+  return payload.time_entry;
+}
+
+async function deleteTimeEntry(redmineDomain, apiKey, timeEntryId) {
+  const url = buildRedmineUrl(redmineDomain, `/time_entries/${timeEntryId}.json`);
+  const response = await fetch(url, {
+    method: "DELETE",
+    headers: {
+      "X-Redmine-API-Key": apiKey,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorMsg = await readErrorMessage(response);
+    throw new Error(`Failed to delete time entry #${timeEntryId}: ${errorMsg}`);
+  }
+}
+
+/**
+ * Fetches Redmine spent time activities.
+ * @param {string} redmineDomain - The domain of the Redmine instance.
+ * @param {string} apiKey - The user's Redmine API key.
+ * @returns {Promise<Array<object>>} A promise that resolves to an array of time entry activities.
+ */
+async function getTimeEntryActivities(redmineDomain, apiKey) {
+  const url = buildRedmineUrl(redmineDomain, "/enumerations/time_entry_activities.json");
+  const response = await fetch(url, {
+    headers: { "X-Redmine-API-Key": apiKey, "Content-Type": "application/json" },
+  });
+
+  if (!response.ok) {
+    const errorMsg = await readErrorMessage(response);
+    throw new Error(`Failed to fetch time entry activities: ${errorMsg}`);
+  }
+
+  const data = await response.json();
+  return data.time_entry_activities || [];
 }
 
 /**
