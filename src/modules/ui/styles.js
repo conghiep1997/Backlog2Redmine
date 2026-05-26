@@ -152,6 +152,8 @@ function injectStyles() {
     .tb-success-link { color: #2563eb !important; text-decoration: underline; word-break: break-all; }
     .tb-success-link:visited { color: #1d4ed8 !important; }
     .tb-success-link:hover { color: #1e40af !important; }
+    .tb-success-hide-option { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 12px; color: #475569; cursor: pointer; text-transform: none; font-weight: 600; }
+    .tb-success-hide-option input { width: auto; height: auto; margin: 0; }
 
     /* Toast */
     .tb-toast {

@@ -372,6 +372,44 @@
         </label>
       </div>
 
+      <!-- Direct Column Copy Section -->
+      <div class="section">
+        <h3 class="section-title">Direct Column Copy</h3>
+        <p style="margin: 0 0 10px 0; color: var(--muted); font-size: 11px; line-height: 1.4">
+          Copy one source column from Source Start Row to one destination column from Dest Start Row.
+        </p>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="copySourceColumn">Source Column</label>
+            <input
+              id="copySourceColumn"
+              type="text"
+              value="A"
+              placeholder="A"
+              style="text-align: center; text-transform: uppercase"
+            />
+          </div>
+          <div class="field">
+            <label for="copyDestColumn">Destination Column</label>
+            <input
+              id="copyDestColumn"
+              type="text"
+              value="A"
+              placeholder="B"
+              style="text-align: center; text-transform: uppercase"
+            />
+          </div>
+        </div>
+
+        <label class="checkbox-field" style="margin-top: 10px">
+          <input type="checkbox" id="copyClearDest" checked />
+          Clear destination column before copy
+        </label>
+
+        <button id="copyColumnBtn" class="secondary" style="width: 100%">Copy Column</button>
+      </div>
+
       <!-- Custom Mapping Section -->
       <details class="section" style="padding: 0 14px 10px 14px">
         <summary

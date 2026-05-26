@@ -92,6 +92,22 @@
         box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
       }
 
+      .check-field {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .check-field input[type="checkbox"] {
+        width: auto;
+        margin-top: 3px;
+        flex: 0 0 auto;
+      }
+
+      .check-field label {
+        margin-bottom: 4px;
+      }
+
       .actions {
         display: flex;
         align-items: center;
@@ -719,6 +735,32 @@
                 />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑 <a href="https://openrouter.ai/keys" target="_blank">Lấy key tại OpenRouter</a>
+                </p>
+              </div>
+            </div>
+          </details>
+
+          <details
+            open
+            style="
+              padding: 16px;
+              background: #f8fafc;
+              border: 1px solid #cbd5e1;
+              border-radius: 12px;
+              margin-bottom: 16px;
+            "
+          >
+            <summary style="padding: 4px 0; font-weight: 600; color: #334155; cursor: pointer">
+              Tùy chọn giao diện
+            </summary>
+            <div class="field check-field" style="padding-top: 12px; margin-bottom: 0">
+              <input id="showRedmineSuccessModal" type="checkbox" />
+              <div>
+                <label for="showRedmineSuccessModal"
+                  >Hiển thị modal thành công khi gửi sang Redmine</label
+                >
+                <p style="margin: 0; font-size: 12px; color: var(--muted)">
+                  Bật lại tùy chọn này nếu trước đó bạn đã chọn không hiển thị thông báo thành công.
                 </p>
               </div>
             </div>

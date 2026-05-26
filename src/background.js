@@ -292,6 +292,7 @@ async function getSettings() {
     "defaultProjectId",
     "reportProjectId",
     "manualFields",
+    "showRedmineSuccessModal",
   ];
   const items = await chrome.storage.local.get(keys);
 
@@ -367,6 +368,7 @@ async function getSettings() {
     defaultProjectId: items.defaultProjectId || "",
     reportProjectId: items.reportProjectId || "",
     manualFields: items.manualFields || "",
+    showRedmineSuccessModal: items.showRedmineSuccessModal !== false,
   };
 
   settingsCache = decryptedSettings;

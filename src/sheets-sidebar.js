@@ -11,6 +11,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const destSheetNameInput = document.getElementById("destSheetName");
   const destStartRowInput = document.getElementById("destStartRow");
   const clearDestCheckbox = document.getElementById("clearDest");
+  const copySourceColumnInput = document.getElementById("copySourceColumn");
+  const copyDestColumnInput = document.getElementById("copyDestColumn");
+  const copyClearDestCheckbox = document.getElementById("copyClearDest");
 
   // Mapping fields
   const mapNoInput = document.getElementById("mapNo");
@@ -25,6 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const testConnBtn = document.getElementById("testConnBtn");
   const convertBtn = document.getElementById("convertBtn");
+  const copyColumnBtn = document.getElementById("copyColumnBtn");
 
   const getSourceUrlBtn = document.getElementById("getSourceUrlBtn");
   const getDestUrlBtn = document.getElementById("getDestUrlBtn");
@@ -46,6 +50,9 @@ document.addEventListener("DOMContentLoaded", () => {
     MAP_SCENARIOS: "tc_map_scenarios",
     MAP_LEVEL7: "tc_map_level7",
     MAP_LEVEL8: "tc_map_level8",
+    COPY_SOURCE_COLUMN: "tc_copy_source_column",
+    COPY_DEST_COLUMN: "tc_copy_dest_column",
+    COPY_CLEAR_DEST: "tc_copy_clear_dest",
   };
 
   let currentToken = null;
@@ -76,6 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
   oauthBtn.addEventListener("click", handleOAuthButtonClick);
   testConnBtn.addEventListener("click", handleTestConnection);
   convertBtn.addEventListener("click", handleConvertSubmit);
+  copyColumnBtn.addEventListener("click", handleCopyColumnSubmit);
 
   getSourceUrlBtn.addEventListener("click", () => requestUrlFromParent(sourceSpreadsheetInput));
   getDestUrlBtn.addEventListener("click", () => requestUrlFromParent(destSpreadsheetInput));
@@ -89,6 +97,9 @@ document.addEventListener("DOMContentLoaded", () => {
     destSheetNameInput,
     destStartRowInput,
     clearDestCheckbox,
+    copySourceColumnInput,
+    copyDestColumnInput,
+    copyClearDestCheckbox,
     mapNoInput,
     mapLevel3Input,
     mapLevel2_1Input,
@@ -120,11 +131,19 @@ document.addEventListener("DOMContentLoaded", () => {
   function columnLetterToNumber(letter) {
     if (!letter) return -1;
     const str = String(letter).trim().toUpperCase();
+    if (!/^[A-Z]+$/.test(str)) return -1;
     let num = 0;
     for (let i = 0; i < str.length; i++) {
       num = num * 26 + (str.charCodeAt(i) - 64);
     }
     return num - 1; // 0-indexed
+  }
+
+  function normalizeColumnLetter(letter) {
+    const str = String(letter || "")
+      .trim()
+      .toUpperCase();
+    return /^[A-Z]+$/.test(str) ? str : "";
   }
 
   // Load / Save Config
@@ -144,6 +163,15 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       if (res[STORAGE_KEYS.CLEAR_DEST] !== undefined) {
         clearDestCheckbox.checked = res[STORAGE_KEYS.CLEAR_DEST];
+      }
+      if (res[STORAGE_KEYS.COPY_SOURCE_COLUMN]) {
+        copySourceColumnInput.value = res[STORAGE_KEYS.COPY_SOURCE_COLUMN];
+      }
+      if (res[STORAGE_KEYS.COPY_DEST_COLUMN]) {
+        copyDestColumnInput.value = res[STORAGE_KEYS.COPY_DEST_COLUMN];
+      }
+      if (res[STORAGE_KEYS.COPY_CLEAR_DEST] !== undefined) {
+        copyClearDestCheckbox.checked = res[STORAGE_KEYS.COPY_CLEAR_DEST];
       }
 
       // Mapping config
@@ -172,6 +200,9 @@ document.addEventListener("DOMContentLoaded", () => {
       [STORAGE_KEYS.DEST_SHEET]: destSheetNameInput.value,
       [STORAGE_KEYS.DEST_ROW]: parseInt(destStartRowInput.value, 10) || 3,
       [STORAGE_KEYS.CLEAR_DEST]: clearDestCheckbox.checked,
+      [STORAGE_KEYS.COPY_SOURCE_COLUMN]: copySourceColumnInput.value,
+      [STORAGE_KEYS.COPY_DEST_COLUMN]: copyDestColumnInput.value,
+      [STORAGE_KEYS.COPY_CLEAR_DEST]: copyClearDestCheckbox.checked,
 
       // Mapping
       [STORAGE_KEYS.MAP_NO]: mapNoInput.value,
@@ -286,6 +317,93 @@ document.addEventListener("DOMContentLoaded", () => {
       addLog("🎉 Kết nối thành công!", "success");
     } catch (err) {
       addLog(`Lỗi: ${err.message}`, "error");
+    }
+  }
+
+  async function handleCopyColumnSubmit() {
+    clearLogs();
+
+    const sourceRaw = sourceSpreadsheetInput.value;
+    const destRaw = destSpreadsheetInput.value;
+    const sourceSheetName = sourceSheetNameInput.value;
+    const destSheetName = destSheetNameInput.value;
+    const sourceStartRow = parseInt(sourceStartRowInput.value, 10);
+    const destStartRow = parseInt(destStartRowInput.value, 10);
+    const sourceColumn = normalizeColumnLetter(copySourceColumnInput.value);
+    const destColumn = normalizeColumnLetter(copyDestColumnInput.value);
+    const clearDestColumn = copyClearDestCheckbox.checked;
+
+    const sourceId = TB_SHEETS_API.extractSpreadsheetId(sourceRaw);
+    const destId = TB_SHEETS_API.extractSpreadsheetId(destRaw);
+
+    if (!sourceId || !destId) {
+      addLog("Spreadsheet ID hoáº·c URL nguá»“n/Ä‘Ã­ch trá»‘ng/lá»—i.", "error");
+      return;
+    }
+    if (isNaN(sourceStartRow) || sourceStartRow < 1 || isNaN(destStartRow) || destStartRow < 1) {
+      addLog("Start row nguá»“n/Ä‘Ã­ch pháº£i lá»›n hÆ¡n hoáº·c báº±ng 1.", "error");
+      return;
+    }
+    if (!sourceColumn || !destColumn) {
+      addLog("Cá»™t nguá»“n/Ä‘Ã­ch khÃ´ng há»£p lá»‡. Vui lÃ²ng nháº­p dáº¡ng A, B, AA...", "error");
+      return;
+    }
+
+    copyColumnBtn.disabled = true;
+    convertBtn.disabled = true;
+    copyColumnBtn.textContent = "Copying...";
+
+    try {
+      if (!currentToken) {
+        addLog("ChÆ°a Ä‘Äƒng nháº­p. Äang káº¿t ná»‘i...", "warning");
+        const ok = await checkOAuthToken(true);
+        if (!ok || !currentToken) return;
+      }
+
+      const sourceRange = `${sourceColumn}${sourceStartRow}:${sourceColumn}`;
+      addLog(`Äang Ä‘á»c ${sourceSheetName}!${sourceRange}...`, "info");
+      const rows = await TB_SHEETS_API.readSheetValues(sourceId, sourceSheetName, sourceRange, currentToken);
+
+      if (rows.length === 0) {
+        addLog("KhÃ´ng cÃ³ dá»¯ liá»‡u trong cá»™t nguá»“n Ä‘á»ƒ copy.", "warning");
+        return;
+      }
+
+      const columnValues = rows.map((row) => [row?.[0] ?? ""]);
+      addLog(`âœ“ ÄÃ£ Ä‘á»c ${columnValues.length} Ã´ tá»« cá»™t ${sourceColumn}.`, "success");
+
+      if (clearDestColumn) {
+        addLog(`Äang xÃ³a dá»¯ liá»‡u cá»™t ${destColumn} tá»« dÃ²ng ${destStartRow}...`, "info");
+        await TB_SHEETS_API.clearSheetColumnRange(
+          destId,
+          destSheetName,
+          destColumn,
+          destStartRow,
+          currentToken
+        );
+      }
+
+      addLog(`Äang ghi sang ${destSheetName}!${destColumn}${destStartRow}:${destColumn}...`, "info");
+      await TB_SHEETS_API.writeSheetColumnValues(
+        destId,
+        destSheetName,
+        destColumn,
+        destStartRow,
+        columnValues,
+        currentToken
+      );
+
+      saveInputs();
+      addLog(
+        `Done! Copied ${columnValues.length} cells from ${sourceColumn}${sourceStartRow} to ${destColumn}${destStartRow}.`,
+        "success"
+      );
+    } catch (err) {
+      addLog(`âŒ Tháº¥t báº¡i: ${err.message}`, "error");
+    } finally {
+      copyColumnBtn.disabled = false;
+      convertBtn.disabled = false;
+      copyColumnBtn.textContent = "Copy Column";
     }
   }
 

@@ -10,8 +10,52 @@ const SRC_DIR = path.join(__dirname, '..', 'src');
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 const MANIFEST_SRC = path.join(__dirname, '..', 'manifest.json');
 const MANIFEST_DIST = path.join(DIST_DIR, 'manifest.json');
+const ENV_FILE = path.join(__dirname, '..', '.env');
+
+function loadEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) return;
+  const lines = fs.readFileSync(filePath, 'utf-8').split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const separatorIndex = trimmed.indexOf('=');
+    if (separatorIndex === -1) continue;
+    const key = trimmed.slice(0, separatorIndex).trim();
+    const rawValue = trimmed.slice(separatorIndex + 1).trim();
+    if (!key || process.env[key] !== undefined) continue;
+    process.env[key] = rawValue.replace(/^['"]|['"]$/g, '');
+  }
+}
+
+function applyOAuthEnv(manifest) {
+  const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID?.trim();
+  const scopes = process.env.GOOGLE_OAUTH_SCOPES?.split(/[,\s]+/)
+    .map((scope) => scope.trim())
+    .filter(Boolean);
+  const requireClientId = process.env.REQUIRE_GOOGLE_OAUTH_CLIENT_ID === 'true';
+
+  if (clientId) {
+    manifest.oauth2 = manifest.oauth2 || {};
+    manifest.oauth2.client_id = clientId;
+  }
+
+  if (scopes?.length) {
+    manifest.oauth2 = manifest.oauth2 || {};
+    manifest.oauth2.scopes = scopes;
+  }
+
+  if (
+    requireClientId &&
+    (!manifest.oauth2?.client_id || manifest.oauth2.client_id.includes('YOUR_GOOGLE_OAUTH2'))
+  ) {
+    console.error('Missing GOOGLE_OAUTH_CLIENT_ID. Configure it in .env or GitHub Secrets.');
+    process.exit(1);
+  }
+}
 
 console.log('🔨 Building Backlog2Redmine Extension...\n');
+
+loadEnvFile(ENV_FILE);
 
 // Step 1: Clean dist directory
 console.log('📁 Step 1: Cleaning dist directory...');
@@ -26,8 +70,9 @@ fs.mkdirSync(DIST_DIR, { recursive: true });
 // Step 2: Copy manifest
 console.log('\n📄 Step 2: Copying manifest.json...');
 const manifest = JSON.parse(fs.readFileSync(MANIFEST_SRC, 'utf-8'));
+applyOAuthEnv(manifest);
 console.log(`   ✓ Extension: ${manifest.name} v${manifest.version}`);
-fs.copyFileSync(MANIFEST_SRC, MANIFEST_DIST);
+fs.writeFileSync(MANIFEST_DIST, `${JSON.stringify(manifest, null, 2)}\n`);
 
 // Step 3: Copy source files
 console.log('\n📂 Step 3: Copying source files...');

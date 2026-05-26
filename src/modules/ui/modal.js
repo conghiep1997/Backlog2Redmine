@@ -159,6 +159,10 @@ function ensureModalShell() {
         <div class="tb-modal-body">
           <p id="tb-success-subtitle" class="tb-modal-subtitle">${TB.MESSAGES.MODAL.SUCCESS_SUBTITLE}</p>
           <div class="tb-success-link-container"><a id="tb-success-link" href="#" target="_blank" class="tb-success-link"></a></div>
+          <label id="tb-success-hide-label" class="tb-success-hide-option">
+            <input type="checkbox" id="tb-success-hide-checkbox">
+            <span>${TB.MESSAGES.MODAL.SUCCESS_HIDE_AGAIN_LABEL || "Khong hien thi lai thong bao nay"}</span>
+          </label>
         </div>
         <div class="tb-modal-footer">
           <button id="tb-success-view-btn" class="tb-btn tb-btn-primary">${TB.MESSAGES.MODAL.SUCCESS_VIEW_BUTTON}</button>
@@ -188,6 +192,8 @@ function ensureModalShell() {
     successTitleEl: overlay.querySelector("#tb-success-title"),
     successSubtitleEl: overlay.querySelector("#tb-success-subtitle"),
     successLinkEl: overlay.querySelector("#tb-success-link"),
+    successHideLabel: overlay.querySelector("#tb-success-hide-label"),
+    successHideCheckbox: overlay.querySelector("#tb-success-hide-checkbox"),
     successViewButton: overlay.querySelector("#tb-success-view-btn"),
     successCloseButton: overlay.querySelector("#tb-success-close-btn"),
     standardFields: overlay.querySelector("#tb-standard-fields"),
@@ -363,8 +369,8 @@ function openConfirmModal(options) {
       if (currentMode) {
         previewTextarea.value = memoizedBatchNotes
           ? [previewText, ...memoizedBatchNotes]
-              .map((text, index) => `--- Note ${index + 1} ---\n${text}`)
-              .join("\n\n")
+            .map((text, index) => `--- Note ${index + 1} ---\n${text}`)
+            .join("\n\n")
           : `${previewText}\n\n${TB.MESSAGES.MODAL.WAITING_TRANSLATION}`;
         currentNotesList = memoizedBatchNotes
           ? [previewText, ...memoizedBatchNotes]
@@ -747,7 +753,7 @@ function openBacklogModal({
 
     if (backlogUsers.length > 0) {
       backlogSuggestionsEl.innerHTML =
-        '<div class="tb-suggestion-item" style="color: #999;">Không tìm thấy @mention nào</div>';
+        "<div class=\"tb-suggestion-item\" style=\"color: #999;\">Không tìm thấy @mention nào</div>";
     }
   }
 
@@ -775,26 +781,26 @@ function openBacklogModal({
   function showUserSuggestions(query) {
     if (backlogUsers.length === 0) {
       backlogSuggestionsEl.innerHTML =
-        '<div class="tb-suggestion-item" style="color: #999;">Chưa tải được danh sách users</div>';
+        "<div class=\"tb-suggestion-item\" style=\"color: #999;\">Chưa tải được danh sách users</div>";
       return;
     }
 
     const matchedUsers = query
       ? backlogUsers
-          .filter(
-            (user) =>
-              user &&
+        .filter(
+          (user) =>
+            user &&
               user.name &&
               (user.userId || user.id) &&
               ((user.userId && user.userId.toLowerCase().includes(query.toLowerCase())) ||
                 user.name.toLowerCase().includes(query.toLowerCase()))
-          )
-          .slice(0, 10)
+        )
+        .slice(0, 10)
       : backlogUsers.filter((user) => user && user.name && (user.userId || user.id)).slice(0, 10);
 
     if (matchedUsers.length === 0) {
       backlogSuggestionsEl.innerHTML =
-        '<div class="tb-suggestion-item" style="color: #999;">Không tìm thấy user</div>';
+        "<div class=\"tb-suggestion-item\" style=\"color: #999;\">Không tìm thấy user</div>";
       return;
     }
 
@@ -964,16 +970,37 @@ function openBacklogModal({
   document.body.classList.add("tb-modal-open");
 }
 
-function openSuccessModal({ redmineUrl, commentCount = 1, onClose, isBacklog = false }) {
+async function openSuccessModal({ redmineUrl, commentCount = 1, onClose, isBacklog = false }) {
   ensureModalShell();
   const {
     overlay,
     successTitleEl,
     successSubtitleEl,
     successLinkEl,
+    successHideLabel,
+    successHideCheckbox,
     successViewButton,
     successCloseButton,
   } = modalElements;
+  if (!isBacklog) {
+    try {
+      const settingsResponse = await sendRuntimeMessage({ type: "GET_SETTINGS" });
+      const settings = settingsResponse.data || settingsResponse;
+      if (settings.showRedmineSuccessModal === false) {
+        closeModal();
+        setModalLoading(false);
+        onClose?.();
+        const message =
+          commentCount > 1
+            ? TB.MESSAGES.MODAL.BATCH_TITLE_MULTIPLE(commentCount)
+            : TB.MESSAGES.MODAL.SUCCESS_SUBTITLE;
+        showToast(message, "success");
+        return;
+      }
+    } catch (error) {
+      console.warn("[TB-MODAL] Failed to load success modal preference:", error);
+    }
+  }
   successTitleEl.textContent =
     commentCount > 1
       ? TB.MESSAGES.MODAL.BATCH_TITLE_MULTIPLE(commentCount)
@@ -988,6 +1015,18 @@ function openSuccessModal({ redmineUrl, commentCount = 1, onClose, isBacklog = f
         : TB.MESSAGES.MODAL.SUCCESS_SUBTITLE;
   successLinkEl.textContent = redmineUrl;
   successLinkEl.href = redmineUrl;
+  if (successHideLabel && successHideCheckbox) {
+    successHideCheckbox.checked = false;
+    successHideLabel.hidden = isBacklog;
+    successHideCheckbox.onchange = async () => {
+      if (!successHideCheckbox.checked) return;
+      try {
+        await chrome.storage.local.set({ showRedmineSuccessModal: false });
+      } catch (error) {
+        console.warn("[TB-MODAL] Failed to save success modal preference:", error);
+      }
+    };
+  }
   successViewButton.textContent = isBacklog
     ? TB.MESSAGES.MODAL.BACKLOG_SUCCESS_VIEW_BUTTON
     : TB.MESSAGES.MODAL.SUCCESS_VIEW_BUTTON;
@@ -1080,14 +1119,14 @@ async function fetchRedmineMetadataForModal(backlogIssueType, backlogMilestone) 
 
 async function updateVersionsDropdown(projectId, backlogMilestone) {
   const { versionSelect } = modalElements;
-  versionSelect.innerHTML = '<option value="">-- Tải version --</option>';
+  versionSelect.innerHTML = "<option value=\"\">-- Tải version --</option>";
   try {
     const versionsRes = await sendRuntimeMessage({
       type: "FETCH_REDMINE_METADATA",
       endpoint: `/projects/${projectId}/versions.json`,
     });
     const versions = versionsRes.data?.versions || [];
-    versionSelect.innerHTML = '<option value="">-- Trống --</option>';
+    versionSelect.innerHTML = "<option value=\"\">-- Trống --</option>";
     versions.forEach((v) => {
       const opt = document.createElement("option");
       opt.value = v.id;
@@ -1099,7 +1138,7 @@ async function updateVersionsDropdown(projectId, backlogMilestone) {
       versionSelect.appendChild(opt);
     });
   } catch (err) {
-    versionSelect.innerHTML = '<option value="">-- Lỗi tải version --</option>';
+    versionSelect.innerHTML = "<option value=\"\">-- Lỗi tải version --</option>";
   }
 }
 
@@ -1184,7 +1223,7 @@ function renderTrackerFields(trackerName, validateCallback) {
       const select = document.createElement("select");
       select.className = "tb-cf-input";
       select.dataset.cfId = cfId;
-      select.innerHTML = '<option value="">-- Select --</option>';
+      select.innerHTML = "<option value=\"\">-- Select --</option>";
       optionsMap[fieldName].forEach((opt) => {
         const o = document.createElement("option");
         o.value = opt;

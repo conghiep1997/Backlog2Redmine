@@ -20,6 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const fallbackGeminiApiKeysInput = document.getElementById("fallbackGeminiApiKeys");
   const primaryProviderSelect = document.getElementById("primaryProvider");
   const fallbackProviderSelect = document.getElementById("fallbackProvider");
+  const showRedmineSuccessModalInput = document.getElementById("showRedmineSuccessModal");
   const statusEl = document.getElementById("status");
   const PRIMARY_PROVIDER_CONFIGS = [
     {
@@ -176,6 +177,7 @@ document.addEventListener("DOMContentLoaded", () => {
       defaultProjectId: document.getElementById("defaultProjectId").value,
       reportProjectId: document.getElementById("reportProjectId").value,
       manualFields: document.getElementById("manualFields").value.trim(),
+      showRedmineSuccessModal: showRedmineSuccessModalInput?.checked !== false,
     };
 
     await Promise.all([
@@ -305,6 +307,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "defaultProjectId",
       "reportProjectId",
       "manualFields",
+      "showRedmineSuccessModal",
     ];
 
     chrome.storage.local.get(keys, async (items) => {
@@ -312,6 +315,9 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("backlogDomain").value = items.backlogDomain || TB.BACKLOG_DOMAIN;
       document.getElementById("manualFields").value =
         items.manualFields || JSON.stringify({ Severity: 46, Role: 11 }, null, 2);
+      if (showRedmineSuccessModalInput) {
+        showRedmineSuccessModalInput.checked = items.showRedmineSuccessModal !== false;
+      }
 
       redmineApiKeyInput.value = items.redmineApiKey ? "**********" : "";
       backlogApiKeyInput.value = items.backlogApiKey ? "**********" : "";
@@ -435,8 +441,8 @@ document.addEventListener("DOMContentLoaded", () => {
         syncBtn.disabled = true;
         syncBtn.textContent = "⌛ Đang tải...";
       }
-      defaultProjectSelect.innerHTML = '<option value="">Đang tải...</option>';
-      reportProjectSelect.innerHTML = '<option value="">Đang tải...</option>';
+      defaultProjectSelect.innerHTML = "<option value=\"\">Đang tải...</option>";
+      reportProjectSelect.innerHTML = "<option value=\"\">Đang tải...</option>";
       const redmineDomain =
         document.getElementById("redmineDomain").value.trim() || TB.REDMINE_DOMAIN;
       const redmineBase = redmineDomain.endsWith("/") ? redmineDomain : `${redmineDomain}/`;
@@ -449,8 +455,8 @@ document.addEventListener("DOMContentLoaded", () => {
       cacheTimestamp = now;
       renderProjectOptions(data.projects, selectedId, selectedReportId);
     } catch (_e) {
-      defaultProjectSelect.innerHTML = '<option value="">Lỗi tải (Kiểm tra Key)</option>';
-      reportProjectSelect.innerHTML = '<option value="">Lỗi tải (Kiểm tra Key)</option>';
+      defaultProjectSelect.innerHTML = "<option value=\"\">Lỗi tải (Kiểm tra Key)</option>";
+      reportProjectSelect.innerHTML = "<option value=\"\">Lỗi tải (Kiểm tra Key)</option>";
     } finally {
       if (syncBtn) {
         syncBtn.disabled = false;
@@ -462,8 +468,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderProjectOptions(projects, selectedId, selectedReportId) {
     const defaultSelect = document.getElementById("defaultProjectId");
     const reportSelect = document.getElementById("reportProjectId");
-    defaultSelect.innerHTML = '<option value="">-- Chọn project --</option>';
-    reportSelect.innerHTML = '<option value="">-- Chọn project --</option>';
+    defaultSelect.innerHTML = "<option value=\"\">-- Chọn project --</option>";
+    reportSelect.innerHTML = "<option value=\"\">-- Chọn project --</option>";
     projects.forEach((p) => {
       const opt = new Option(p.name, p.id);
       defaultSelect.add(opt);

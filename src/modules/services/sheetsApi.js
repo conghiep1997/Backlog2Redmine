@@ -115,13 +115,36 @@
     });
   }
 
+  async function clearSheetColumnRange(spreadsheetId, sheetName, column, startRow, token) {
+    if (!spreadsheetId) {
+      throw new Error("Spreadsheet ID khÃ´ng há»£p lá»‡.");
+    }
+    const clearRange = `${sheetName}!${column}${startRow}:${column}`;
+    await sheetsRequest(`/${spreadsheetId}/values/${encodeURIComponent(clearRange)}:clear`, token, {
+      method: "POST",
+    });
+  }
+
   async function writeSheetValues(spreadsheetId, sheetName, startRow, values, token) {
     if (!spreadsheetId) {
       throw new Error("Spreadsheet ID không hợp lệ.");
     }
     const lastCol = "J";
     const range = `${sheetName}!A${startRow}:${lastCol}`;
-    const endpoint = `/${spreadsheetId}/values/${encodeURIComponent(range)}`;
+    const endpoint = `/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`;
+    await sheetsRequest(endpoint, token, {
+      method: "PUT",
+      body: JSON.stringify({ values: values }),
+    });
+  }
+
+  async function writeSheetColumnValues(spreadsheetId, sheetName, column, startRow, values, token) {
+    if (!spreadsheetId) {
+      throw new Error("Spreadsheet ID khÃ´ng há»£p lá»‡.");
+    }
+    const endRow = startRow + values.length - 1;
+    const range = `${sheetName}!${column}${startRow}:${column}${endRow}`;
+    const endpoint = `/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`;
     await sheetsRequest(endpoint, token, {
       method: "PUT",
       body: JSON.stringify({ values: values }),
@@ -153,7 +176,9 @@
     getSheetIdByName,
     readSheetValues,
     clearSheetRange,
+    clearSheetColumnRange,
     writeSheetValues,
+    writeSheetColumnValues,
     launchOAuthFlow,
     revokeToken,
   };

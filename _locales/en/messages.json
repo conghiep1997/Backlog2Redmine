@@ -97,6 +97,9 @@
   "modal_success_close_button": {
     "message": "Close"
   },
+  "modal_success_hide_again_label": {
+    "message": "Do not show this message again"
+  },
   "modal_notify_users_label": {
     "message": "Notify users (Example: 12345, 67890)"
   },

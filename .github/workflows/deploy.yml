@@ -36,6 +36,10 @@ jobs:
          
       - name: Build Project
         run: node scripts/build.js
+        env:
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_SCOPES: https://www.googleapis.com/auth/spreadsheets
+          REQUIRE_GOOGLE_OAUTH_CLIENT_ID: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
         
       - name: Get Version
         id: get_version

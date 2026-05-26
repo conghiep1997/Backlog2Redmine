@@ -5,7 +5,7 @@
   // Create floating button
   const button = document.createElement("div");
   button.id = "b2r-sheet-floating-btn";
-  button.innerText = "📋 B2R";
+  button.innerText = "📋";
 
   // Style the floating button
   Object.assign(button.style, {
@@ -77,7 +77,7 @@
     } else {
       sidebarContainer.style.right = "-420px";
       button.style.right = "0px";
-      button.innerText = "📋 B2R";
+      button.innerText = "📋";
     }
   });
 

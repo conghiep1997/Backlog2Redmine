@@ -30,6 +30,7 @@
   "modal_success_subtitle": { "message": "Bình luận đã được gửi thành công sang Redmine." },
   "modal_success_view_button": { "message": "Xem trên Redmine" },
   "modal_success_close_button": { "message": "Đóng" },
+  "modal_success_hide_again_label": { "message": "Không hiển thị lại thông báo này" },
   "modal_notify_users_label": { "message": "Tag thêm người (Ví dụ: 12345, 67890)" },
   "modal_backlog_issue_key_label": { "message": "Mã Issue Backlog" },
   "modal_migrate_title": { "message": "Tạo Issue mới trên Redmine" },
