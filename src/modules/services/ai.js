@@ -443,7 +443,8 @@ function isRetryableProviderError(error) {
     message.includes("rate limit") ||
     message.includes("503") ||
     message.includes("high demand") ||
-    message.includes("try again later")
+    message.includes("try again later") ||
+    message.includes("only safety metadata")
   );
 }
 
@@ -575,7 +576,7 @@ async function callGeminiAPI(
     throw new Error(TB.MESSAGES.GEMINI.EMPTY_TRANSLATION);
   }
 
-  const cleaned = normalizeTranslationOutput(rawText);
+  const cleaned = extractCleanedTranslation(rawText);
   if (promptFn === TB.PROMPTS.USER) {
     return formatTranslation(commentText, cleaned, commentUrl);
   }
@@ -632,7 +633,7 @@ async function callCerebrasAPI(
     throw new Error("AI returned no content.");
   }
 
-  const cleaned = normalizeTranslationOutput(rawText);
+  const cleaned = extractCleanedTranslation(rawText);
   if (promptFn === TB.PROMPTS.USER) {
     return formatTranslation(commentText, cleaned, commentUrl);
   }
@@ -679,7 +680,7 @@ async function callGroqAPI(
     throw new Error("AI returned no content.");
   }
 
-  const cleaned = normalizeTranslationOutput(rawText);
+  const cleaned = extractCleanedTranslation(rawText);
   if (promptFn === TB.PROMPTS.USER) {
     return formatTranslation(commentText, cleaned, commentUrl);
   }
@@ -725,9 +726,17 @@ async function callOpenRouterAPI(
     throw new Error("AI returned no content.");
   }
 
-  const cleaned = normalizeTranslationOutput(rawText);
+  const cleaned = extractCleanedTranslation(rawText);
   if (promptFn === TB.PROMPTS.USER) {
     return formatTranslation(commentText, cleaned, commentUrl);
+  }
+  return cleaned;
+}
+
+function extractCleanedTranslation(rawText) {
+  const cleaned = normalizeTranslationOutput(rawText);
+  if (!cleaned || isSafetyOnlyOutput(cleaned)) {
+    throw new Error("AI returned only safety metadata.");
   }
   return cleaned;
 }
@@ -779,7 +788,7 @@ function normalizeTranslationOutput(rawText) {
       const isNoise = noiseMarkers.some((marker) =>
         line.toUpperCase().includes(marker.toUpperCase())
       );
-      if (isNoise || /^\d+\.\s+[A-Z\s]+/.test(line)) {
+      if (isNoise || isSafetyMetadataLine(line) || /^\d+\.\s+[A-Z\s]+/.test(line)) {
         firstValidLineIndex = i + 1;
         continue;
       }
@@ -806,6 +815,20 @@ function normalizeTranslationOutput(rawText) {
   }
 
   return cleaned;
+}
+
+function isSafetyMetadataLine(line) {
+  return /^(user|content|response|assistant|model)?\s*safety\s*:\s*(safe|unsafe|blocked|allowed|disallowed)$/i.test(
+    line
+  );
+}
+
+function isSafetyOnlyOutput(text) {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return lines.length > 0 && lines.every(isSafetyMetadataLine);
 }
 
 /**
