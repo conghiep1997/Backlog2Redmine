@@ -86,6 +86,43 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("goToDashboardBtn")
     ?.addEventListener("click", () => chrome.tabs.create({ url: "https://hipppo.vercel.app/" }));
+  document.getElementById("exportLogsBtn")?.addEventListener("click", handleExportLogs);
+  document.getElementById("clearLogsBtn")?.addEventListener("click", handleClearLogs);
+
+  async function handleExportLogs() {
+    if (!globalThis.TB_LOGGER?.getLogs) {
+      setStatus("Không thể đọc log lỗi.", true);
+      return;
+    }
+
+    const logs = await globalThis.TB_LOGGER.getLogs();
+    if (logs.length === 0) {
+      setStatus("Không có log lỗi để xuất.");
+      return;
+    }
+
+    const blob = new Blob([JSON.stringify(logs, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `b2r-error-logs-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setStatus("Đã xuất file log lỗi.");
+  }
+
+  async function handleClearLogs() {
+    if (!globalThis.TB_LOGGER?.clearLogs) {
+      setStatus("Không thể xóa log lỗi.", true);
+      return;
+    }
+
+    const confirmed = confirm("Xóa toàn bộ lịch sử log lỗi?");
+    if (!confirmed) return;
+
+    await globalThis.TB_LOGGER.clearLogs();
+    setStatus("Đã xóa lịch sử log lỗi.");
+  }
 
   async function handleManualUpdateCheck() {
     const btn = document.getElementById("checkUpdateBtn");
@@ -441,8 +478,8 @@ document.addEventListener("DOMContentLoaded", () => {
         syncBtn.disabled = true;
         syncBtn.textContent = "⌛ Đang tải...";
       }
-      defaultProjectSelect.innerHTML = "<option value=\"\">Đang tải...</option>";
-      reportProjectSelect.innerHTML = "<option value=\"\">Đang tải...</option>";
+      defaultProjectSelect.innerHTML = '<option value="">Đang tải...</option>';
+      reportProjectSelect.innerHTML = '<option value="">Đang tải...</option>';
       const redmineDomain =
         document.getElementById("redmineDomain").value.trim() || TB.REDMINE_DOMAIN;
       const redmineBase = redmineDomain.endsWith("/") ? redmineDomain : `${redmineDomain}/`;
@@ -455,8 +492,8 @@ document.addEventListener("DOMContentLoaded", () => {
       cacheTimestamp = now;
       renderProjectOptions(data.projects, selectedId, selectedReportId);
     } catch (_e) {
-      defaultProjectSelect.innerHTML = "<option value=\"\">Lỗi tải (Kiểm tra Key)</option>";
-      reportProjectSelect.innerHTML = "<option value=\"\">Lỗi tải (Kiểm tra Key)</option>";
+      defaultProjectSelect.innerHTML = '<option value="">Lỗi tải (Kiểm tra Key)</option>';
+      reportProjectSelect.innerHTML = '<option value="">Lỗi tải (Kiểm tra Key)</option>';
     } finally {
       if (syncBtn) {
         syncBtn.disabled = false;
@@ -468,8 +505,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderProjectOptions(projects, selectedId, selectedReportId) {
     const defaultSelect = document.getElementById("defaultProjectId");
     const reportSelect = document.getElementById("reportProjectId");
-    defaultSelect.innerHTML = "<option value=\"\">-- Chọn project --</option>";
-    reportSelect.innerHTML = "<option value=\"\">-- Chọn project --</option>";
+    defaultSelect.innerHTML = '<option value="">-- Chọn project --</option>';
+    reportSelect.innerHTML = '<option value="">-- Chọn project --</option>';
     projects.forEach((p) => {
       const opt = new Option(p.name, p.id);
       defaultSelect.add(opt);

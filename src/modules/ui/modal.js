@@ -369,8 +369,8 @@ function openConfirmModal(options) {
       if (currentMode) {
         previewTextarea.value = memoizedBatchNotes
           ? [previewText, ...memoizedBatchNotes]
-            .map((text, index) => `--- Note ${index + 1} ---\n${text}`)
-            .join("\n\n")
+              .map((text, index) => `--- Note ${index + 1} ---\n${text}`)
+              .join("\n\n")
           : `${previewText}\n\n${TB.MESSAGES.MODAL.WAITING_TRANSLATION}`;
         currentNotesList = memoizedBatchNotes
           ? [previewText, ...memoizedBatchNotes]
@@ -753,7 +753,7 @@ function openBacklogModal({
 
     if (backlogUsers.length > 0) {
       backlogSuggestionsEl.innerHTML =
-        "<div class=\"tb-suggestion-item\" style=\"color: #999;\">Không tìm thấy @mention nào</div>";
+        '<div class="tb-suggestion-item" style="color: #999;">Không tìm thấy @mention nào</div>';
     }
   }
 
@@ -781,26 +781,26 @@ function openBacklogModal({
   function showUserSuggestions(query) {
     if (backlogUsers.length === 0) {
       backlogSuggestionsEl.innerHTML =
-        "<div class=\"tb-suggestion-item\" style=\"color: #999;\">Chưa tải được danh sách users</div>";
+        '<div class="tb-suggestion-item" style="color: #999;">Chưa tải được danh sách users</div>';
       return;
     }
 
     const matchedUsers = query
       ? backlogUsers
-        .filter(
-          (user) =>
-            user &&
+          .filter(
+            (user) =>
+              user &&
               user.name &&
               (user.userId || user.id) &&
               ((user.userId && user.userId.toLowerCase().includes(query.toLowerCase())) ||
                 user.name.toLowerCase().includes(query.toLowerCase()))
-        )
-        .slice(0, 10)
+          )
+          .slice(0, 10)
       : backlogUsers.filter((user) => user && user.name && (user.userId || user.id)).slice(0, 10);
 
     if (matchedUsers.length === 0) {
       backlogSuggestionsEl.innerHTML =
-        "<div class=\"tb-suggestion-item\" style=\"color: #999;\">Không tìm thấy user</div>";
+        '<div class="tb-suggestion-item" style="color: #999;">Không tìm thấy user</div>';
       return;
     }
 
@@ -1119,14 +1119,14 @@ async function fetchRedmineMetadataForModal(backlogIssueType, backlogMilestone) 
 
 async function updateVersionsDropdown(projectId, backlogMilestone) {
   const { versionSelect } = modalElements;
-  versionSelect.innerHTML = "<option value=\"\">-- Tải version --</option>";
+  versionSelect.innerHTML = '<option value="">-- Tải version --</option>';
   try {
     const versionsRes = await sendRuntimeMessage({
       type: "FETCH_REDMINE_METADATA",
       endpoint: `/projects/${projectId}/versions.json`,
     });
     const versions = versionsRes.data?.versions || [];
-    versionSelect.innerHTML = "<option value=\"\">-- Trống --</option>";
+    versionSelect.innerHTML = '<option value="">-- Trống --</option>';
     versions.forEach((v) => {
       const opt = document.createElement("option");
       opt.value = v.id;
@@ -1138,7 +1138,7 @@ async function updateVersionsDropdown(projectId, backlogMilestone) {
       versionSelect.appendChild(opt);
     });
   } catch (err) {
-    versionSelect.innerHTML = "<option value=\"\">-- Lỗi tải version --</option>";
+    versionSelect.innerHTML = '<option value="">-- Lỗi tải version --</option>';
   }
 }
 
@@ -1223,7 +1223,7 @@ function renderTrackerFields(trackerName, validateCallback) {
       const select = document.createElement("select");
       select.className = "tb-cf-input";
       select.dataset.cfId = cfId;
-      select.innerHTML = "<option value=\"\">-- Select --</option>";
+      select.innerHTML = '<option value="">-- Select --</option>';
       optionsMap[fieldName].forEach((opt) => {
         const o = document.createElement("option");
         o.value = opt;

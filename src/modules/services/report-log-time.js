@@ -514,7 +514,9 @@ async function upsertDailyTimeEntries(
     );
   }
 
-  const sortedExistingEntries = [...safeExistingEntries].sort((a, b) => Number(a.id) - Number(b.id));
+  const sortedExistingEntries = [...safeExistingEntries].sort(
+    (a, b) => Number(a.id) - Number(b.id)
+  );
 
   for (const [index, desiredEntry] of desiredEntries.entries()) {
     const existingEntry = sortedExistingEntries[index];

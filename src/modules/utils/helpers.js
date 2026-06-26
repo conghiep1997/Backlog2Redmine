@@ -105,8 +105,14 @@ async function readErrorMessage(response) {
  */
 function sendRuntimeMessage(payload) {
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(payload, (response) => {
-      const lastError = chrome.runtime.lastError;
+    const runtime = getChromeRuntime();
+    if (!runtime?.sendMessage) {
+      reject(new Error("Extension runtime is unavailable. Please reload the page."));
+      return;
+    }
+
+    runtime.sendMessage(payload, (response) => {
+      const lastError = runtime.lastError;
       if (lastError) {
         reject(new Error(lastError.message));
         return;
@@ -118,6 +124,13 @@ function sendRuntimeMessage(payload) {
       resolve(response);
     });
   });
+}
+
+function getChromeRuntime() {
+  if (typeof chrome === "undefined") {
+    return null;
+  }
+  return chrome.runtime || null;
 }
 
 /**

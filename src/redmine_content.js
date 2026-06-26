@@ -114,7 +114,10 @@ async function logTimeForMonth() {
         stats.logged.textContent = "0";
         stats.skipped.textContent = String(deletedCount);
         statusText.textContent = "Đã xóa spent time tháng";
-        updateProgress(`Đã xóa ${deletedCount} spent time entr${deletedCount === 1 ? "y" : "ies"}.`, "success");
+        updateProgress(
+          `Đã xóa ${deletedCount} spent time entr${deletedCount === 1 ? "y" : "ies"}.`,
+          "success"
+        );
       } catch (error) {
         statusText.textContent = "Xóa thất bại";
         updateProgress(`Không xóa: ${error.message}`, "error");
@@ -159,7 +162,7 @@ async function logTimeForMonth() {
 
       try {
         statusText.textContent = "Đang quét report tháng...";
-        updateProgress("Đang tìm kiếm các issue \"Report\" của tháng...");
+        updateProgress('Đang tìm kiếm các issue "Report" của tháng...');
         const now = new Date();
         const year = now.getFullYear();
         const month = now.getMonth() + 1;
@@ -169,7 +172,7 @@ async function logTimeForMonth() {
         const reportTracker = trackers.find((t) => t.name.toLowerCase() === "report");
         if (!reportTracker) {
           throw new Error(
-            "Không thể tìm thấy Tracker \"Report\". Vui lòng kiểm tra cấu hình Redmine."
+            'Không thể tìm thấy Tracker "Report". Vui lòng kiểm tra cấu hình Redmine.'
           );
         }
 
@@ -183,7 +186,7 @@ async function logTimeForMonth() {
 
         if (issues.length === 0) {
           statusText.textContent = "Không tìm thấy report";
-          updateProgress("Không tìm thấy issue \"Report\" nào khớp với tháng này.");
+          updateProgress('Không tìm thấy issue "Report" nào khớp với tháng này.');
           startButton.textContent = "Đã xong";
           closeButton.disabled = false;
           return;
@@ -304,10 +307,7 @@ function createMonthlyCopyRows(year, month) {
   const rows = new Map();
 
   for (let day = 1; day <= daysInMonth; day++) {
-    rows.set(
-      `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
-      ""
-    );
+    rows.set(`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`, "");
   }
 
   return rows;

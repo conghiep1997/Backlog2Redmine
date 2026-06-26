@@ -9,12 +9,7 @@
     "128": "assets/icons/icon-128.png"
   },
   "default_locale": "vi",
-  "permissions": [
-    "storage",
-    "alarms",
-    "notifications",
-    "identity"
-  ],
+  "permissions": ["storage", "alarms", "notifications"],
   "host_permissions": [
     "*://*.backlog.com/*",
     "*://*.backlog.jp/*",
@@ -22,34 +17,14 @@
     "https://generativelanguage.googleapis.com/*",
     "https://api.cerebras.ai/*",
     "https://dev-tool-platform-backend.onrender.com/*",
-    "https://hipppo.vercel.app/*",
-    "https://sheets.googleapis.com/*",
-    "https://docs.google.com/spreadsheets/*"
+    "https://hipppo.vercel.app/*"
   ],
-  "oauth2": {
-    "client_id": "YOUR_GOOGLE_OAUTH2_CLIENT_ID.apps.googleusercontent.com",
-    "scopes": [
-      "https://www.googleapis.com/auth/spreadsheets"
-    ]
-  },
   "background": {
     "service_worker": "src/background.js"
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://docs.google.com/spreadsheets/*"
-      ],
-      "js": [
-        "src/sheets-content.js"
-      ],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": [
-        "*://*.backlog.com/*",
-        "*://*.backlog.jp/*"
-      ],
+      "matches": ["*://*.backlog.com/*", "*://*.backlog.jp/*"],
       "js": [
         "src/modules/constants/models.js",
         "src/modules/constants/icons.js",
@@ -67,9 +42,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": [
-        "https://redmine.splus-software.com/*"
-      ],
+      "matches": ["https://redmine.splus-software.com/*"],
       "js": [
         "src/modules/constants/models.js",
         "src/modules/constants/icons.js",
@@ -93,17 +66,8 @@
   },
   "web_accessible_resources": [
     {
-      "resources": [
-        "assets/images/*.jpg",
-        "assets/images/*.png",
-        "src/sheets-sidebar.html",
-        "src/sheets-sidebar.js",
-        "src/modules/services/sheetsApi.js",
-        "src/modules/services/testcaseConverter.js"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
+      "resources": ["assets/images/*.jpg", "assets/images/*.png"],
+      "matches": ["<all_urls>"]
     }
   ]
 }
