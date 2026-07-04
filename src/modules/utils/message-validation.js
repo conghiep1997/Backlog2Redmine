@@ -7,6 +7,7 @@
     apiKey: 10000,
     commentText: 100000,
     commentUrl: 2000,
+    domain: 2000,
     endpoint: 500,
     issueKey: 100,
     issueSummary: 1000,
@@ -20,6 +21,7 @@
     "CREATE_REDMINE_ISSUE",
     "EXTRACT_JAPANESE_CONTENT",
     "FETCH_REDMINE_METADATA",
+    "FETCH_REDMINE_PROJECTS_WITH_KEY",
     "GET_BACKLOG_ISSUE_INFO",
     "GET_BACKLOG_USERS",
     "GET_REPORT_SETTINGS",
@@ -31,6 +33,7 @@
     "SEND_TO_BACKLOG",
     "SEND_TO_REDMINE",
     "TEST_MODEL",
+    "TEST_MODEL_WITH_KEY",
     "TRANSLATE_COMMENT_FULL",
     "TRANSLATE_TEXT_SIMPLE",
   ]);

@@ -183,6 +183,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const settings = await getSettings();
       return testModelAvailability(provider, modelId, settings);
     },
+    TEST_MODEL_WITH_KEY: ({ provider, modelId, apiKey }) => {
+      assertOptionsSender(sender);
+      return testModelAvailability(provider, modelId, createProviderTestSettings(provider, apiKey));
+    },
     LOOKUP_AND_TRANSLATE_COMMENT: async (msg) => {
       const settings = await getSettings();
       assertSettings(settings, ["redmineApiKey", "ai"]);
@@ -213,6 +217,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return getBacklogUsers(msg.projectKey);
     },
     FETCH_REDMINE_METADATA: (msg) => handleFetchMetadata(msg.endpoint),
+    FETCH_REDMINE_PROJECTS_WITH_KEY: ({ domain, apiKey }) => {
+      assertOptionsSender(sender);
+      return handleFetchProjectsWithCredentials(domain, apiKey);
+    },
     CREATE_REDMINE_ISSUE: async (msg) => {
       const settings = await getSettings();
       assertSettings(settings, ["redmineApiKey", "ai"]);
@@ -499,6 +507,39 @@ async function handleFetchMetadata(endpoint) {
   return await response.json();
 }
 
+async function handleFetchProjectsWithCredentials(domain, apiKey) {
+  if (!TB_SETTINGS_VIEW.hasSameOrigin(domain, TB.REDMINE_DOMAIN)) {
+    throw new Error("Unsupported Redmine domain.");
+  }
+  if (!apiKey) {
+    throw new Error("Missing Redmine API key.");
+  }
+
+  const response = await timeoutFetch(
+    new URL("/projects.json?limit=100", domain).toString(),
+    {
+      headers: { "X-Redmine-API-Key": apiKey, Accept: "application/json" },
+    },
+    10000
+  );
+  if (!response.ok) {
+    throw new Error(`Redmine projects request failed (${response.status}).`);
+  }
+  const data = await safeReadJson(response);
+  return data?.projects || [];
+}
+
+function createProviderTestSettings(provider, apiKey) {
+  if (!apiKey) throw new Error("Missing provider API key.");
+  return {
+    geminiApiKey: provider === TB.PROVIDERS.GEMINI ? apiKey : "",
+    geminiApiKeys: provider === TB.PROVIDERS.GEMINI ? [apiKey] : [],
+    groqApiKey: provider === TB.PROVIDERS.GROQ ? apiKey : "",
+    cerebrasApiKey: provider === TB.PROVIDERS.CEREBRAS ? apiKey : "",
+    openrouterApiKey: provider === TB.PROVIDERS.OPENROUTER ? apiKey : "",
+  };
+}
+
 function assertAllowedRedmineMetadataEndpoint(endpoint) {
   if (typeof endpoint !== "string" || !endpoint.startsWith("/")) {
     throw new Error("Unsupported Redmine metadata endpoint.");
@@ -535,4 +576,10 @@ function assertTrustedRedmineSender(sender, redmineDomain) {
   if (TB_SETTINGS_VIEW.hasSameOrigin(sender?.url, redmineDomain)) return;
 
   throw new Error("Redmine report settings are unavailable for this page.");
+}
+
+function assertOptionsSender(sender) {
+  if (sender?.url !== chrome.runtime.getURL("src/options.html")) {
+    throw new Error("This operation is only available from the options page.");
+  }
 }

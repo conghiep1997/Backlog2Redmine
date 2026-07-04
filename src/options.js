@@ -8,6 +8,22 @@ document.addEventListener("DOMContentLoaded", () => {
   let cacheTimestamp = 0;
   const CACHE_DURATION = 5 * 60 * 1000;
 
+  function sendBackgroundRequest(message) {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(message, (response) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        if (!response?.ok) {
+          reject(new Error(response?.error || "Unknown background error."));
+          return;
+        }
+        resolve(response.data);
+      });
+    });
+  }
+
   const form = document.getElementById("optionsForm");
   const redmineApiKeyInput = document.getElementById("redmineApiKey");
   const backlogApiKeyInput = document.getElementById("backlogApiKey");
@@ -472,15 +488,14 @@ document.addEventListener("DOMContentLoaded", () => {
       reportProjectSelect.innerHTML = '<option value="">Đang tải...</option>';
       const redmineDomain =
         document.getElementById("redmineDomain").value.trim() || TB.REDMINE_DOMAIN;
-      const redmineBase = redmineDomain.endsWith("/") ? redmineDomain : `${redmineDomain}/`;
-      const response = await fetch(new URL("projects.json?limit=100", redmineBase).toString(), {
-        headers: { "X-Redmine-API-Key": apiKey, Accept: "application/json" },
+      const projects = await sendBackgroundRequest({
+        type: "FETCH_REDMINE_PROJECTS_WITH_KEY",
+        domain: redmineDomain,
+        apiKey,
       });
-      if (!response.ok) throw new Error(`API ${response.status}`);
-      const data = await response.json();
-      cachedProjects = data.projects;
+      cachedProjects = projects;
       cacheTimestamp = now;
-      renderProjectOptions(data.projects, selectedId, selectedReportId);
+      renderProjectOptions(projects, selectedId, selectedReportId);
     } catch (_e) {
       defaultProjectSelect.innerHTML = '<option value="">Lỗi tải (Kiểm tra Key)</option>';
       reportProjectSelect.innerHTML = '<option value="">Lỗi tải (Kiểm tra Key)</option>';
@@ -678,49 +693,18 @@ document.addEventListener("DOMContentLoaded", () => {
     setStatus(`Đang test ${provider}: ${modelLabel}...`);
 
     try {
-      let url = "";
-      const headers = { "Content-Type": "application/json" };
-      let body = {};
-
-      if (provider === "groq") {
-        url = "https://api.groq.com/openai/v1/chat/completions";
-        headers["Authorization"] = `Bearer ${apiKey}`;
-        body = {
-          model: modelId,
-          messages: [{ role: "user", content: "hi" }],
-          max_tokens: 5,
-        };
-      } else if (provider === "cerebras") {
-        url = "https://api.cerebras.ai/v1/chat/completions";
-        headers["Authorization"] = `Bearer ${apiKey}`;
-        body = {
-          model: modelId,
-          messages: [{ role: "user", content: "hi" }],
-          max_tokens: 5,
-        };
-      } else if (provider === "openrouter") {
-        url = "https://openrouter.ai/api/v1/chat/completions";
-        headers["Authorization"] = `Bearer ${apiKey}`;
-        body = {
-          model: modelId,
-          messages: [{ role: "user", content: "hi" }],
-          max_tokens: 5,
-        };
-      }
-
-      const res = await fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
+      const result = await sendBackgroundRequest({
+        type: "TEST_MODEL_WITH_KEY",
+        provider,
+        modelId,
+        apiKey,
       });
-
-      if (res.ok) {
+      if (result.ok) {
         icon.textContent = "✅";
         icon.style.animation = "";
         setStatus(`✅ Model ${modelLabel} (${provider}) hoạt động tốt`);
       } else {
-        const errorData = await res.json();
-        throw new Error(errorData?.error?.message || `Lỗi ${res.status}`);
+        throw new Error(result.message || "Model test failed.");
       }
     } catch (e) {
       icon.textContent = "❌";
@@ -850,26 +834,20 @@ document.addEventListener("DOMContentLoaded", () => {
     icon.style.animation = "spin 1s linear infinite";
     setStatus(`Đang test: ${modelLabel}...`);
     try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(apiKey)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: "ok" }] }],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 10 },
-          }),
-        }
-      );
-      if (res.ok) {
+      const result = await sendBackgroundRequest({
+        type: "TEST_MODEL_WITH_KEY",
+        provider: TB.PROVIDERS.GEMINI,
+        modelId,
+        apiKey,
+      });
+      if (result.ok) {
         icon.textContent = "✅";
         icon.style.animation = "";
         setStatus(`✅ Model ${modelLabel} hoạt động tốt`);
       } else {
         icon.textContent = "❌";
         icon.style.animation = "";
-        const errorData = await res.json();
-        setStatus(`❌ ${errorData?.error?.message || "Lỗi không xác định"}`, true);
+        setStatus(`❌ ${result.message || "Lỗi không xác định"}`, true);
       }
     } catch (e) {
       icon.textContent = "❌";

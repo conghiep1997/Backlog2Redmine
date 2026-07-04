@@ -1,5 +1,11 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.11] - 2026-07-04
+- **♻️ Improved**:
+  - Chuyển Redmine project sync và AI model test từ Options page sang privileged background handlers.
+  - Giới hạn các handler nhận API key chưa lưu chỉ cho sender là trang Options của extension.
+
+
 ## [1.8.10] - 2026-07-04
 - **🔧 Fixed**:
   - Tự động sanitize error logs cũ khi extension khởi động hoặc được cập nhật.

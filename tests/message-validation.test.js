@@ -21,6 +21,13 @@ test("accepts known messages from the current extension", () => {
   assert.doesNotThrow(() =>
     context.TB_MESSAGE_VALIDATION.assertInternalSender({ id: "extension-id" }, "extension-id")
   );
+  assert.doesNotThrow(() =>
+    context.TB_MESSAGE_VALIDATION.assertMessage({
+      type: "FETCH_REDMINE_PROJECTS_WITH_KEY",
+      domain: "https://redmine.example.com",
+      apiKey: "key",
+    })
+  );
 });
 
 test("rejects unknown, oversized, and malformed messages", () => {
