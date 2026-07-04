@@ -3,7 +3,7 @@
  * Loads modules and coordinates message handling between content scripts and external APIs.
  */
 
-/* global TB_LOGGER, getBacklogIssueInfo, getBacklogUsers, listProviderModels, testModelAvailability */
+/* global TB_LOGGER, getBacklogIssueInfo, getBacklogUsers, testModelAvailability */
 
 importScripts(
   "modules/utils/version.js",
@@ -178,11 +178,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return TB_SETTINGS_VIEW.forReport(settings);
     },
     LOG_ERROR: ({ log }) => TB_LOGGER?.saveLogToStorage(log),
-    LIST_MODELS: ({ provider, apiKey }) => listProviderModels(provider, apiKey),
-    TEST_MODEL: async ({ provider, modelId }) => {
-      const settings = await getSettings();
-      return testModelAvailability(provider, modelId, settings);
-    },
+
     TEST_MODEL_WITH_KEY: ({ provider, modelId, apiKey }) => {
       assertOptionsSender(sender);
       return testModelAvailability(provider, modelId, createProviderTestSettings(provider, apiKey));

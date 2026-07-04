@@ -26,17 +26,19 @@
     "GET_BACKLOG_USERS",
     "GET_REPORT_SETTINGS",
     "GET_UI_SETTINGS",
-    "LIST_MODELS",
     "LOG_ERROR",
     "LOOKUP_AND_TRANSLATE_COMMENT",
     "OPEN_OPTIONS_PAGE",
     "SEND_TO_BACKLOG",
     "SEND_TO_REDMINE",
-    "TEST_MODEL",
     "TEST_MODEL_WITH_KEY",
     "TRANSLATE_COMMENT_FULL",
     "TRANSLATE_TEXT_SIMPLE",
   ]);
+  const REQUIRED_FIELDS = Object.freeze({
+    FETCH_REDMINE_PROJECTS_WITH_KEY: ["domain", "apiKey"],
+    TEST_MODEL_WITH_KEY: ["provider", "modelId", "apiKey"],
+  });
 
   function assertMessage(message) {
     if (!message || typeof message !== "object" || Array.isArray(message)) {
@@ -62,6 +64,12 @@
       }
       if (message[field]?.length > limit) {
         throw new RangeError(`Message field '${field}' is too long.`);
+      }
+    }
+
+    for (const field of REQUIRED_FIELDS[message.type] || []) {
+      if (!message[field]) {
+        throw new TypeError(`Message field '${field}' is required.`);
       }
     }
   }

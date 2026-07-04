@@ -1,5 +1,11 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.12] - 2026-07-04
+- **♻️ Improved**:
+  - Xóa privileged handlers `LIST_MODELS` và `TEST_MODEL` không còn caller.
+  - Bắt buộc domain/API key/provider/model cho các Options API messages trước khi xử lý.
+
+
 ## [1.8.11] - 2026-07-04
 - **♻️ Improved**:
   - Chuyển Redmine project sync và AI model test từ Options page sang privileged background handlers.

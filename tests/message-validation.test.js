@@ -55,4 +55,17 @@ test("rejects unknown, oversized, and malformed messages", () => {
     () => context.TB_MESSAGE_VALIDATION.assertInternalSender({ id: "other" }, "extension-id"),
     /Untrusted/
   );
+  assert.throws(
+    () =>
+      context.TB_MESSAGE_VALIDATION.assertMessage({
+        type: "TEST_MODEL_WITH_KEY",
+        provider: "gemini",
+        modelId: "gemini-test",
+      }),
+    /apiKey.*required/
+  );
+  assert.throws(
+    () => context.TB_MESSAGE_VALIDATION.assertMessage({ type: "TEST_MODEL" }),
+    /Unsupported/
+  );
 });
