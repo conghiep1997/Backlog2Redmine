@@ -9,6 +9,7 @@ importScripts(
   "modules/utils/version.js",
   "modules/utils/settings-view.js",
   "modules/utils/message-validation.js",
+  "modules/utils/request-deduper.js",
   "modules/constants/models.js",
   "modules/constants/icons.js",
   "modules/constants/prompts.js",
@@ -200,8 +201,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         previewText: finalPreview,
       };
     },
-    SEND_TO_REDMINE: (msg) => handleSendToRedmine(msg, sender),
-    SEND_TO_BACKLOG: (msg) => handleSendToBacklog(msg),
+    SEND_TO_REDMINE: (msg) =>
+      TB_REQUEST_DEDUPER.run(TB_REQUEST_DEDUPER.createKey(msg.type, msg), () =>
+        handleSendToRedmine(msg, sender)
+      ),
+    SEND_TO_BACKLOG: (msg) =>
+      TB_REQUEST_DEDUPER.run(TB_REQUEST_DEDUPER.createKey(msg.type, msg), () =>
+        handleSendToBacklog(msg)
+      ),
     GET_BACKLOG_ISSUE_INFO: async (msg) => {
       const settings = await getSettings();
       assertSettings(settings, ["backlogApiKey"]);

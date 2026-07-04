@@ -1,5 +1,11 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.13] - 2026-07-04
+- **♻️ Improved**:
+  - Gộp các request gửi comment giống hệt đang chạy đồng thời để tránh double-submit.
+  - Cho phép gửi lại bình thường ngay sau khi request trước hoàn tất.
+
+
 ## [1.8.12] - 2026-07-04
 - **♻️ Improved**:
   - Xóa privileged handlers `LIST_MODELS` và `TEST_MODEL` không còn caller.
