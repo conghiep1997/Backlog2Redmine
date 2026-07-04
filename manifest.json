@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "B2R",
-  "version": "1.8.13",
+  "version": "1.8.14",
   "description": "Dịch và đồng bộ comment từ Backlog sang Redmine (B2R).",
   "icons": {
     "16": "assets/icons/icon-16.png",
@@ -9,11 +9,8 @@
     "128": "assets/icons/icon-128.png"
   },
   "default_locale": "vi",
-  "permissions": [
-    "storage",
-    "alarms",
-    "notifications"
-  ],
+  "permissions": ["storage", "alarms", "notifications", "scripting"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
   "host_permissions": [
     "*://*.backlog.com/*",
     "*://*.backlog.jp/*",
@@ -30,10 +27,7 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "*://*.backlog.com/*",
-        "*://*.backlog.jp/*"
-      ],
+      "matches": ["*://*.backlog.com/*", "*://*.backlog.jp/*"],
       "js": [
         "src/modules/constants/models.js",
         "src/modules/constants/icons.js",
@@ -51,9 +45,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": [
-        "https://redmine.splus-software.com/*"
-      ],
+      "matches": ["https://redmine.splus-software.com/*"],
       "js": [
         "src/modules/constants/models.js",
         "src/modules/constants/icons.js",

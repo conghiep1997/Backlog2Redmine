@@ -10,6 +10,7 @@
     "TB_SETTINGS_VIEW": "readonly",
     "TB_MESSAGE_VALIDATION": "readonly",
     "TB_REQUEST_DEDUPER": "readonly",
+    "TB_REDMINE_DOMAIN": "readonly",
     "TB_CONSTANTS": "readonly",
     "importScripts": "readonly",
     "chrome": "readonly",

@@ -1,5 +1,12 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.14] - 2026-07-04
+- **✨ Added**:
+  - Hỗ trợ Redmine domain tùy chỉnh bằng optional host permission và dynamic content script.
+- **🔧 Fixed**:
+  - Chuẩn hóa Redmine domain về origin và gỡ permission/script cũ khi đổi domain.
+
+
 ## [1.8.13] - 2026-07-04
 - **♻️ Improved**:
   - Gộp các request gửi comment giống hệt đang chạy đồng thời để tránh double-submit.

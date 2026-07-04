@@ -7,6 +7,20 @@ document.addEventListener("DOMContentLoaded", () => {
   let cachedProjects = null;
   let cacheTimestamp = 0;
   const CACHE_DURATION = 5 * 60 * 1000;
+  const REDMINE_CONTENT_SCRIPTS = [
+    "src/modules/constants/models.js",
+    "src/modules/constants/icons.js",
+    "src/modules/constants/prompts.js",
+    "src/constants.js",
+    "src/modules/utils/helpers.js",
+    "src/modules/utils/logger.js",
+    "src/modules/ui/styles.js",
+    "src/modules/ui/toast.js",
+    "src/modules/ui/modal.js",
+    "src/modules/services/redmine.js",
+    "src/modules/services/report-log-time.js",
+    "src/redmine_content.js",
+  ];
 
   function sendBackgroundRequest(message) {
     return new Promise((resolve, reject) => {
@@ -197,7 +211,11 @@ document.addEventListener("DOMContentLoaded", () => {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
+      const redmineDomain = await configureRedmineDomain(
+        document.getElementById("redmineDomain").value.trim() || TB.REDMINE_DOMAIN
+      );
       const settings = await gatherSettings();
+      settings.redmineDomain = redmineDomain;
       await chrome.storage.local.set(settings);
       setStatus(TB.MESSAGES.SETTINGS.OPTIONS_SAVE_SUCCESS);
       setTimeout(loadOptions, 200);
@@ -301,6 +319,64 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     return settings;
+  }
+
+  async function configureRedmineDomain(domain) {
+    const normalizedDomain = TB_REDMINE_DOMAIN.normalize(domain);
+
+    if (!TB_REDMINE_DOMAIN.isDefault(normalizedDomain, TB.REDMINE_DOMAIN)) {
+      const originPattern = TB_REDMINE_DOMAIN.toMatchPattern(normalizedDomain);
+      const granted = await chrome.permissions.request({ origins: [originPattern] });
+      if (!granted) {
+        throw new Error("Cần cấp quyền truy cập Redmine domain để sử dụng extension.");
+      }
+    }
+
+    const previous = await chrome.storage.local.get("redmineDomain");
+    if (TB_REDMINE_DOMAIN.isDefault(normalizedDomain, TB.REDMINE_DOMAIN)) {
+      await unregisterCustomRedmineScript();
+      await removePreviousRedminePermission(previous.redmineDomain, normalizedDomain);
+      return normalizedDomain;
+    }
+
+    const originPattern = TB_REDMINE_DOMAIN.toMatchPattern(normalizedDomain);
+
+    await unregisterCustomRedmineScript();
+    await chrome.scripting.registerContentScripts([
+      {
+        id: TB_REDMINE_DOMAIN.CUSTOM_SCRIPT_ID,
+        matches: [originPattern],
+        js: REDMINE_CONTENT_SCRIPTS,
+        runAt: "document_idle",
+        persistAcrossSessions: true,
+      },
+    ]);
+    await removePreviousRedminePermission(previous.redmineDomain, normalizedDomain);
+    return normalizedDomain;
+  }
+
+  async function unregisterCustomRedmineScript() {
+    try {
+      await chrome.scripting.unregisterContentScripts({
+        ids: [TB_REDMINE_DOMAIN.CUSTOM_SCRIPT_ID],
+      });
+    } catch (_error) {
+      // The script has not been registered yet.
+    }
+  }
+
+  async function removePreviousRedminePermission(previousDomain, currentDomain) {
+    if (
+      !previousDomain ||
+      TB_REDMINE_DOMAIN.isDefault(previousDomain, TB.REDMINE_DOMAIN) ||
+      TB_REDMINE_DOMAIN.toMatchPattern(previousDomain) ===
+        TB_REDMINE_DOMAIN.toMatchPattern(currentDomain)
+    ) {
+      return;
+    }
+    await chrome.permissions.remove({
+      origins: [TB_REDMINE_DOMAIN.toMatchPattern(previousDomain)],
+    });
   }
 
   async function handleApiKeyUpdate(settings, keyName, inputElement) {

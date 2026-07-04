@@ -10,6 +10,7 @@ importScripts(
   "modules/utils/settings-view.js",
   "modules/utils/message-validation.js",
   "modules/utils/request-deduper.js",
+  "modules/utils/redmine-domain.js",
   "modules/constants/models.js",
   "modules/constants/icons.js",
   "modules/constants/prompts.js",
@@ -511,9 +512,7 @@ async function handleFetchMetadata(endpoint) {
 }
 
 async function handleFetchProjectsWithCredentials(domain, apiKey) {
-  if (!TB_SETTINGS_VIEW.hasSameOrigin(domain, TB.REDMINE_DOMAIN)) {
-    throw new Error("Unsupported Redmine domain.");
-  }
+  await assertRedmineHostPermission(domain);
   if (!apiKey) {
     throw new Error("Missing Redmine API key.");
   }
@@ -530,6 +529,18 @@ async function handleFetchProjectsWithCredentials(domain, apiKey) {
   }
   const data = await safeReadJson(response);
   return data?.projects || [];
+}
+
+async function assertRedmineHostPermission(domain) {
+  const normalizedDomain = TB_REDMINE_DOMAIN.normalize(domain);
+  if (TB_REDMINE_DOMAIN.isDefault(normalizedDomain, TB.REDMINE_DOMAIN)) return;
+
+  const granted = await chrome.permissions.contains({
+    origins: [TB_REDMINE_DOMAIN.toMatchPattern(normalizedDomain)],
+  });
+  if (!granted) {
+    throw new Error("Redmine host permission has not been granted.");
+  }
 }
 
 function createProviderTestSettings(provider, apiKey) {
