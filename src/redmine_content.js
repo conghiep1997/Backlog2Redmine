@@ -29,10 +29,10 @@ window.addEventListener("beforeunload", () => {
 // ====================
 
 /**
- * Retrieves decrypted settings through the background service worker.
+ * Retrieves the settings required by Redmine reporting through the background service worker.
  */
 async function getSettings() {
-  const response = await sendRuntimeMessage({ type: "GET_SETTINGS" });
+  const response = await sendRuntimeMessage({ type: "GET_REPORT_SETTINGS" });
   return response.data || {};
 }
 

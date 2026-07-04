@@ -1,5 +1,15 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.08] - 2026-07-04
+- **🔧 Fixed**:
+  - Cấp đúng host permission cho API kiểm tra phiên bản.
+  - Chỉ xử lý click từ notification cập nhật của B2R và bỏ qua version response không hợp lệ.
+  - Tránh dùng cache Redmine issue cũ khi domain, issue summary hoặc settings thay đổi.
+- **♻️ Improved**:
+  - Dùng chung logic kiểm tra phiên bản giữa service worker và trang options.
+  - Bổ sung unit test cho so sánh phiên bản và loại bỏ web-accessible resource không tồn tại.
+  - Giới hạn settings trả cho content script theo đúng nhu cầu và xác thực origin trước khi cấp Redmine credential.
+
 ## [1.8.07] - 2026-05-20
 - **✨ Added**:
   - Tích hợp chức năng "Google Sheet Testcase Converter" giúp chuyển đổi dữ liệu testcase sang định dạng mới.

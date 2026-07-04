@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "B2R",
-  "version": "1.8.07",
+  "version": "1.8.08",
   "description": "Dịch và đồng bộ comment từ Backlog sang Redmine (B2R).",
   "icons": {
     "16": "assets/icons/icon-16.png",
@@ -9,14 +9,18 @@
     "128": "assets/icons/icon-128.png"
   },
   "default_locale": "vi",
-  "permissions": ["storage", "alarms", "notifications"],
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications"
+  ],
   "host_permissions": [
     "*://*.backlog.com/*",
     "*://*.backlog.jp/*",
     "https://redmine.splus-software.com/*",
     "https://generativelanguage.googleapis.com/*",
     "https://api.cerebras.ai/*",
-    "https://dev-tool-platform-backend.onrender.com/*",
+    "https://dev-tool-platform-api.onrender.com/*",
     "https://hipppo.vercel.app/*"
   ],
   "background": {
@@ -24,7 +28,10 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://*.backlog.com/*", "*://*.backlog.jp/*"],
+      "matches": [
+        "*://*.backlog.com/*",
+        "*://*.backlog.jp/*"
+      ],
       "js": [
         "src/modules/constants/models.js",
         "src/modules/constants/icons.js",
@@ -42,7 +49,9 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://redmine.splus-software.com/*"],
+      "matches": [
+        "https://redmine.splus-software.com/*"
+      ],
       "js": [
         "src/modules/constants/models.js",
         "src/modules/constants/icons.js",
@@ -63,11 +72,5 @@
   "options_page": "src/options.html",
   "action": {
     "default_title": "B2R - Backlog to Redmine"
-  },
-  "web_accessible_resources": [
-    {
-      "resources": ["assets/images/*.jpg", "assets/images/*.png"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  }
 }

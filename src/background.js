@@ -6,6 +6,8 @@
 /* global TB_LOGGER, getBacklogIssueInfo, getBacklogUsers, listProviderModels, testModelAvailability */
 
 importScripts(
+  "modules/utils/version.js",
+  "modules/utils/settings-view.js",
   "modules/constants/models.js",
   "modules/constants/icons.js",
   "modules/constants/prompts.js",
@@ -19,7 +21,7 @@ importScripts(
 );
 
 const DEBUG_PREFIX = "[TB-BG]";
-const BACKEND_API_URL = "https://dev-tool-platform-api.onrender.com/api";
+const UPDATE_NOTIFICATION_ID = "b2r-update-available";
 const CHECK_INTERVAL_HOURS = 24;
 
 // ============================================================================
@@ -72,6 +74,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
  * Handles notification clicks to direct users to the download page.
  */
 chrome.notifications.onClicked.addListener((notificationId) => {
+  if (notificationId !== UPDATE_NOTIFICATION_ID) return;
+
   chrome.notifications.clear(notificationId);
   chrome.tabs.create({ url: "https://hipppo.vercel.app/" });
 });
@@ -80,6 +84,8 @@ chrome.notifications.onClicked.addListener((notificationId) => {
  * Handles notification button clicks.
  */
 chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
+  if (notificationId !== UPDATE_NOTIFICATION_ID) return;
+
   chrome.notifications.clear(notificationId);
   if (buttonIndex === 0) {
     // "Download ngay" button
@@ -108,7 +114,7 @@ async function checkForUpdates() {
   const currentVersion = manifest.version;
 
   try {
-    const response = await fetch(`${BACKEND_API_URL}/versions/latest`);
+    const response = await fetch(`${TB_VERSION.API_URL}/versions/latest`);
     if (!response.ok) {
       console.warn(`${DEBUG_PREFIX} Failed to fetch latest version: ${response.status}`);
       return;
@@ -116,12 +122,17 @@ async function checkForUpdates() {
 
     const data = await response.json();
     const latestVersion = data.version_number;
-    const comparison = compareVersions(currentVersion, latestVersion);
+    if (!TB_VERSION.isValid(latestVersion)) {
+      console.warn(`${DEBUG_PREFIX} Backend returned an invalid version.`);
+      return;
+    }
+
+    const comparison = TB_VERSION.compare(currentVersion, latestVersion);
 
     if (comparison < 0) {
       await chrome.action.setBadgeText({ text: "!" });
       await chrome.action.setBadgeBackgroundColor({ color: "#ff0000" });
-      await chrome.notifications.create({
+      await chrome.notifications.create(UPDATE_NOTIFICATION_ID, {
         type: "basic",
         iconUrl: "assets/icons/icon-48.png",
         title: "🚀 Cập nhật mới sẵn sàng!",
@@ -149,7 +160,12 @@ async function checkForUpdates() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const handlers = {
     OPEN_OPTIONS_PAGE: () => chrome.runtime.openOptionsPage(),
-    GET_SETTINGS: getSettings,
+    GET_UI_SETTINGS: async () => TB_SETTINGS_VIEW.forUi(await getSettings()),
+    GET_REPORT_SETTINGS: async () => {
+      const settings = await getSettings();
+      assertTrustedRedmineSender(sender, settings.redmineDomain);
+      return TB_SETTINGS_VIEW.forReport(settings);
+    },
     LOG_ERROR: ({ log }) => TB_LOGGER?.saveLogToStorage(log),
     LIST_MODELS: ({ provider, apiKey }) => listProviderModels(provider, apiKey),
     TEST_MODEL: async ({ provider, modelId }) => {
@@ -246,6 +262,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 let settingsCache = null;
 let settingsCacheTime = 0;
 const SETTINGS_CACHE_TTL = 15000; // 15 seconds
+const issueLookupCache = new Map();
+const LOOKUP_CACHE_TTL = 60000; // 1 minute
 
 /**
  * Loads, decrypts, and caches extension settings.
@@ -382,6 +400,7 @@ async function getSettings() {
 chrome.storage.onChanged.addListener(() => {
   settingsCache = null;
   settingsCacheTime = 0;
+  issueLookupCache.clear();
 });
 
 /**
@@ -434,11 +453,8 @@ function assertSettings(settings, required = []) {
 // Caching & Utility Functions
 // ============================================================================
 
-const issueLookupCache = new Map();
-const LOOKUP_CACHE_TTL = 60000; // 1 minute
-
 async function findRedmineIssueWithCache(domain, apiKey, issueKey, summary) {
-  const cacheKey = `${issueKey}`;
+  const cacheKey = JSON.stringify([domain, issueKey, summary]);
   const now = Date.now();
   const cached = issueLookupCache.get(cacheKey);
 
@@ -504,18 +520,8 @@ function assertAllowedRedmineMetadataEndpoint(endpoint) {
   }
 }
 
-/**
- * Simple semantic version comparison.
- * @returns 1 if v1 > v2, -1 if v1 < v2, 0 if equal.
- */
-function compareVersions(v1, v2) {
-  const parts1 = v1.split(".").map(Number);
-  const parts2 = v2.split(".").map(Number);
-  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-    const a = parts1[i] || 0;
-    const b = parts2[i] || 0;
-    if (a > b) return 1;
-    if (a < b) return -1;
-  }
-  return 0;
+function assertTrustedRedmineSender(sender, redmineDomain) {
+  if (TB_SETTINGS_VIEW.hasSameOrigin(sender?.url, redmineDomain)) return;
+
+  throw new Error("Redmine report settings are unavailable for this page.");
 }

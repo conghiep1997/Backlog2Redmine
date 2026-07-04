@@ -6,6 +6,8 @@
   },
   "globals": {
     "TB": "readonly",
+    "TB_VERSION": "readonly",
+    "TB_SETTINGS_VIEW": "readonly",
     "TB_CONSTANTS": "readonly",
     "importScripts": "readonly",
     "chrome": "readonly",
@@ -70,6 +72,13 @@
   },
   "ignorePatterns": ["node_modules/", "dist/", "*.min.js"],
   "overrides": [
+    {
+      "files": ["tests/**/*.js"],
+      "env": {
+        "browser": false,
+        "node": true
+      }
+    },
     {
       "files": ["src/modules/**/*.js"],
       "rules": {

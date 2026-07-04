@@ -137,27 +137,17 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const manifest = chrome.runtime.getManifest();
       const currentVersion = manifest.version;
-      const BACKEND_API_URL = "https://dev-tool-platform-api.onrender.com/api";
 
-      const response = await fetch(`${BACKEND_API_URL}/versions/latest`);
+      const response = await fetch(`${TB_VERSION.API_URL}/versions/latest`);
       if (!response.ok) throw new Error(`Server trả về lỗi ${response.status}`);
 
       const data = await response.json();
       const latestVersion = data.version_number;
-
-      // Hàm so sánh version đơn giản
-      const v1 = currentVersion.split(".").map(Number);
-      const v2 = latestVersion.split(".").map(Number);
-      let isNewer = false;
-      for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
-        const num1 = v1[i] || 0;
-        const num2 = v2[i] || 0;
-        if (num2 > num1) {
-          isNewer = true;
-          break;
-        }
-        if (num1 > num2) break;
+      if (!TB_VERSION.isValid(latestVersion)) {
+        throw new Error("Server trả về phiên bản không hợp lệ");
       }
+
+      const isNewer = TB_VERSION.compare(currentVersion, latestVersion) < 0;
 
       if (isNewer) {
         statusDiv.innerHTML = `

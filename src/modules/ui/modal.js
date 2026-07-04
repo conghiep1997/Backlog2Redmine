@@ -984,7 +984,7 @@ async function openSuccessModal({ redmineUrl, commentCount = 1, onClose, isBackl
   } = modalElements;
   if (!isBacklog) {
     try {
-      const settingsResponse = await sendRuntimeMessage({ type: "GET_SETTINGS" });
+      const settingsResponse = await sendRuntimeMessage({ type: "GET_UI_SETTINGS" });
       const settings = settingsResponse.data || settingsResponse;
       if (settings.showRedmineSuccessModal === false) {
         closeModal();
@@ -1049,7 +1049,7 @@ async function fetchRedmineMetadataForModal(backlogIssueType, backlogMilestone) 
   const { projectSelect, trackerSelect, prioritySelect, versionSelect } = modalElements;
   try {
     const [settings, projectsRes, trackersRes, prioritiesRes] = await Promise.all([
-      sendRuntimeMessage({ type: "GET_SETTINGS" }).catch(() => ({})),
+      sendRuntimeMessage({ type: "GET_UI_SETTINGS" }).catch(() => ({})),
       sendRuntimeMessage({
         type: "FETCH_REDMINE_METADATA",
         endpoint: "/projects.json?limit=100",
