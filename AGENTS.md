@@ -1,7 +1,7 @@
 # Agent Guidance: Backlog2Redmine
 
 ## Purpose
-- Backlog2Redmine is a Manifest V3 Chrome extension for translating and syncing Backlog, Redmine, and Google Sheets workflows.
+- Backlog2Redmine is a Manifest V3 Chrome extension for translating and syncing Backlog and Redmine workflows.
 - Keep this file routing-focused. Put implementation details in `.agents/skills/*/SKILL.md`.
 - Do not load all skills by default; load only the skill files relevant to the current task.
 
@@ -10,9 +10,8 @@
 - `src/background.js`: service worker, lifecycle hooks, update checks, message routing, decrypted settings cache.
 - `src/content.js`: Backlog content script and DOM injection.
 - `src/redmine_content.js`: Redmine content script for report/log-time workflow.
-- `src/sheets-content.js`, `src/sheets-sidebar.*`, `src/testcase-converter.*`: Google Sheets/testcase tools.
 - `src/options.*`: extension options UI and encrypted settings persistence.
-- `src/modules/services/`: AI, Backlog, Redmine, Sheets, version, report-log-time services.
+- `src/modules/services/`: AI, Backlog, Redmine, version, and report-log-time services.
 - `src/modules/utils/`: crypto, logging, markdown, helper utilities.
 - `src/modules/ui/`: shared injected UI helpers.
 - `src/modules/constants/`, `src/constants.js`, `_locales/`: constants, prompts, models, icons, i18n fallback.
@@ -21,9 +20,9 @@
 
 ## Skill Routing
 - `chrome-extension`: manifest, service worker, content scripts, permissions, messaging, storage, web accessible resources.
-- `extension-ui`: options page, injected Backlog/Redmine UI, modal/toast/styles, Sheets sidebar/testcase pages.
+- `extension-ui`: options page, injected Backlog/Redmine UI, modal/toast/styles.
 - `ai-integration`: provider/model/key handling, translation prompts, fallback and retry behavior.
-- `cross-platform-sync`: Backlog, Redmine, Sheets, issue/comment/file sync and API behavior.
+- `cross-platform-sync`: Backlog/Redmine issue, comment, file sync and API behavior.
 - `deployment`: build scripts, version sync, zip packaging, GitHub release workflow.
 - `token-optimization`: focused discovery before broad reading or large edits.
 - `code-review`: final review, changed-file-first checks, security and architecture validation.

@@ -1,5 +1,15 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.09] - 2026-07-04
+- **🔧 Fixed**:
+  - Ngăn API key/token xuất hiện trong timeout errors và persistent error logs.
+  - Bổ sung host permissions cho Groq và OpenRouter.
+  - Loại bỏ HTML injection từ model labels và settings error messages.
+- **📝 Docs**:
+  - Xóa các tham chiếu lỗi thời tới Google Sheet Testcase Converter khỏi repo guidance.
+  - Đồng bộ trách nhiệm formatting giữa Prettier và ESLint để build output không còn warning nhiễu.
+
+
 ## [1.8.08] - 2026-07-04
 - **🔧 Fixed**:
   - Cấp đúng host permission cho API kiểm tra phiên bản.

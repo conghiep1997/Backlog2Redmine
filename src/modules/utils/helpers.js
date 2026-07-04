@@ -152,7 +152,7 @@ async function timeoutFetch(url, options = {}, timeoutMs = 10000) {
     return response;
   } catch (error) {
     if (error.name === "AbortError") {
-      throw new Error(`Request timeout after ${timeoutMs}ms for ${url}`);
+      throw new Error(`Request timeout after ${timeoutMs}ms.`);
     }
     throw error;
   } finally {

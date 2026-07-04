@@ -581,6 +581,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 3000);
   }
 
+  function setModelButtonContent(button, label) {
+    const icon = document.createElement("span");
+    icon.className = "test-icon";
+    icon.textContent = "🧪";
+    Object.assign(icon.style, {
+      marginLeft: "6px",
+      opacity: "0.6",
+      cursor: "pointer",
+    });
+    button.replaceChildren(document.createTextNode(`${label} `), icon);
+  }
+
   function renderGeminiModelsTags(selectedModels = []) {
     const listEl = document.getElementById("geminiModelsList");
     listEl.innerHTML = "";
@@ -590,7 +602,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.dataset.modelId = model.value;
       btn.dataset.modelLabel = model.label;
       btn.className = selectedModels.includes(model.value) ? "selected" : "";
-      btn.innerHTML = `${model.label} <span class="test-icon" style="margin-left:6px;opacity:0.6;cursor:pointer;">🧪</span>`;
+      setModelButtonContent(btn, model.label);
       btn.onclick = (e) => {
         if (e.target.classList.contains("test-icon")) {
           e.stopPropagation();
@@ -621,7 +633,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.dataset.provider = provider;
       btn.dataset.modelId = model.value;
       btn.className = selectedModels.includes(model.value) ? "selected" : "";
-      btn.innerHTML = `${model.label} <span class="test-icon" style="margin-left:6px;opacity:0.6;cursor:pointer;">🧪</span>`;
+      setModelButtonContent(btn, model.label);
 
       Object.assign(btn.style, {
         background: btn.classList.contains("selected") ? "#10b981" : "#dbeafe",

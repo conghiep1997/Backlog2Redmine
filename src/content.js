@@ -431,11 +431,33 @@ function showSettingsErrorLink(message) {
     document.body.appendChild(container);
   }
 
-  container.innerHTML = `
-    <span style="color: #92400E;">${message}</span>
-    <a href="#" id="tb-open-settings-link" style="color: #05668D; text-decoration: underline; font-weight: bold;">Click here to fix.</a>
-    <button id="tb-close-error-link" style="background:none; border:none; font-size: 20px; cursor:pointer; color: #92400E;">&times;</button>
-  `;
+  const messageEl = document.createElement("span");
+  messageEl.style.color = "#92400E";
+  messageEl.textContent = String(message || "Extension settings are incomplete.");
+
+  const settingsLink = document.createElement("a");
+  settingsLink.href = "#";
+  settingsLink.id = "tb-open-settings-link";
+  settingsLink.textContent = "Click here to fix.";
+  Object.assign(settingsLink.style, {
+    color: "#05668D",
+    textDecoration: "underline",
+    fontWeight: "bold",
+  });
+
+  const closeButton = document.createElement("button");
+  closeButton.id = "tb-close-error-link";
+  closeButton.type = "button";
+  closeButton.textContent = "×";
+  Object.assign(closeButton.style, {
+    background: "none",
+    border: "none",
+    fontSize: "20px",
+    cursor: "pointer",
+    color: "#92400E",
+  });
+
+  container.replaceChildren(messageEl, settingsLink, closeButton);
 
   document.getElementById("tb-open-settings-link").onclick = (e) => {
     e.preventDefault();
