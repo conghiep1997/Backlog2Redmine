@@ -34,3 +34,10 @@ test("limits oversized log fields", () => {
   const sanitized = context.TB_LOGGER.sanitizeLogEntry({ message: "x".repeat(20000) });
   assert.equal(sanitized.message.length, 10000);
 });
+test("sanitizes existing log collections", () => {
+  const logs = context.TB_LOGGER.sanitizeLogEntries([
+    { message: "https://example.test?apiKey=old-secret" },
+  ]);
+  assert.equal(logs.length, 1);
+  assert.equal(logs[0].message.includes("old-secret"), false);
+});

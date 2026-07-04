@@ -50,6 +50,19 @@ function sanitizeLogEntry(logEntry) {
   };
 }
 
+function sanitizeLogEntries(logs) {
+  return (Array.isArray(logs) ? logs : []).slice(0, MAX_LOGS).map(sanitizeLogEntry);
+}
+
+async function sanitizeStoredLogs() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(["errorLogs"], (result) => {
+      const logs = sanitizeLogEntries(result.errorLogs);
+      chrome.storage.local.set({ errorLogs: logs }, () => resolve(logs));
+    });
+  });
+}
+
 /**
  * Adds an error log entry.
  * @param {string} source - Source component (e.g. 'Content', 'Background', 'RedmineService')
@@ -107,11 +120,7 @@ async function saveLogToStorage(logEntry) {
  * @returns {Promise<Array>} List of log entries
  */
 async function getLogs() {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(["errorLogs"], (result) => {
-      resolve(result.errorLogs || []);
-    });
-  });
+  return sanitizeStoredLogs();
 }
 
 /**
@@ -126,4 +135,12 @@ async function clearLogs() {
 }
 
 // Global for scripts loaded via manifest
-globalThis.TB_LOGGER = { logError, getLogs, clearLogs, saveLogToStorage, sanitizeLogEntry };
+globalThis.TB_LOGGER = {
+  logError,
+  getLogs,
+  clearLogs,
+  saveLogToStorage,
+  sanitizeLogEntry,
+  sanitizeLogEntries,
+  sanitizeStoredLogs,
+};

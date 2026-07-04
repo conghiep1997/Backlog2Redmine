@@ -8,6 +8,7 @@
 importScripts(
   "modules/utils/version.js",
   "modules/utils/settings-view.js",
+  "modules/utils/message-validation.js",
   "modules/constants/models.js",
   "modules/constants/icons.js",
   "modules/constants/prompts.js",
@@ -40,6 +41,7 @@ chrome.action.onClicked.addListener(() => {
  * Opens options page on first install and checks for updates.
  */
 chrome.runtime.onInstalled.addListener(async (details) => {
+  await TB_LOGGER.sanitizeStoredLogs();
   if (details.reason === "install") {
     console.log(`${DEBUG_PREFIX} Extension installed, opening options page.`);
     chrome.runtime.openOptionsPage();
@@ -54,6 +56,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
  * Checks for updates if it hasn't been done recently.
  */
 chrome.runtime.onStartup.addListener(async () => {
+  await TB_LOGGER.sanitizeStoredLogs();
   console.log(`${DEBUG_PREFIX} Extension started, checking for updates...`);
   const shouldCheck = await shouldCheckForUpdates();
   if (shouldCheck) {
@@ -158,6 +161,14 @@ async function checkForUpdates() {
  * Main message listener for requests from content scripts and options page.
  */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  try {
+    TB_MESSAGE_VALIDATION.assertInternalSender(sender, chrome.runtime.id);
+    TB_MESSAGE_VALIDATION.assertMessage(message);
+  } catch (error) {
+    sendResponse({ ok: false, error: error.message });
+    return false;
+  }
+
   const handlers = {
     OPEN_OPTIONS_PAGE: () => chrome.runtime.openOptionsPage(),
     GET_UI_SETTINGS: async () => TB_SETTINGS_VIEW.forUi(await getSettings()),

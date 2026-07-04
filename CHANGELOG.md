@@ -1,5 +1,11 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.10] - 2026-07-04
+- **🔧 Fixed**:
+  - Tự động sanitize error logs cũ khi extension khởi động hoặc được cập nhật.
+  - Chặn message không hợp lệ, sender ngoài extension và payload vượt giới hạn trước privileged handlers.
+
+
 ## [1.8.09] - 2026-07-04
 - **🔧 Fixed**:
   - Ngăn API key/token xuất hiện trong timeout errors và persistent error logs.
