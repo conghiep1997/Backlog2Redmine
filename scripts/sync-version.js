@@ -14,7 +14,6 @@ const MANIFEST_DIST = path.join(DIST_DIR, 'manifest.json');
 
 // Configuration - update these for your deployment
 const BACKEND_URL = process.env.BACKEND_URL || 'https://dev-tool-platform-backend.onrender.com';
-const BACKEND_API_KEY = process.env.BACKEND_API_KEY || ''; // Set via environment if needed
 
 // Optional: Set to your GitHub repository download pattern
 // For GitHub Releases: https://github.com/{org}/{repo}/releases/download/v{version}/{asset}
@@ -81,7 +80,6 @@ async function syncVersion() {
     const env = {
       ...process.env,
       BACKEND_URL,
-      BACKEND_API_KEY,
       VERSION: version,
       DOWNLOAD_URL: downloadUrl
     };

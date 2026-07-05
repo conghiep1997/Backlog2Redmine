@@ -5,6 +5,7 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -26,7 +27,7 @@ jobs:
           cache: 'npm'
           
       - name: Install dependencies
-        run: npm install
+        run: npm ci
         
       - name: Run Lint
         run: npm run lint
@@ -39,7 +40,7 @@ jobs:
         env:
           GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
           GOOGLE_OAUTH_SCOPES: https://www.googleapis.com/auth/spreadsheets
-          REQUIRE_GOOGLE_OAUTH_CLIENT_ID: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+          REQUIRE_GOOGLE_OAUTH_CLIENT_ID: ${{ github.event_name == 'workflow_dispatch' }}
         
       - name: Get Version
         id: get_version
@@ -58,7 +59,7 @@ jobs:
           awk '/^## \[/{count++} count==2{exit} count==1{print}' CHANGELOG.md > LATEST_CHANGES.md
 
       - name: Create Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: github.event_name == 'workflow_dispatch'
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
@@ -71,11 +72,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Register version in backend
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.create_release.outputs.url
+        if: github.event_name == 'workflow_dispatch' && steps.create_release.outputs.url
         run: node scripts/register-version.js
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
-          BACKEND_API_KEY: ${{ secrets.BACKEND_API_KEY }}
           VERSION: ${{ steps.get_version.outputs.version }}
           DOWNLOAD_URL: https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.tag }}/Backlog2Redmine-v${{ steps.get_version.outputs.version }}.zip
 

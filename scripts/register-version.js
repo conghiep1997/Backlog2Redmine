@@ -8,7 +8,6 @@ const path = require('path');
 async function registerVersion() {
   const {
     BACKEND_URL: backendUrl,
-    BACKEND_API_KEY: backendApiKey,
     VERSION: version,
     DOWNLOAD_URL: downloadUrl
   } = process.env;
@@ -59,8 +58,7 @@ async function registerVersion() {
     const response = await fetch(`${backendUrl}/api/versions`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        ...(backendApiKey ? { 'Authorization': `Bearer ${backendApiKey}` } : {})
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
     });
@@ -95,7 +93,7 @@ function parseChangelogToStructured(content, version) {
   let currentSectionType = null;
   let currentIndent = 0;
 
-  const SECTION_TYPES = ['Added', 'Fixed', 'Changed', 'Removed', 'Refactored', 'Improved', 'Deprecated'];
+  const SECTION_TYPES = ['Added', 'Fixed', 'Changed', 'Removed', 'Refactored', 'Improved', 'Deprecated', 'Docs', 'Security'];
 
   for (const line of lines) {
     // Check if we've entered the target version section

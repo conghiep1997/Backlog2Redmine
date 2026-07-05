@@ -12,7 +12,6 @@ Trong repo `Backlog2Redmine`, vào **Settings → Secrets and variables → Acti
 
 ### Backend
 - `BACKEND_URL` = URL backend của Dev Tool Platform, ví dụ: `https://dev-tool-platform-api.onrender.com`
-- `BACKEND_API_KEY` = nếu backend có auth thì thêm, chưa có thì để trống
 
 ### Frontend (Dashboard)
 - `DASHBOARD_URL` = URL frontend dashboard, ví dụ: `https://dev-tool-platform.vercel.app`

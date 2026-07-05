@@ -1,82 +1,75 @@
 # Changelog - Backlog2Redmine
 
-## [1.8.17] - 2026-07-05
-- **🔧 Fixed**:
+## [1.8.09] - 2026-07-05
+
+Tổng hợp các thay đổi từ ngày 2026-07-04 đến 2026-07-05.
+### Fixed
   - Inject lại custom Redmine content scripts vào tab đang mở sau extension update.
   - Cô lập lỗi query/inject từng tab để không làm gián đoạn service-worker lifecycle.
 
 
-## [1.8.16] - 2026-07-05
-- **🔧 Fixed**:
+### Fixed
   - Inject custom Redmine content scripts vào tab đang mở ngay sau khi cấp permission.
   - Dùng isolated-world marker để tránh inject trùng và lỗi redeclare globals.
 
 
-## [1.8.15] - 2026-07-05
-- **🔧 Fixed**:
+### Fixed
   - Tách dedupe scope theo sender origin để không gộp request giữa các Backlog workspace.
   - Rollback domain/registration khi cập nhật custom Redmine thất bại.
   - Tự đồng bộ dynamic content script khi extension được install hoặc update.
 
 
-## [1.8.14] - 2026-07-04
-- **✨ Added**:
+### Added
   - Hỗ trợ Redmine domain tùy chỉnh bằng optional host permission và dynamic content script.
-- **🔧 Fixed**:
+### Fixed
   - Chuẩn hóa Redmine domain về origin và gỡ permission/script cũ khi đổi domain.
 
 
-## [1.8.13] - 2026-07-04
-- **♻️ Improved**:
+### Improved
   - Gộp các request gửi comment giống hệt đang chạy đồng thời để tránh double-submit.
   - Cho phép gửi lại bình thường ngay sau khi request trước hoàn tất.
 
 
-## [1.8.12] - 2026-07-04
-- **♻️ Improved**:
+### Improved
   - Xóa privileged handlers `LIST_MODELS` và `TEST_MODEL` không còn caller.
   - Bắt buộc domain/API key/provider/model cho các Options API messages trước khi xử lý.
 
 
-## [1.8.11] - 2026-07-04
-- **♻️ Improved**:
+### Improved
   - Chuyển Redmine project sync và AI model test từ Options page sang privileged background handlers.
   - Giới hạn các handler nhận API key chưa lưu chỉ cho sender là trang Options của extension.
 
 
-## [1.8.10] - 2026-07-04
-- **🔧 Fixed**:
+### Fixed
   - Tự động sanitize error logs cũ khi extension khởi động hoặc được cập nhật.
   - Chặn message không hợp lệ, sender ngoài extension và payload vượt giới hạn trước privileged handlers.
 
 
-## [1.8.09] - 2026-07-04
-- **🔧 Fixed**:
+### Fixed
   - Ngăn API key/token xuất hiện trong timeout errors và persistent error logs.
   - Bổ sung host permissions cho Groq và OpenRouter.
   - Loại bỏ HTML injection từ model labels và settings error messages.
-- **📝 Docs**:
+### Docs
   - Xóa các tham chiếu lỗi thời tới Google Sheet Testcase Converter khỏi repo guidance.
   - Đồng bộ trách nhiệm formatting giữa Prettier và ESLint để build output không còn warning nhiễu.
 
 
-## [1.8.08] - 2026-07-04
-- **🔧 Fixed**:
+### Fixed
   - Cấp đúng host permission cho API kiểm tra phiên bản.
   - Chỉ xử lý click từ notification cập nhật của B2R và bỏ qua version response không hợp lệ.
   - Tránh dùng cache Redmine issue cũ khi domain, issue summary hoặc settings thay đổi.
-- **♻️ Improved**:
+### Improved
   - Dùng chung logic kiểm tra phiên bản giữa service worker và trang options.
   - Bổ sung unit test cho so sánh phiên bản và loại bỏ web-accessible resource không tồn tại.
   - Giới hạn settings trả cho content script theo đúng nhu cầu và xác thực origin trước khi cấp Redmine credential.
 
 ## [1.8.07] - 2026-05-20
-- **✨ Added**:
+### Added
   - Tích hợp chức năng "Google Sheet Testcase Converter" giúp chuyển đổi dữ liệu testcase sang định dạng mới.
   - Hỗ trợ giao diện Standalone Page và Sidebar nổi (Floating Sidebar Button) trực tiếp trên Google Sheets.
   - Cho phép tùy chỉnh Column Mapping (A, B, C, D...) để chuyển đổi cột linh hoạt.
   - Bổ sung hướng dẫn tự động tạo OAuth2 Client ID và chèn snippet manifest động trên giao diện.
-- **🔧 Fixed**:
+### Fixed
   - Khắc phục cảnh báo ESLint, whitelisted các biến toàn cục Sheets API và Testcase Converter.
 
 

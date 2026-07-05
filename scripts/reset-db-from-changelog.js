@@ -13,7 +13,6 @@ const path = require('path');
 
 // Configuration
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
-const BACKEND_API_KEY = process.env.BACKEND_API_KEY || '';
 const CHANGELOG_PATH = path.join(__dirname, '..', 'CHANGELOG.md');
 
 // Parse CHANGELOG.md to extract all versions
@@ -64,7 +63,6 @@ async function dropAndRecreateTable() {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        ...(BACKEND_API_KEY ? { 'Authorization': `Bearer ${BACKEND_API_KEY}` } : {})
       }
     });
     
@@ -78,7 +76,6 @@ async function dropAndRecreateTable() {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
-            ...(BACKEND_API_KEY ? { 'Authorization': `Bearer ${BACKEND_API_KEY}` } : {})
           }
         });
         
@@ -107,7 +104,6 @@ async function createVersion(versionData) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(BACKEND_API_KEY ? { 'Authorization': `Bearer ${BACKEND_API_KEY}` } : {})
     },
     body: JSON.stringify(payload)
   });
@@ -162,7 +158,6 @@ async function seedVersions() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(BACKEND_API_KEY ? { 'Authorization': `Bearer ${BACKEND_API_KEY}` } : {})
         },
         body: JSON.stringify(payload)
       });
