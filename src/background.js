@@ -646,4 +646,40 @@ async function syncCustomRedmineRegistration() {
       persistAcrossSessions: true,
     },
   ]);
+  await injectIntoOpenCustomRedmineTabs(originPattern);
+}
+
+async function injectIntoOpenCustomRedmineTabs(originPattern) {
+  let tabs;
+  try {
+    tabs = await chrome.tabs.query({ url: [originPattern] });
+  } catch (error) {
+    await TB_LOGGER.logError("Background", error, {
+      operation: "queryOpenCustomRedmineTabs",
+    });
+    return;
+  }
+
+  await Promise.all(
+    tabs
+      .filter((tab) => Number.isInteger(tab.id))
+      .map(async (tab) => {
+        try {
+          const probe = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: () => Boolean(globalThis.__B2R_REDMINE_LOADED__),
+          });
+          if (probe[0]?.result) return;
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: TB_REDMINE_DOMAIN.CONTENT_SCRIPTS,
+          });
+        } catch (error) {
+          await TB_LOGGER.logError("Background", error, {
+            operation: "injectOpenCustomRedmineTab",
+            tabId: tab.id,
+          });
+        }
+      })
+  );
 }

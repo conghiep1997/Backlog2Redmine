@@ -1,5 +1,11 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.17] - 2026-07-05
+- **🔧 Fixed**:
+  - Inject lại custom Redmine content scripts vào tab đang mở sau extension update.
+  - Cô lập lỗi query/inject từng tab để không làm gián đoạn service-worker lifecycle.
+
+
 ## [1.8.16] - 2026-07-05
 - **🔧 Fixed**:
   - Inject custom Redmine content scripts vào tab đang mở ngay sau khi cấp permission.
