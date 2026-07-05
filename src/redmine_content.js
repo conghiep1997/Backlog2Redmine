@@ -1,5 +1,7 @@
 /* globals getTrackers, findIssues, findTimeEntries, deleteTimeEntry, getCurrentUser, logTimeFromReport */
 
+globalThis.__B2R_REDMINE_LOADED__ = true;
+
 /**
  * Redmine Content Script Entry Point for Backlog2Redmine Extension.
  * Handles extracting Japanese content, syncing to Backlog, and logging time from reports.

@@ -1,5 +1,11 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.16] - 2026-07-05
+- **🔧 Fixed**:
+  - Inject custom Redmine content scripts vào tab đang mở ngay sau khi cấp permission.
+  - Dùng isolated-world marker để tránh inject trùng và lỗi redeclare globals.
+
+
 ## [1.8.15] - 2026-07-05
 - **🔧 Fixed**:
   - Tách dedupe scope theo sender origin để không gộp request giữa các Backlog workspace.
