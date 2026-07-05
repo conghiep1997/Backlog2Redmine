@@ -7,20 +7,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let cachedProjects = null;
   let cacheTimestamp = 0;
   const CACHE_DURATION = 5 * 60 * 1000;
-  const REDMINE_CONTENT_SCRIPTS = [
-    "src/modules/constants/models.js",
-    "src/modules/constants/icons.js",
-    "src/modules/constants/prompts.js",
-    "src/constants.js",
-    "src/modules/utils/helpers.js",
-    "src/modules/utils/logger.js",
-    "src/modules/ui/styles.js",
-    "src/modules/ui/toast.js",
-    "src/modules/ui/modal.js",
-    "src/modules/services/redmine.js",
-    "src/modules/services/report-log-time.js",
-    "src/redmine_content.js",
-  ];
 
   function sendBackgroundRequest(message) {
     return new Promise((resolve, reject) => {
@@ -211,12 +197,24 @@ document.addEventListener("DOMContentLoaded", () => {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
-      const redmineDomain = await configureRedmineDomain(
+      const domainChange = await prepareRedmineDomain(
         document.getElementById("redmineDomain").value.trim() || TB.REDMINE_DOMAIN
       );
       const settings = await gatherSettings();
-      settings.redmineDomain = redmineDomain;
+      settings.redmineDomain = domainChange.currentDomain;
       await chrome.storage.local.set(settings);
+      try {
+        await applyRedmineRegistration(domainChange.currentDomain);
+      } catch (registrationError) {
+        const rollbackDomain = domainChange.previousDomain || TB.REDMINE_DOMAIN;
+        await chrome.storage.local.set({ redmineDomain: rollbackDomain });
+        await applyRedmineRegistration(rollbackDomain);
+        throw registrationError;
+      }
+      await removePreviousRedminePermission(
+        domainChange.previousDomain,
+        domainChange.currentDomain
+      );
       setStatus(TB.MESSAGES.SETTINGS.OPTIONS_SAVE_SUCCESS);
       setTimeout(loadOptions, 200);
     } catch (error) {
@@ -321,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return settings;
   }
 
-  async function configureRedmineDomain(domain) {
+  async function prepareRedmineDomain(domain) {
     const normalizedDomain = TB_REDMINE_DOMAIN.normalize(domain);
 
     if (!TB_REDMINE_DOMAIN.isDefault(normalizedDomain, TB.REDMINE_DOMAIN)) {
@@ -333,26 +331,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const previous = await chrome.storage.local.get("redmineDomain");
-    if (TB_REDMINE_DOMAIN.isDefault(normalizedDomain, TB.REDMINE_DOMAIN)) {
-      await unregisterCustomRedmineScript();
-      await removePreviousRedminePermission(previous.redmineDomain, normalizedDomain);
-      return normalizedDomain;
-    }
+    return {
+      currentDomain: normalizedDomain,
+      previousDomain: previous.redmineDomain,
+    };
+  }
 
-    const originPattern = TB_REDMINE_DOMAIN.toMatchPattern(normalizedDomain);
-
+  async function applyRedmineRegistration(domain) {
     await unregisterCustomRedmineScript();
+    if (TB_REDMINE_DOMAIN.isDefault(domain, TB.REDMINE_DOMAIN)) return;
+
+    const originPattern = TB_REDMINE_DOMAIN.toMatchPattern(domain);
     await chrome.scripting.registerContentScripts([
       {
         id: TB_REDMINE_DOMAIN.CUSTOM_SCRIPT_ID,
         matches: [originPattern],
-        js: REDMINE_CONTENT_SCRIPTS,
+        js: TB_REDMINE_DOMAIN.CONTENT_SCRIPTS,
         runAt: "document_idle",
         persistAcrossSessions: true,
       },
     ]);
-    await removePreviousRedminePermission(previous.redmineDomain, normalizedDomain);
-    return normalizedDomain;
   }
 
   async function unregisterCustomRedmineScript() {

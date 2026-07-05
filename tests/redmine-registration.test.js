@@ -11,8 +11,12 @@ test("dynamic Redmine registration preserves static content-script load order", 
   const staticRegistration = manifest.content_scripts.find((entry) =>
     entry.matches.some((match) => match.includes("redmine"))
   );
-  const block = optionsSource.match(/const REDMINE_CONTENT_SCRIPTS = \[([\s\S]*?)\];/);
-  assert.ok(block, "REDMINE_CONTENT_SCRIPTS must exist");
+  const domainSource = fs.readFileSync(
+    path.join(root, "src", "modules", "utils", "redmine-domain.js"),
+    "utf8"
+  );
+  const block = domainSource.match(/const CONTENT_SCRIPTS = Object\.freeze\(\[([\s\S]*?)\]\);/);
+  assert.ok(block, "CONTENT_SCRIPTS must exist");
   const dynamicScripts = [...block[1].matchAll(/"([^"]+\.js)"/g)].map((match) => match[1]);
   assert.deepEqual(dynamicScripts, staticRegistration.js);
 });

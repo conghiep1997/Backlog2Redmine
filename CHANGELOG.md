@@ -1,5 +1,12 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.15] - 2026-07-05
+- **🔧 Fixed**:
+  - Tách dedupe scope theo sender origin để không gộp request giữa các Backlog workspace.
+  - Rollback domain/registration khi cập nhật custom Redmine thất bại.
+  - Tự đồng bộ dynamic content script khi extension được install hoặc update.
+
+
 ## [1.8.14] - 2026-07-04
 - **✨ Added**:
   - Hỗ trợ Redmine domain tùy chỉnh bằng optional host permission và dynamic content script.

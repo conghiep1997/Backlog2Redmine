@@ -3,6 +3,20 @@
  */
 (function (global) {
   const CUSTOM_SCRIPT_ID = "b2r-redmine-custom";
+  const CONTENT_SCRIPTS = Object.freeze([
+    "src/modules/constants/models.js",
+    "src/modules/constants/icons.js",
+    "src/modules/constants/prompts.js",
+    "src/constants.js",
+    "src/modules/utils/helpers.js",
+    "src/modules/utils/logger.js",
+    "src/modules/ui/styles.js",
+    "src/modules/ui/toast.js",
+    "src/modules/ui/modal.js",
+    "src/modules/services/redmine.js",
+    "src/modules/services/report-log-time.js",
+    "src/redmine_content.js",
+  ]);
 
   function normalize(domain) {
     const url = new URL(String(domain || "").trim());
@@ -23,6 +37,7 @@
 
   global.TB_REDMINE_DOMAIN = Object.freeze({
     CUSTOM_SCRIPT_ID,
+    CONTENT_SCRIPTS,
     isDefault,
     normalize,
     toMatchPattern,

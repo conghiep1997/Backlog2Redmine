@@ -51,3 +51,14 @@ test("allows the same request after completion", async () => {
   await Promise.resolve();
   assert.equal(await context.TB_REQUEST_DEDUPER.run(key, operation), 2);
 });
+test("does not coalesce identical Redmine messages from different sender origins", () => {
+  const message = {
+    redmineIssueId: "12",
+    backlogIssueKey: "TEST-1",
+    notes: "hello",
+  };
+  assert.notEqual(
+    context.TB_REQUEST_DEDUPER.createKey("SEND_TO_REDMINE", message, "https://a.backlog.com"),
+    context.TB_REQUEST_DEDUPER.createKey("SEND_TO_REDMINE", message, "https://b.backlog.com")
+  );
+});

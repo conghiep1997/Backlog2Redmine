@@ -44,6 +44,13 @@ chrome.action.onClicked.addListener(() => {
  */
 chrome.runtime.onInstalled.addListener(async (details) => {
   await TB_LOGGER.sanitizeStoredLogs();
+  try {
+    await syncCustomRedmineRegistration();
+  } catch (error) {
+    await TB_LOGGER.logError("Background", error, {
+      operation: "syncCustomRedmineRegistration",
+    });
+  }
   if (details.reason === "install") {
     console.log(`${DEBUG_PREFIX} Extension installed, opening options page.`);
     chrome.runtime.openOptionsPage();
@@ -59,6 +66,13 @@ chrome.runtime.onInstalled.addListener(async (details) => {
  */
 chrome.runtime.onStartup.addListener(async () => {
   await TB_LOGGER.sanitizeStoredLogs();
+  try {
+    await syncCustomRedmineRegistration();
+  } catch (error) {
+    await TB_LOGGER.logError("Background", error, {
+      operation: "syncCustomRedmineRegistration",
+    });
+  }
   console.log(`${DEBUG_PREFIX} Extension started, checking for updates...`);
   const shouldCheck = await shouldCheckForUpdates();
   if (shouldCheck) {
@@ -203,12 +217,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       };
     },
     SEND_TO_REDMINE: (msg) =>
-      TB_REQUEST_DEDUPER.run(TB_REQUEST_DEDUPER.createKey(msg.type, msg), () =>
-        handleSendToRedmine(msg, sender)
+      TB_REQUEST_DEDUPER.run(
+        TB_REQUEST_DEDUPER.createKey(msg.type, msg, getSenderScope(sender)),
+        () => handleSendToRedmine(msg, sender)
       ),
     SEND_TO_BACKLOG: (msg) =>
-      TB_REQUEST_DEDUPER.run(TB_REQUEST_DEDUPER.createKey(msg.type, msg), () =>
-        handleSendToBacklog(msg)
+      TB_REQUEST_DEDUPER.run(
+        TB_REQUEST_DEDUPER.createKey(msg.type, msg, getSenderScope(sender)),
+        () => handleSendToBacklog(msg)
       ),
     GET_BACKLOG_ISSUE_INFO: async (msg) => {
       const settings = await getSettings();
@@ -596,4 +612,38 @@ function assertOptionsSender(sender) {
   if (sender?.url !== chrome.runtime.getURL("src/options.html")) {
     throw new Error("This operation is only available from the options page.");
   }
+}
+function getSenderScope(sender) {
+  const senderUrl = sender?.tab?.url || sender?.url || "";
+  try {
+    return new URL(senderUrl).origin;
+  } catch {
+    return senderUrl;
+  }
+}
+
+async function syncCustomRedmineRegistration() {
+  const { redmineDomain = TB.REDMINE_DOMAIN } = await chrome.storage.local.get("redmineDomain");
+  try {
+    await chrome.scripting.unregisterContentScripts({
+      ids: [TB_REDMINE_DOMAIN.CUSTOM_SCRIPT_ID],
+    });
+  } catch (_error) {
+    // No custom registration exists yet.
+  }
+
+  if (TB_REDMINE_DOMAIN.isDefault(redmineDomain, TB.REDMINE_DOMAIN)) return;
+  const originPattern = TB_REDMINE_DOMAIN.toMatchPattern(redmineDomain);
+  const granted = await chrome.permissions.contains({ origins: [originPattern] });
+  if (!granted) return;
+
+  await chrome.scripting.registerContentScripts([
+    {
+      id: TB_REDMINE_DOMAIN.CUSTOM_SCRIPT_ID,
+      matches: [originPattern],
+      js: TB_REDMINE_DOMAIN.CONTENT_SCRIPTS,
+      runAt: "document_idle",
+      persistAcrossSessions: true,
+    },
+  ]);
 }

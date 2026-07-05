@@ -4,13 +4,21 @@
 (function (global) {
   const inFlightRequests = new Map();
 
-  function createKey(type, message) {
+  function createKey(type, message, senderScope = "") {
     if (type === "SEND_TO_REDMINE") {
-      return JSON.stringify([type, message.redmineIssueId, message.backlogIssueKey, message.notes]);
+      return JSON.stringify([
+        type,
+        senderScope,
+        message.redmineIssueId,
+        message.backlogIssueKey,
+        message.notes,
+      ]);
     }
     if (type === "SEND_TO_BACKLOG") {
       return JSON.stringify([
         type,
+        senderScope,
+        senderScope,
         message.backlogIssueKey,
         message.content,
         message.notifiedUserId || [],
