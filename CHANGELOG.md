@@ -2,7 +2,7 @@
 
 ## [1.8.09] - 2026-07-05
 
-Tổng hợp các thay đổi từ ngày 2026-07-04 đến 2026-07-05.
+> Tăng cường bảo mật, độ ổn định và khả năng kết nối với Redmine domain tùy chỉnh.
 ### Fixed
   - Inject lại custom Redmine content scripts vào tab đang mở sau extension update.
   - Cô lập lỗi query/inject từng tab để không làm gián đoạn service-worker lifecycle.

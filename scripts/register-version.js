@@ -30,13 +30,14 @@ async function registerVersion() {
 
   // Parse changelog from CHANGELOG.md into structured format
   let changelog = [];
+  let changelogContent = '';
   if (fs.existsSync('CHANGELOG.md')) {
-    const changelogContent = fs.readFileSync('CHANGELOG.md', 'utf8');
+    changelogContent = fs.readFileSync('CHANGELOG.md', 'utf8');
     changelog = parseChangelogToStructured(changelogContent, version);
   }
 
   // Extract description from changelog - first non-sub item as summary
-  const description = extractDescription(changelog);
+  const description = extractReleaseDescription(changelogContent, version) || extractDescription(changelog);
 
   const payload = {
     name: `Backlog2Redmine v${version}`,
@@ -84,6 +85,11 @@ async function registerVersion() {
  * @param {string} version - Target version
  * @returns {Array} - Array of {text, level, type} objects
  */
+function extractReleaseDescription(content, version) {
+  const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const sectionMatch = content.match(new RegExp(`^## \\[${escapedVersion}\\][^\\n]*\\n+>\\s*(.+)$`, 'm'));
+  return sectionMatch ? sectionMatch[1].trim() : '';
+}
 function parseChangelogToStructured(content, version) {
   // Match the version header (e.g., "## [1.8.3] - 2026-04-26")
   const versionRegex = new RegExp(`^## \\[${version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]`, 'm');
@@ -110,8 +116,7 @@ function parseChangelogToStructured(content, version) {
     if (inSection) {
       const trimmed = line.trim();
 
-      // Skip empty lines and main version header
-      if (!trimmed || trimmed.startsWith('#')) continue;
+      if (!trimmed || trimmed.startsWith('>')) continue;
 
       // Detect section header (### Added, **✨ Added**, etc.)
       const sectionMatch = trimmed.match(/^(?:###|##?\*?)\s*(?:\*\*)?([A-Za-z\u00C0-\u024F ]+)(?:\*\*)?:?\s*$/);
@@ -170,4 +175,8 @@ function extractDescription(changelog) {
   return 'Bug fixes and improvements';
 }
 
-registerVersion();
+if (require.main === module) {
+  registerVersion();
+}
+
+module.exports = { extractReleaseDescription, parseChangelogToStructured };
