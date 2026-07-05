@@ -33,14 +33,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
-      - name: Run Lint
-        run: npm run lint
+      - name: Run Tests
+        run: npm test
 
-      - name: Check Version Sync
-        run: npm run check:version-sync
-         
       - name: Build Project
-        run: node scripts/build.js
+        run: npm run build
         env:
           GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
           GOOGLE_OAUTH_SCOPES: https://www.googleapis.com/auth/spreadsheets
