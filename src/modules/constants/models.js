@@ -5,16 +5,40 @@
   const GEMINI_MODELS = [
     {
       value: "gemini-3.1-flash-lite",
-      label: "Gemini 3.1 Flash Lite (RPD 500) \u2B50 M\u1EB7c \u0111\u1ECBnh",
+      label: "Gemini 3.1 Flash Lite (recommended: high-volume, low latency)",
       default: true,
     },
     {
+      value: "gemini-3.5-flash",
+      label: "Gemini 3.5 Flash (best quality/speed balance)",
+    },
+    {
+      value: "gemini-2.5-flash-lite",
+      label: "Gemini 2.5 Flash Lite (stable high-throughput fallback)",
+    },
+    {
+      value: "gemini-2.5-flash",
+      label: "Gemini 2.5 Flash (strong translation quality)",
+    },
+    {
+      value: "gemini-2.0-flash-lite",
+      label: "Gemini 2.0 Flash Lite (legacy high-throughput fallback)",
+    },
+    {
+      value: "gemini-2.0-flash",
+      label: "Gemini 2.0 Flash (legacy fast fallback)",
+    },
+    {
+      value: "gemini-2.5-pro",
+      label: "Gemini 2.5 Pro (highest quality, lower throughput)",
+    },
+    {
       value: "gemma-4-31b-it",
-      label: "Gemma 4 31B IT (RPD 1.5K) \u2728 Ch\u1EA5t l\u01B0\u1EE3ng cao",
+      label: "Gemma 4 31B IT (Google AI Studio, quality fallback)",
     },
     {
       value: "gemma-4-26b-a4b-it",
-      label: "Gemma 4 26B A4B IT (RPD 1.5K) \uD83D\uDC8E MoE Stable",
+      label: "Gemma 4 26B A4B IT (Google AI Studio, fast fallback)",
     },
   ];
 
@@ -69,7 +93,7 @@
     CEREBRAS_MODELS,
     GROQ_MODELS,
     OPENROUTER_MODELS,
-    GEMINI: "gemini-3.1-flash-lite-preview",
+    GEMINI: "gemini-3.1-flash-lite",
     GEMINI_FALLBACK: "gemma-4-31b-it",
     CEREBRAS: "gpt-oss-120b",
     GROQ: "llama-3.3-70b-versatile",

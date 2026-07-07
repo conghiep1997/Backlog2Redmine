@@ -9,6 +9,7 @@ const lastUsedProviderIndexByProvider = {};
 const providerCooldownUntilByCombination = new Map();
 const GEMINI_RATE_LIMIT_COOLDOWN_MS = 60 * 1000;
 const GEMINI_OVERLOAD_COOLDOWN_MS = 30 * 1000;
+const AI_TRANSLATION_TIMEOUT_MS = 15 * 1000;
 
 /**
  * Fetches the list of available models from a provider.
@@ -442,6 +443,8 @@ function isRetryableProviderError(error) {
     message.includes("429") ||
     message.includes("rate limit") ||
     message.includes("503") ||
+    message.includes("timeout") ||
+    message.includes("timed out") ||
     message.includes("high demand") ||
     message.includes("try again later") ||
     message.includes("only safety metadata")
@@ -558,8 +561,8 @@ async function callGeminiAPI(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     },
-    10000
-  ); // 15s timeout cho Gemini
+    AI_TRANSLATION_TIMEOUT_MS
+  );
 
   if (!response.ok) {
     const errorMsg = await readErrorMessage(response);
@@ -619,8 +622,8 @@ async function callCerebrasAPI(
         max_tokens: 2048,
       }),
     },
-    10000
-  ); // 15s timeout cho Cerebras
+    AI_TRANSLATION_TIMEOUT_MS
+  );
 
   if (!response.ok) {
     const errorMsg = await readErrorMessage(response);
@@ -666,7 +669,7 @@ async function callGroqAPI(
         max_tokens: 2048,
       }),
     },
-    10000
+    AI_TRANSLATION_TIMEOUT_MS
   );
 
   if (!response.ok) {
@@ -712,7 +715,7 @@ async function callOpenRouterAPI(
         max_tokens: 2048,
       }),
     },
-    10000
+    AI_TRANSLATION_TIMEOUT_MS
   );
 
   if (!response.ok) {

@@ -133,13 +133,7 @@ async function checkForUpdates() {
   const currentVersion = manifest.version;
 
   try {
-    const response = await fetch(`${TB_VERSION.API_URL}/versions/latest`);
-    if (!response.ok) {
-      console.warn(`${DEBUG_PREFIX} Failed to fetch latest version: ${response.status}`);
-      return;
-    }
-
-    const data = await response.json();
+    const data = await TB_VERSION.fetchLatest();
     const latestVersion = data.version_number;
     if (!TB_VERSION.isValid(latestVersion)) {
       console.warn(`${DEBUG_PREFIX} Backend returned an invalid version.`);

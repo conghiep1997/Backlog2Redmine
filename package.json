@@ -1,19 +1,19 @@
 {
   "name": "backlog2redmine",
-  "version": "1.8.09",
+  "version": "1.8.10",
   "description": "Chrome extension to translate and sync comments between Backlog and Redmine",
   "scripts": {
     "bump": "node scripts/bump-version.js",
     "check:version-sync": "node scripts/check-version-sync.js",
     "lint": "eslint src/**/*.js",
     "lint:fix": "eslint src/**/*.js --fix",
-    "format": "prettier --write \"src/**/*.{js,json,html,css}\"",
-    "format:check": "prettier --check \"src/**/*.{js,json,html,css}\"",
+    "format": "prettier --write \"src/**/*.{js,json,html,css}\" \"scripts/**/*.js\" \"tests/**/*.js\" \"manifest.json\" \"package.json\"",
+    "format:check": "prettier --check \"src/**/*.{js,json,html,css}\" \"scripts/**/*.js\" \"tests/**/*.js\" \"manifest.json\" \"package.json\"",
     "build": "npm run check:version-sync && npm run lint && npm run format:check && node scripts/build.js",
     "build:zip": "node scripts/build-zip.js",
     "sync:version": "node scripts/sync-version.js",
     "release": "npm run build:zip && npm run sync:version",
-    "test": "node --test --test-isolation=none tests/*.test.js",
+    "test": "node --test tests/*.test.js",
     "dev": "echo \"Load unpacked extension from dist/ folder in chrome://extensions/\""
   },
   "keywords": [

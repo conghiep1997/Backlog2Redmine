@@ -17,6 +17,7 @@ const DEFAULT_MANUAL_FIELDS = {
   "Q&A Category": 58,
 };
 const NOTE_SEPARATOR_REGEX = /^--- Note \d+ ---\s*\n/gm;
+const NOTE_LIST_SCROLL_THRESHOLD = 4;
 
 function escapeUiHtml(value) {
   if (typeof escapeHtml === "function") {
@@ -28,6 +29,133 @@ function escapeUiHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function setPreviewMode(previewTextarea, previewHtmlEl, previewToggleBtn, isHtmlMode) {
+  if (!previewToggleBtn || !previewHtmlEl || !previewTextarea) return;
+
+  if (isHtmlMode) {
+    previewHtmlEl.innerHTML = renderMarkdownHtml(previewTextarea.value);
+    previewTextarea.style.display = "none";
+    previewHtmlEl.style.display = "block";
+    previewToggleBtn.textContent = "HTML";
+    return;
+  }
+
+  previewTextarea.style.display = "block";
+  previewHtmlEl.style.display = "none";
+  previewToggleBtn.textContent = "MD";
+}
+
+function renderStructuredNoteEditors(listEl, notes, options = {}) {
+  if (!listEl) return;
+
+  const { titlePrefix = "Note", startIndex = 1, helperText = "", onChange } = options;
+
+  listEl.classList.toggle("tb-note-list--scrollable", notes.length >= NOTE_LIST_SCROLL_THRESHOLD);
+  listEl.classList.toggle("tb-note-list--single", notes.length === 1);
+  listEl.replaceChildren();
+
+  if (!notes.length) {
+    const emptyState = document.createElement("p");
+    emptyState.className = "tb-note-list-empty";
+    emptyState.textContent = helperText || TB.MESSAGES.MODAL.WAITING_TRANSLATION;
+    listEl.appendChild(emptyState);
+    return;
+  }
+
+  notes.forEach((note, index) => {
+    const card = document.createElement("section");
+    card.className = "tb-note-card";
+
+    const header = document.createElement("div");
+    header.className = "tb-note-card-header";
+
+    const title = document.createElement("h4");
+    title.className = "tb-note-card-title";
+    title.textContent = titlePrefix + " " + (startIndex + index);
+
+    const meta = document.createElement("span");
+    meta.className = "tb-note-card-meta";
+    meta.textContent = note.trim().length + " ky tu";
+
+    const toggleBtn = document.createElement("button");
+    toggleBtn.type = "button";
+    toggleBtn.className = "tb-note-preview-toggle";
+    toggleBtn.textContent = "MD";
+    toggleBtn.title = "Toggle preview";
+
+    const headerActions = document.createElement("div");
+    headerActions.className = "tb-note-card-actions";
+    headerActions.append(meta, toggleBtn);
+
+    const textarea = document.createElement("textarea");
+    textarea.className = "tb-note-card-textarea";
+    textarea.rows = 6;
+    textarea.value = note;
+
+    const previewEl = document.createElement("div");
+    previewEl.className = "tb-note-card-preview";
+    previewEl.style.display = "none";
+
+    let isPreviewMode = false;
+    const syncPreview = () => {
+      previewEl.innerHTML = renderMarkdownHtml(textarea.value);
+    };
+    toggleBtn.addEventListener("click", () => {
+      isPreviewMode = !isPreviewMode;
+      if (isPreviewMode) {
+        syncPreview();
+        textarea.style.display = "none";
+        previewEl.style.display = "block";
+        toggleBtn.textContent = "HTML";
+        return;
+      }
+      textarea.style.display = "block";
+      previewEl.style.display = "none";
+      toggleBtn.textContent = "MD";
+    });
+
+    textarea.addEventListener("input", () => {
+      meta.textContent = textarea.value.trim().length + " ky tu";
+      if (isPreviewMode) {
+        syncPreview();
+      }
+      onChange?.(index, textarea.value);
+    });
+
+    header.append(title, headerActions);
+    card.append(header, textarea, previewEl);
+    listEl.appendChild(card);
+  });
+}
+
+function setCombinedNotesTextareaValue(textarea, notes, startIndex = 1) {
+  if (!textarea) return;
+  textarea.value = notes
+    .map((text, index) => "--- Note " + (startIndex + index) + " ---\n" + text)
+    .join("\n\n");
+}
+
+function renderStructuredBatchNotes(listEl, notes, options = {}) {
+  const {
+    titlePrefix = "Note",
+    startIndex = 1,
+    helperText = "",
+    targetTextarea,
+    onNotesChange,
+  } = options;
+
+  renderStructuredNoteEditors(listEl, notes, {
+    titlePrefix,
+    startIndex,
+    helperText,
+    onChange: (index, value) => {
+      notes[index] = value;
+      setCombinedNotesTextareaValue(targetTextarea, notes, startIndex);
+      onNotesChange?.(notes);
+    },
+  });
 }
 
 function renderBacklogUserSuggestion(user) {
@@ -120,7 +248,7 @@ function ensureModalShell() {
           <div class="tb-field-group">
             <div class="tb-preview-header">
               <label id="tb-preview-label" for="tb-redmine-preview">${TB.MESSAGES.MODAL.PREVIEW_LABEL}</label>
-              <button type="button" id="tb-preview-toggle" class="tb-preview-toggle" title="Toggle preview">👁</button>
+              <button type="button" id="tb-preview-toggle" class="tb-preview-toggle" title="Toggle preview">MD</button>
             </div>
             <div class="tb-preview-container">
               <textarea id="tb-redmine-preview" rows="10"></textarea>
@@ -128,11 +256,14 @@ function ensureModalShell() {
             </div>
           </div>
           <div id="tb-comments-preview-group" class="tb-field-group" style="display: none;">
-            <label for="tb-redmine-comments-preview">Xem trước bình luận</label>
-            <textarea id="tb-redmine-comments-preview" rows="8"></textarea>
+            <div class="tb-note-list-header">
+              <label class="tb-note-list-label" for="tb-redmine-comments-preview">Preview comments</label>
+              <span class="tb-note-list-helper">Each note is split for review.</span>
+            </div>
+            <div id="tb-comments-note-list" class="tb-note-list"></div>
+            <textarea id="tb-redmine-comments-preview" rows="8" hidden></textarea>
           </div>
           <div id="tb-batch-info" class="tb-batch-pill" hidden></div>
-          <p class="tb-modal-hint">${TB.MESSAGES.MODAL.HINT}</p>
           <div id="tb-batch-option" class="tb-batch-option" hidden>
             <label><input type="checkbox" id="tb-batch-checkbox"> <span id="tb-batch-text"></span></label>
           </div>
@@ -140,10 +271,8 @@ function ensureModalShell() {
            <!-- Backlog Specific Field -->
            <div id="tb-backlog-fields">
              <div class="tb-field-group">
-               <label for="tb-backlog-notify">${TB.MESSAGES.MODAL.NOTIFY_USERS_LABEL}</label>
                <div id="tb-backlog-suggestions" class="tb-suggestions"></div>
              </div>
-             <p class="tb-modal-hint">Mẹo: Gõ @username trong nội dung để tag người dùng Backlog.</p>
            </div>
         </div>
         <div class="tb-modal-footer">
@@ -207,6 +336,7 @@ function ensureModalShell() {
     migrateDueDateLabel: overlay.querySelector("#tb-migrate-due-date-label"),
     migrateDueDateGroup: overlay.querySelector("#tb-migrate-due-date-group"),
     commentsPreviewGroup: overlay.querySelector("#tb-comments-preview-group"),
+    commentsPreviewList: overlay.querySelector("#tb-comments-note-list"),
     commentsPreviewTextarea: overlay.querySelector("#tb-redmine-comments-preview"),
     previewLabel: overlay.querySelector("#tb-preview-label"),
     dynamicFieldsContainer: overlay.querySelector("#tb-dynamic-fields"),
@@ -275,16 +405,26 @@ function openConfirmModal(options) {
     migrateSubjectInput,
     migrateDueDateInput,
     commentsPreviewGroup,
+    commentsPreviewList,
     commentsPreviewTextarea,
+    backlogFields,
     previewLabel,
     batchHintEl,
   } = modalElements;
+  if (backlogFields) backlogFields.hidden = true;
   const previewHtmlEl = overlay.querySelector("#tb-redmine-preview-html");
   const previewToggleBtn = overlay.querySelector("#tb-preview-toggle");
+  const previewFieldGroup = previewTextarea.closest(".tb-field-group");
+
+  function setCommentsPreviewVisible(isVisible) {
+    commentsPreviewGroup.hidden = !isVisible;
+    commentsPreviewGroup.style.display = isVisible ? "" : "none";
+  }
 
   let currentMode = false;
   let currentNotesList = [previewText];
   let memoizedBatchNotes = null;
+  let pendingBatchNotes = null;
 
   const validateMigrationForm = () => {
     if (!isMigration) return;
@@ -315,19 +455,30 @@ function openConfirmModal(options) {
 
   let isHtmlMode = false;
 
-  const updatePreviewMode = () => {
-    if (!previewToggleBtn || !previewHtmlEl) return;
-    if (isHtmlMode) {
-      const currentText = previewTextarea.value;
-      previewHtmlEl.innerHTML = renderMarkdownHtml(currentText);
-      previewTextarea.hidden = true;
-      previewHtmlEl.hidden = false;
-      previewToggleBtn.textContent = "📝";
-    } else {
-      previewTextarea.hidden = false;
-      previewHtmlEl.hidden = true;
-      previewToggleBtn.textContent = "👁";
+  function mergeTranslatedBatchNotes(baseNotes, translatedNotes) {
+    if (!Array.isArray(translatedNotes) || translatedNotes.length === 0) {
+      return Array.isArray(baseNotes) ? baseNotes.slice() : [];
     }
+
+    const liveNotes = Array.isArray(currentNotesList) ? currentNotesList : [];
+    const baselineNotes = Array.isArray(baseNotes) ? baseNotes : [];
+
+    const mergedNotes = translatedNotes.map((translatedNote, index) => {
+      const liveNote = liveNotes[index + 1];
+      const baselineNote = baselineNotes[index + 1];
+      const hasUserEdit =
+        typeof liveNote === "string" &&
+        typeof baselineNote === "string" &&
+        liveNote !== baselineNote;
+
+      return hasUserEdit ? liveNote : translatedNote;
+    });
+
+    return [liveNotes[0] || baselineNotes[0] || previewText, ...mergedNotes];
+  }
+
+  const updatePreviewMode = () => {
+    setPreviewMode(previewTextarea, previewHtmlEl, previewToggleBtn, isHtmlMode);
   };
 
   // Internal state management for the modal
@@ -335,9 +486,9 @@ function openConfirmModal(options) {
     if (isMigration) {
       titleEl.textContent = TB.MESSAGES.MODAL.MIGRATE_TITLE;
       subtitleEl.textContent = TB.MESSAGES.MODAL.MIGRATE_SUBTITLE(commentsCount);
+      previewFieldGroup.hidden = false;
       standardFields.hidden = true;
       migrationFields.hidden = false;
-      previewLabel.textContent = "Xem trước mô tả";
 
       batchOptionEl.hidden = commentsCount === 0;
       batchOptionText.textContent = TB.MESSAGES.MODAL.MIGRATE_COMMENTS_TEXT(commentsCount);
@@ -347,37 +498,79 @@ function openConfirmModal(options) {
       confirmButton.textContent = TB.MESSAGES.MODAL.MIGRATE_CONFIRM;
 
       if (batchOptionCheckbox.checked) {
-        commentsPreviewGroup.hidden = false;
-        commentsPreviewTextarea.value = memoizedBatchNotes
-          ? memoizedBatchNotes.map((text, i) => `--- Note ${i + 1} ---\n${text}`).join("\n\n")
-          : TB.MESSAGES.MODAL.WAITING_TRANSLATION;
+        setCommentsPreviewVisible(true);
+        const commentNotes = memoizedBatchNotes || [];
+        setCombinedNotesTextareaValue(commentsPreviewTextarea, commentNotes);
+        renderStructuredBatchNotes(commentsPreviewList, commentNotes, {
+          titlePrefix: "Comment",
+          startIndex: 1,
+          helperText: TB.MESSAGES.MODAL.WAITING_TRANSLATION,
+          targetTextarea: commentsPreviewTextarea,
+          onNotesChange: (nextNotes) => {
+            memoizedBatchNotes = nextNotes;
+          },
+        });
       } else {
-        commentsPreviewGroup.hidden = true;
+        setCommentsPreviewVisible(false);
       }
       validateMigrationForm();
     } else {
+      previewFieldGroup.hidden = true;
       titleEl.textContent = TB.MESSAGES.MODAL.TITLE;
       subtitleEl.textContent = currentMode
         ? TB.MESSAGES.MODAL.BATCH_SUBTITLE_PREPARING(remainingComments.length + 1)
         : TB.MESSAGES.MODAL.SUBTITLE;
       standardFields.hidden = false;
       migrationFields.hidden = true;
-      commentsPreviewGroup.hidden = true;
-      previewLabel.textContent = TB.MESSAGES.MODAL.PREVIEW_LABEL;
-      issueTitleLabel.textContent = TB.MESSAGES.MODAL.ISSUE_TITLE_LABEL;
+      setCommentsPreviewVisible(true);
+      if (issueTitleLabel) issueTitleLabel.textContent = TB.MESSAGES.MODAL.ISSUE_TITLE_LABEL;
+
+      const primaryNote = currentNotesList[0] || previewText;
+      previewTextarea.value = primaryNote;
 
       if (currentMode) {
-        previewTextarea.value = memoizedBatchNotes
-          ? [previewText, ...memoizedBatchNotes]
-              .map((text, index) => `--- Note ${index + 1} ---\n${text}`)
-              .join("\n\n")
-          : `${previewText}\n\n${TB.MESSAGES.MODAL.WAITING_TRANSLATION}`;
-        currentNotesList = memoizedBatchNotes
-          ? [previewText, ...memoizedBatchNotes]
-          : [previewText];
+        previewTextarea.readOnly = true;
+        if (memoizedBatchNotes) {
+          const batchNotes = [primaryNote, ...memoizedBatchNotes];
+          currentNotesList = batchNotes;
+          renderStructuredBatchNotes(commentsPreviewList, batchNotes, {
+            titlePrefix: "Note",
+            startIndex: 1,
+            targetTextarea: commentsPreviewTextarea,
+            onNotesChange: (nextNotes) => {
+              currentNotesList = nextNotes;
+              memoizedBatchNotes = nextNotes.slice(1);
+              setCombinedNotesTextareaValue(commentsPreviewTextarea, memoizedBatchNotes);
+            },
+          });
+        } else {
+          const placeholderNotes = [
+            primaryNote,
+            ...remainingComments.map(() => TB.MESSAGES.MODAL.WAITING_TRANSLATION),
+          ];
+          pendingBatchNotes = placeholderNotes.slice();
+          currentNotesList = placeholderNotes.slice();
+          renderStructuredBatchNotes(commentsPreviewList, placeholderNotes, {
+            titlePrefix: "Note",
+            startIndex: 1,
+            targetTextarea: commentsPreviewTextarea,
+            onNotesChange: (nextNotes) => {
+              currentNotesList = nextNotes;
+            },
+          });
+        }
       } else {
-        previewTextarea.value = previewText;
-        currentNotesList = [previewText];
+        previewTextarea.readOnly = false;
+        currentNotesList = [primaryNote];
+        renderStructuredBatchNotes(commentsPreviewList, currentNotesList, {
+          titlePrefix: "Note",
+          startIndex: 1,
+          targetTextarea: commentsPreviewTextarea,
+          onNotesChange: (nextNotes) => {
+            currentNotesList = nextNotes.length ? nextNotes : [""];
+            previewTextarea.value = currentNotesList[0] || "";
+          },
+        });
       }
       confirmButton.textContent = currentMode
         ? TB.MESSAGES.MODAL.BATCH_CONFIRM(remainingComments.length + 1)
@@ -385,59 +578,54 @@ function openConfirmModal(options) {
     }
     updatePreviewMode();
   }
+  trackerSelect.onchange = () => {
+    const selectedTracker = trackerSelect.options[trackerSelect.selectedIndex]?.text;
+    // Handle defaults when switching tracker
+    if (selectedTracker === "Bug") {
+      migrateDueDateInput.value = getPlus3WorkingDays();
+      modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}<span class="tb-required">*</span>`;
+    } else if (selectedTracker === "Task") {
+      modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}<span class="tb-required">*</span>`;
+    } else {
+      migrateDueDateInput.value = "";
+      modalElements.migrateDueDateLabel.innerHTML = TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date";
+    }
 
-  if (isMigration) {
-    confirmButton.disabled = true;
-    trackerSelect.onchange = () => {
-      const selectedTracker = trackerSelect.options[trackerSelect.selectedIndex]?.text;
-      // Handle defaults when switching tracker
-      if (selectedTracker === "Bug") {
-        migrateDueDateInput.value = getPlus3WorkingDays();
-        modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}<span class="tb-required">*</span>`;
-      } else if (selectedTracker === "Task") {
-        modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}<span class="tb-required">*</span>`;
-      } else {
-        migrateDueDateInput.value = "";
-        modalElements.migrateDueDateLabel.innerHTML =
-          TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date";
-      }
+    // Hide Due Date for others
+    const isDueDateVisible = ["Bug", "Task"].includes(selectedTracker);
+    modalElements.migrateDueDateGroup.style.display = isDueDateVisible ? "block" : "none";
 
-      // Hide Due Date for others
-      const isDueDateVisible = ["Bug", "Task"].includes(selectedTracker);
-      modalElements.migrateDueDateGroup.style.display = isDueDateVisible ? "block" : "none";
+    renderTrackerFields(selectedTracker, validateMigrationForm);
+    validateMigrationForm();
+  };
 
-      renderTrackerFields(selectedTracker, validateMigrationForm);
-      validateMigrationForm();
-    };
+  migrateDueDateInput.onchange = validateMigrationForm;
 
-    migrateDueDateInput.onchange = validateMigrationForm;
+  fetchRedmineMetadataForModal(backlogIssueType, backlogMilestone).then(() => {
+    const initialTracker = trackerSelect.options[trackerSelect.selectedIndex]?.text;
 
-    fetchRedmineMetadataForModal(backlogIssueType, backlogMilestone).then(() => {
-      const initialTracker = trackerSelect.options[trackerSelect.selectedIndex]?.text;
+    if (initialTracker === "Bug") {
+      migrateDueDateInput.value = getPlus3WorkingDays();
+      modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}<span class="tb-required">*</span>`;
+    } else if (initialTracker === "Task") {
+      modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}<span class="tb-required">*</span>`;
+    }
 
-      if (initialTracker === "Bug") {
-        migrateDueDateInput.value = getPlus3WorkingDays();
-        modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}<span class="tb-required">*</span>`;
-      } else if (initialTracker === "Task") {
-        modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}<span class="tb-required">*</span>`;
-      }
+    const isDueDateVisible = ["Bug", "Task"].includes(initialTracker);
+    modalElements.migrateDueDateGroup.style.display = isDueDateVisible ? "block" : "none";
 
-      const isDueDateVisible = ["Bug", "Task"].includes(initialTracker);
-      modalElements.migrateDueDateGroup.style.display = isDueDateVisible ? "block" : "none";
+    renderTrackerFields(initialTracker, validateMigrationForm);
+    validateMigrationForm();
+  });
 
-      renderTrackerFields(initialTracker, validateMigrationForm);
-      validateMigrationForm();
-    });
-
-    projectSelect.onchange = (e) => {
-      const newProjectId = e.target.value;
-      if (newProjectId) {
-        updateVersionsDropdown(newProjectId, backlogMilestone);
-      }
-      validateMigrationForm();
-    };
-    migrateSubjectInput.oninput = validateMigrationForm;
-  }
+  projectSelect.onchange = (e) => {
+    const newProjectId = e.target.value;
+    if (newProjectId) {
+      updateVersionsDropdown(newProjectId, backlogMilestone);
+    }
+    validateMigrationForm();
+  };
+  migrateSubjectInput.oninput = validateMigrationForm;
 
   if (previewToggleBtn && previewHtmlEl) {
     previewToggleBtn.onclick = () => {
@@ -449,6 +637,9 @@ function openConfirmModal(options) {
       if (isHtmlMode) {
         updatePreviewMode();
       }
+      if (!isMigration && !currentMode) {
+        currentNotesList = [previewTextarea.value];
+      }
     };
 
     updatePreviewMode();
@@ -459,37 +650,12 @@ function openConfirmModal(options) {
    * This ensures user edits to the preview are reflected when sending to Redmine.
    */
   function updateCurrentNotesFromTextarea() {
-    const val = previewTextarea.value.trim();
     if (isMigration) {
       // In migration mode, previewTextarea is the description; notesList for comments is handled separately.
-      // No need to update currentNotesList here.
       return;
     }
-    if (currentMode) {
-      // Batch mode: textarea contains previewText + batch notes separated by markers
-      // We need to split back into individual notes.
-      const notes = parseNotePreviewText(val);
-      if (notes.length === 0) {
-        memoizedBatchNotes = [];
-        currentNotesList = [val]; // fallback
-        return;
-      }
-      // Warn if note count differs from original (user may have edited/deleted notes)
-      const originalCount = remainingComments.length + 1;
-      if (notes.length !== originalCount) {
-        showToast(
-          `${TB.MESSAGES.MODAL.BATCH_COUNT_CHANGED_WARNING} (${notes.length}/${originalCount})`,
-          "warning"
-        );
-      }
-      // The first part is the clicked comment's translation (previewText)
-      const firstNote = notes[0];
-      const batchNotes = notes.slice(1);
-      memoizedBatchNotes = batchNotes;
-      currentNotesList = [firstNote, ...batchNotes];
-    } else {
-      // Single note mode: textarea value is the only note
-      currentNotesList = [val];
+    if (!currentNotesList.length) {
+      currentNotesList = [previewTextarea.value.trim()];
     }
   }
 
@@ -507,13 +673,19 @@ function openConfirmModal(options) {
       if (currentMode && !memoizedBatchNotes) {
         confirmButton.disabled = true;
         try {
-          memoizedBatchNotes = await translateBatch(remainingComments);
+          const translatedBatchNotes = await translateBatch(remainingComments);
+          memoizedBatchNotes = mergeTranslatedBatchNotes(
+            pendingBatchNotes || currentNotesList,
+            translatedBatchNotes
+          );
+          pendingBatchNotes = null;
         } catch (err) {
           console.error("[TB-Modal] Batch translation failed:", err);
           const errorMsg = err.error || err.message || TB.MESSAGES.TOAST.TRANSLATION_FAILED;
-          showToast(`Lỗi dịch hàng loạt: ${errorMsg}`, "error");
+          showToast(`Loi dich hang loat: ${errorMsg}`, "error");
           batchOptionCheckbox.checked = false;
           currentMode = false;
+          pendingBatchNotes = null;
         } finally {
           confirmButton.disabled = false;
           updateModalState();
@@ -554,7 +726,7 @@ function openConfirmModal(options) {
         issueTitleInput.value = res.data.issue.subject;
         confirmButton.disabled = false;
       } else {
-        throw new Error("Phản hồi không hợp lệ");
+        throw new Error("Invalid response");
       }
     } catch (err) {
       issueTitleInput.value = TB.MESSAGES.MODAL.ERROR_NOT_FOUND;
@@ -600,9 +772,7 @@ function openConfirmModal(options) {
           confirmButton.disabled = false;
           return;
         }
-        const comments = batchOptionCheckbox.checked
-          ? parseNotePreviewText(commentsPreviewTextarea.value)
-          : [];
+        const comments = batchOptionCheckbox.checked ? currentNotesList.slice(1) : [];
         await onConfirm({
           issueData,
           comments,
@@ -619,7 +789,7 @@ function openConfirmModal(options) {
       }
     } catch (err) {
       console.error("[TB-MODAL] Confirm error:", err);
-      showToast(err.message || "Đã xảy ra lỗi khi di chuyển", "error");
+      showToast(err.message || "An error occurred while moving", "error");
       confirmButton.disabled = false;
       setModalLoading(false);
     }
@@ -673,23 +843,13 @@ function openBacklogModal({
   let isHtmlMode = false;
 
   const updatePreviewMode = () => {
-    if (!previewToggleBtn || !previewHtmlEl) return;
-    if (isHtmlMode) {
-      previewHtmlEl.innerHTML = renderMarkdownHtml(previewTextarea.value);
-      previewTextarea.hidden = true;
-      previewHtmlEl.hidden = false;
-      previewToggleBtn.textContent = "📝";
-    } else {
-      previewTextarea.hidden = false;
-      previewHtmlEl.hidden = true;
-      previewToggleBtn.textContent = "👁";
-    }
+    setPreviewMode(previewTextarea, previewHtmlEl, previewToggleBtn, isHtmlMode);
   };
 
   titleEl.textContent = TB.MESSAGES.MODAL.BACKLOG_TITLE;
   subtitleEl.textContent = TB.MESSAGES.MODAL.BACKLOG_SUBTITLE;
   issueIdLabel.textContent = TB.MESSAGES.MODAL.BACKLOG_ISSUE_KEY_LABEL;
-  if (issueTitleLabel) issueTitleLabel.textContent = "Tiêu đề Issue Backlog";
+  if (issueTitleLabel) issueTitleLabel.textContent = "Backlog issue title";
   if (previewLabel) previewLabel.textContent = TB.MESSAGES.MODAL.PREVIEW_LABEL;
   issueIdInput.value = backlogIssueKey;
   issueTitleInput.value = "";
@@ -753,7 +913,7 @@ function openBacklogModal({
 
     if (backlogUsers.length > 0) {
       backlogSuggestionsEl.innerHTML =
-        '<div class="tb-suggestion-item" style="color: #999;">Không tìm thấy @mention nào</div>';
+        '<div class="tb-suggestion-item" style="color: #999;">No @mention found</div>';
     }
   }
 
@@ -781,7 +941,7 @@ function openBacklogModal({
   function showUserSuggestions(query) {
     if (backlogUsers.length === 0) {
       backlogSuggestionsEl.innerHTML =
-        '<div class="tb-suggestion-item" style="color: #999;">Chưa tải được danh sách users</div>';
+        '<div class="tb-suggestion-item" style="color: #999;">No users loaded</div>';
       return;
     }
 
@@ -800,7 +960,7 @@ function openBacklogModal({
 
     if (matchedUsers.length === 0) {
       backlogSuggestionsEl.innerHTML =
-        '<div class="tb-suggestion-item" style="color: #999;">Không tìm thấy user</div>';
+        '<div class="tb-suggestion-item" style="color: #999;">No user found</div>';
       return;
     }
 
@@ -926,6 +1086,7 @@ function openBacklogModal({
   modalElements.migrationFields.hidden = true;
   modalElements.backlogFields.hidden = false;
   modalElements.commentsPreviewGroup.hidden = true;
+  modalElements.commentsPreviewGroup.style.display = "none";
   modalElements.batchOptionEl.hidden = true;
   confirmButton.disabled = false;
 
@@ -1119,14 +1280,14 @@ async function fetchRedmineMetadataForModal(backlogIssueType, backlogMilestone) 
 
 async function updateVersionsDropdown(projectId, backlogMilestone) {
   const { versionSelect } = modalElements;
-  versionSelect.innerHTML = '<option value="">-- Tải version --</option>';
+  versionSelect.innerHTML = '<option value="">-- Loading version --</option>';
   try {
     const versionsRes = await sendRuntimeMessage({
       type: "FETCH_REDMINE_METADATA",
       endpoint: `/projects/${projectId}/versions.json`,
     });
     const versions = versionsRes.data?.versions || [];
-    versionSelect.innerHTML = '<option value="">-- Trống --</option>';
+    versionSelect.innerHTML = '<option value="">-- Empty --</option>';
     versions.forEach((v) => {
       const opt = document.createElement("option");
       opt.value = v.id;
@@ -1138,7 +1299,7 @@ async function updateVersionsDropdown(projectId, backlogMilestone) {
       versionSelect.appendChild(opt);
     });
   } catch (err) {
-    versionSelect.innerHTML = '<option value="">-- Lỗi tải version --</option>';
+    versionSelect.innerHTML = '<option value="">-- Error loading version --</option>';
   }
 }
 

@@ -7,6 +7,13 @@ document.addEventListener("DOMContentLoaded", () => {
   let cachedProjects = null;
   let cacheTimestamp = 0;
   const CACHE_DURATION = 5 * 60 * 1000;
+  const DEFAULT_MANUAL_FIELDS = {
+    Severity: 46,
+    "Reproduction Rate": 0,
+    Role: 11,
+    "QC Activity": 8,
+    "Q&A Category": 58,
+  };
 
   function sendBackgroundRequest(message) {
     return new Promise((resolve, reject) => {
@@ -154,10 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const manifest = chrome.runtime.getManifest();
       const currentVersion = manifest.version;
 
-      const response = await fetch(`${TB_VERSION.API_URL}/versions/latest`);
-      if (!response.ok) throw new Error(`Server trả về lỗi ${response.status}`);
-
-      const data = await response.json();
+      const data = await TB_VERSION.fetchLatest();
       const latestVersion = data.version_number;
       if (!TB_VERSION.isValid(latestVersion)) {
         throw new Error("Server trả về phiên bản không hợp lệ");
@@ -224,6 +228,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   async function gatherSettings() {
+    commitPendingKeyInputs();
+
     const primaryModels = getSelectedModelsForProvider("primary", primaryProviderSelect.value);
     const fallbackModels = getSelectedModelsForProvider("fallback", fallbackProviderSelect.value);
     const settings = {
@@ -258,9 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ? await encryptData(selectedFallbackGeminiModels.join("\n"))
         : "";
 
-    const selectedFallbackGeminiKeys = Array.from(
-      document.querySelectorAll("#fallbackGeminiKeysList button")
-    ).map((button) => button.title);
+    const selectedFallbackGeminiKeys = getFallbackGeminiKeys();
     if (selectedFallbackGeminiKeys.length > 0) {
       settings.fallbackGeminiApiKeys = await encryptData(selectedFallbackGeminiKeys.join("\n"));
     } else {
@@ -305,9 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
       settings.geminiModels = "";
     }
 
-    const selectedGeminiKeys = Array.from(document.querySelectorAll("#geminiKeysList button")).map(
-      (b) => b.title
-    );
+    const selectedGeminiKeys = getGeminiKeys();
     if (selectedGeminiKeys.length > 0) {
       settings.geminiApiKeys = await encryptData(selectedGeminiKeys.join("\n"));
       settings.geminiApiKey = await encryptData(selectedGeminiKeys[0]);
@@ -319,6 +321,21 @@ document.addEventListener("DOMContentLoaded", () => {
     return settings;
   }
 
+  function normalizeManualFields(storedValue) {
+    if (!storedValue) {
+      return JSON.stringify(DEFAULT_MANUAL_FIELDS, null, 2);
+    }
+
+    try {
+      const parsed = JSON.parse(storedValue);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return storedValue;
+      }
+      return JSON.stringify({ ...DEFAULT_MANUAL_FIELDS, ...parsed }, null, 2);
+    } catch (_error) {
+      return storedValue;
+    }
+  }
   async function prepareRedmineDomain(domain) {
     const normalizedDomain = TB_REDMINE_DOMAIN.normalize(domain);
 
@@ -460,8 +477,7 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.storage.local.get(keys, async (items) => {
       document.getElementById("redmineDomain").value = items.redmineDomain || TB.REDMINE_DOMAIN;
       document.getElementById("backlogDomain").value = items.backlogDomain || TB.BACKLOG_DOMAIN;
-      document.getElementById("manualFields").value =
-        items.manualFields || JSON.stringify({ Severity: 46, Role: 11 }, null, 2);
+      document.getElementById("manualFields").value = normalizeManualFields(items.manualFields);
       if (showRedmineSuccessModalInput) {
         showRedmineSuccessModalInput.checked = items.showRedmineSuccessModal !== false;
       }
@@ -555,14 +571,15 @@ document.addEventListener("DOMContentLoaded", () => {
       const keysBlock = document.createElement("div");
       keysBlock.style.margin = "8px 0 0";
       keysBlock.innerHTML = `
-        <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">Keys (nhập + Enter để thêm, click để xóa)</p>
+        <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">Keys (nh&#7853;p r&#7891;i L&#432;u, Enter &#273;&#7875; th&#234;m nhanh, click &#273;&#7875; x&#243;a)</p>
         <div id="${scope}${capitalize(provider)}KeysList" class="provider-keys-list" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px"></div>
         <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">Đã thêm: <span id="${scope}${capitalize(provider)}SelectedKeyCount">0</span>/10</p>
       `;
       configEl.appendChild(keysBlock);
 
       if (keyInput) {
-        keyInput.placeholder = "Nhập key + Enter để thêm";
+        keyInput.placeholder =
+          "Nh\u1eadp key r\u1ed3i L\u01b0u ho\u1eb7c Enter \u0111\u1ec3 th\u00eam nhanh";
         keyInput.addEventListener("keydown", (event) =>
           handleProviderKeyInput(event, scope, provider)
         );
@@ -890,16 +907,27 @@ document.addEventListener("DOMContentLoaded", () => {
   function handleProviderKeyInput(event, scope, provider) {
     if (event.key !== "Enter") return;
     event.preventDefault();
-    const input = event.target;
-    const key = input.value.trim();
+    commitProviderKeyInput(scope, provider, event.target);
+  }
+
+  function commitPendingKeyInputs() {
+    commitGeminiKeyInput(document.getElementById("geminiApiKeys"));
+    commitFallbackGeminiKeyInput(fallbackGeminiApiKeysInput);
+
+    [...PRIMARY_PROVIDER_CONFIGS, ...FALLBACK_PROVIDER_CONFIGS].forEach((config) => {
+      const scope = config.keysStorage.startsWith("fallback") ? "fallback" : "primary";
+      commitProviderKeyInput(scope, config.provider, config.keyInput);
+    });
+  }
+
+  function commitProviderKeyInput(scope, provider, input) {
+    const key = input?.value?.trim();
     if (!key || key === "**********") return;
 
     const currentKeys = getProviderKeys(scope, provider);
-    if (currentKeys.length >= 10 || currentKeys.includes(key)) {
-      input.value = "";
-      return;
+    if (currentKeys.length < 10 && !currentKeys.includes(key)) {
+      renderProviderKeysButtons(scope, provider, [...currentKeys, key]);
     }
-    renderProviderKeysButtons(scope, provider, [...currentKeys, key]);
     input.value = "";
   }
 
@@ -1022,25 +1050,33 @@ document.addEventListener("DOMContentLoaded", () => {
   function handleFallbackGeminiKeyInput(event) {
     if (event.key !== "Enter") return;
     event.preventDefault();
-    const key = event.target.value.trim();
-    if (!key) return;
+    commitFallbackGeminiKeyInput(event.target);
+  }
+
+  function commitFallbackGeminiKeyInput(input) {
+    const key = input?.value?.trim();
+    if (!key || key === "**********") return;
     const currentKeys = Array.from(document.querySelectorAll("#fallbackGeminiKeysList button")).map(
       (button) => button.title
     );
     if (currentKeys.length < 10 && !currentKeys.includes(key)) {
       renderFallbackGeminiKeysButtons([...currentKeys, key]);
     }
-    event.target.value = "";
+    input.value = "";
   }
 
   function handleGeminiKeyInput(e) {
     if (e.key !== "Enter") return;
     e.preventDefault();
-    const input = e.target;
-    const key = input.value.trim();
+    commitGeminiKeyInput(e.target);
+  }
+
+  function commitGeminiKeyInput(input) {
+    const key = input?.value?.trim();
     const listEl = document.getElementById("geminiKeysList");
     if (
       key &&
+      key !== "**********" &&
       listEl.children.length < 10 &&
       !Array.from(listEl.children).some((b) => b.title === key)
     ) {
@@ -1049,10 +1085,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function getFirstGeminiKey() {
-    const keys = Array.from(document.querySelectorAll("#geminiKeysList button")).map(
-      (b) => b.title
+  function getGeminiKeys() {
+    return Array.from(document.querySelectorAll("#geminiKeysList button")).map((b) => b.title);
+  }
+
+  function getFallbackGeminiKeys() {
+    return Array.from(document.querySelectorAll("#fallbackGeminiKeysList button")).map(
+      (button) => button.title
     );
+  }
+
+  function getFirstGeminiKey() {
+    commitGeminiKeyInput(document.getElementById("geminiApiKeys"));
+    const keys = getGeminiKeys();
     return keys[0] || "";
   }
 

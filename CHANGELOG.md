@@ -1,5 +1,17 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.10] - 2026-07-07
+### Fixed
+- Restore update checks when the backend version routes return 404 by falling back to GitHub Releases.
+- Keep GitHub release publishing successful when optional backend version registration is unavailable.
+- Let Options save API keys that are still typed in the input without requiring Enter first.
+- Render markdown preview paragraphs, lists, task lists, tables, strikethrough, and fenced code blocks reliably.
+
+### Improved
+- Restore the full default Custom Fields mapping for migrate and merge missing defaults into saved JSON.
+- Polish markdown preview spacing and styles for lists, tables, blockquotes, and code blocks.
+- Extend format checks to scripts, tests, manifest, and package metadata.
+
 ## [1.8.09] - 2026-07-05
 
 > Tăng cường bảo mật, độ ổn định và khả năng kết nối với Redmine domain tùy chỉnh.
