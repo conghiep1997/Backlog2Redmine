@@ -33,11 +33,11 @@ test("UI settings exclude credentials", () => {
   );
 });
 
-test("report settings expose only required Redmine fields", () => {
+test("report settings expose Redmine fields without API key", () => {
   assert.deepEqual(
     { ...context.TB_SETTINGS_VIEW.forReport(settings) },
     {
-      redmineApiKey: "redmine-secret",
+      hasRedmineApiKey: true,
       redmineDomain: "https://redmine.example.com",
       reportProjectId: "34",
     }

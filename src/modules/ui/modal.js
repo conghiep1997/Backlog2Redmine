@@ -457,15 +457,26 @@ function openConfirmModal(options) {
 
   function mergeTranslatedBatchNotes(baseNotes, translatedNotes) {
     if (!Array.isArray(translatedNotes) || translatedNotes.length === 0) {
-      return Array.isArray(baseNotes) ? baseNotes.slice() : [];
+      return [];
     }
 
-    const liveNotes = Array.isArray(currentNotesList) ? currentNotesList : [];
+    // memoizedBatchNotes / return value are comment-only (no primary/description).
+    const liveCommentNotes = isMigration
+      ? Array.isArray(memoizedBatchNotes)
+        ? memoizedBatchNotes
+        : []
+      : Array.isArray(currentNotesList)
+        ? currentNotesList.slice(1)
+        : [];
     const baselineNotes = Array.isArray(baseNotes) ? baseNotes : [];
+    const baselineComments =
+      baselineNotes.length === translatedNotes.length
+        ? baselineNotes
+        : baselineNotes.slice(1);
 
-    const mergedNotes = translatedNotes.map((translatedNote, index) => {
-      const liveNote = liveNotes[index + 1];
-      const baselineNote = baselineNotes[index + 1];
+    return translatedNotes.map((translatedNote, index) => {
+      const liveNote = liveCommentNotes[index];
+      const baselineNote = baselineComments[index];
       const hasUserEdit =
         typeof liveNote === "string" &&
         typeof baselineNote === "string" &&
@@ -473,8 +484,6 @@ function openConfirmModal(options) {
 
       return hasUserEdit ? liveNote : translatedNote;
     });
-
-    return [liveNotes[0] || baselineNotes[0] || previewText, ...mergedNotes];
   }
 
   const updatePreviewMode = () => {
@@ -770,9 +779,10 @@ function openConfirmModal(options) {
         if (!issueData.project_id) {
           showToast(TB.MESSAGES.MODAL.ERROR_SELECT_PROJECT, "error");
           confirmButton.disabled = false;
+          setModalLoading(false);
           return;
         }
-        const comments = batchOptionCheckbox.checked ? currentNotesList.slice(1) : [];
+        const comments = batchOptionCheckbox.checked ? (memoizedBatchNotes || []).slice() : [];
         await onConfirm({
           issueData,
           comments,
@@ -782,14 +792,17 @@ function openConfirmModal(options) {
         if (!id) {
           showToast(TB.MESSAGES.MODAL.EMPTY_ISSUE_ID, "error");
           confirmButton.disabled = false;
+          setModalLoading(false);
           return;
         }
         updateCurrentNotesFromTextarea();
         await onConfirm({ redmineIssueId: id, notesList: currentNotesList });
       }
+      // openSuccessModal (from onConfirm) owns overlay visibility — do not closeModal here.
+      setModalLoading(false);
     } catch (err) {
-      console.error("[TB-MODAL] Confirm error:", err);
-      showToast(err.message || "An error occurred while moving", "error");
+      console.error("[TB-Modal] Confirm failed:", err);
+      showToast(err?.error || err?.message || TB.MESSAGES.TOAST.SEND_FAILED, "error");
       confirmButton.disabled = false;
       setModalLoading(false);
     }
@@ -1255,9 +1268,17 @@ async function fetchRedmineMetadataForModal(backlogIssueType, backlogMilestone) 
     const matchedOption = Array.from(trackerSelect.options).find(
       (opt) => opt.text.toLowerCase() === mappedTracker.toLowerCase()
     );
+    const qaFallbackOption =
+      !matchedOption && ["Q/A", "Q&A"].includes(mappedTracker)
+        ? Array.from(trackerSelect.options).find((opt) =>
+            ["q/a", "q&a", "qa"].includes(opt.text.toLowerCase())
+          )
+        : null;
 
     if (matchedOption) {
       trackerSelect.value = matchedOption.value;
+    } else if (qaFallbackOption) {
+      trackerSelect.value = qaFallbackOption.value;
     } else {
       // Fallback to Task
       const taskOption = Array.from(trackerSelect.options).find((opt) => opt.text === "Task");
@@ -1425,7 +1446,7 @@ globalThis.TB_MODAL = { openConfirmModal, openBacklogModal, openSuccessModal };
 function getMappedTrackerName(backlogType) {
   if (!backlogType) return "";
   const type = backlogType.toLowerCase();
-  if (type === "qa") return "Q&A";
+  if (type === "qa" || type === "q/a" || type === "q&a") return "Q/A";
   if (type === "bug") return "Bug";
   if (type === "task") return "Task";
   if (type === "cr") return "CR";

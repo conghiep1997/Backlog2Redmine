@@ -199,7 +199,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
   const commentItem = actionsEl
     ? actionsEl.closest(".comment-item")
     : null || actionsEl.parentElement;
-  const { issueKey, issueSummary } = getBacklogHeaderInfo();
+  const { issueKey, issueSummary, backlogIssueType } = getBacklogHeaderInfo();
   if (!issueKey) {
     showToast(TB.MESSAGES.TOAST.MISSING_ISSUE_KEY, "error");
     return;
@@ -230,6 +230,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
       type: "LOOKUP_AND_TRANSLATE_COMMENT",
       issueKey,
       issueSummary,
+      backlogIssueType: backlogIssueType || "",
       commentText: clickedCommentText,
       userInfo: clickedUserInfo,
       commentUrl: getCommentUrl(commentItem),
@@ -241,7 +242,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
       previewText: result.data.previewText || "",
       remainingComments: remainingItems,
       hasBatchOption: remainingItems.length > 0,
-      backlogIssueType: result.data.backlogIssueType,
+      backlogIssueType,
       onCancel: () => setButtonLoading(button, false),
       onConfirm: async ({ redmineIssueId, notesList }) => {
         let lastRes = null;
@@ -342,6 +343,7 @@ async function handleIssueMigration(button) {
         type: "LOOKUP_AND_TRANSLATE_COMMENT",
         issueKey,
         issueSummary,
+        backlogIssueType: backlogIssueType || "",
         commentText: fullDescription,
         userInfo: "", // No userInfo for main description
         commentUrl: window.location.href,
@@ -371,9 +373,27 @@ async function handleIssueMigration(button) {
           issueData: issueDataToSend,
           comments: translatedComments, // Use translated comments from modal if any
         });
+        const failedCommentCount = result.data?.failedCommentCount || 0;
+        const failedComments = result.data?.failedComments || [];
+        if (failedCommentCount > 0) {
+          const totalComments = translatedComments?.length || 0;
+          const failedIndexes = failedComments
+            .map((item) => `#${item.index}`)
+            .filter(Boolean)
+            .join(", ");
+          const firstError = failedComments[0]?.message
+            ? ` Lý do: ${String(failedComments[0].message).slice(0, 120)}`
+            : "";
+          showToast(
+            `Đã tạo issue nhưng ${failedCommentCount}/${totalComments} comment migrate thất bại${
+              failedIndexes ? ` (${failedIndexes})` : ""
+            }.${firstError}`,
+            "error"
+          );
+        }
         await openSuccessModal({
           redmineUrl: result.data.redmineUrl,
-          commentCount: (translatedComments?.length || 0) + 1,
+          commentCount: (result.data?.migratedCommentCount || 0) + 1,
           onClose: () => setButtonLoading(button, false),
         });
       },

@@ -1,5 +1,36 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.11] - 2026-08-27
+
+> Ưu tiên tracker khi lookup Redmine, giữ đúng format Markdown, hotfix migrate/batch/security P0.
+
+### Added
+- Ưu tiên tìm issue Redmine theo tracker dựa trên Backlog issue type (`QA` → `Q/A`/`Q&A`).
+- Convert thêm underline, màu chữ/nền (`&color`/`<mark>`), và task list checkbox từ Backlog sang Markdown.
+- Thêm unit test cho `extractBacklogContent` (code fence, inline code đặc biệt, underline/color/task list).
+- Proxy `REDMINE_AUTHORIZED_FETCH` để content script Redmine gọi API qua service worker (không nhận plaintext API key).
+
+### Fixed
+- Không còn phá code fence ` ``` ` khi cleanup Markdown (trước đây ``+/g làm mất format code block trên Redmine).
+- Giữ nguyên ký tự đặc biệt trong code (`--`, `/*`, `;`, `0x...`) khi convert và khi AI dịch.
+- Map tracker migrate `QA` sang `Q/A` (kèm fallback `Q&A`) thay vì chỉ khớp `Q&A`.
+- Migrate comments dùng `memoizedBatchNotes` (trước đây `currentNotesList.slice(1)` luôn rỗng).
+- Batch notes không còn nhân đôi note đầu do lệch contract `mergeTranslatedBatchNotes`.
+- `fixed_version_id` được gửi khi create issue Redmine.
+- Lookup API không còn fallback `issues[0]` khi tracker không khớp preference.
+- Báo lỗi rõ khi một phần comment migrate thất bại.
+- Origin allowlist cho privileged handlers (Backlog / Redmine / Options).
+
+### Improved
+- Truyền `backlogIssueType` vào lookup/cache để phân biệt đúng issue khi cùng title có cả Task và Q/A.
+- Rút gọn SYSTEM prompt (~giảm phí token cố định) và bổ sung bảo vệ `[[TB_FILE]]`.
+- Empty Backlog issue type / type lạ không ép prefer tracker (no preference).
+- Không gọi `closeModal()` sau confirm để tránh che success modal.
+- Prompt: cấm bọc @mention bằng link; đã Việt thì chỉ chỉnh nhẹ.
+- Create-issue error giữ đúng HTTP status khi sanitize.
+- Toast partial migrate kèm index comment lỗi và lý do đầu tiên.
+
+
 ## [1.8.10] - 2026-07-07
 ### Fixed
 - Restore update checks when the backend version routes return 404 by falling back to GitHub Releases.

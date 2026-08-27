@@ -71,14 +71,17 @@ function injectMonthlyLogButton() {
  */
 async function logTimeForMonth() {
   const settings = await getSettings();
-  const { redmineDomain, redmineApiKey, reportProjectId } = settings;
+  const { redmineDomain, reportProjectId, hasRedmineApiKey } = settings;
 
-  if (!redmineDomain || !redmineApiKey || !reportProjectId) {
+  if (!redmineDomain || !hasRedmineApiKey || !reportProjectId) {
     alert(
       "Lỗi: Vui lòng cấu hình đầy đủ Redmine Domain, API Key, và Report Project ID trong trang Options của extension."
     );
     return;
   }
+
+  // API key stays in the service worker; pass empty key so redmine.js proxies requests.
+  const redmineApiKey = "";
 
   const currentMonthLabel = `${new Date().getMonth() + 1}/${new Date().getFullYear()}`;
   openMonthlyLogModal({

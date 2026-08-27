@@ -27,13 +27,13 @@
  */
 async function logTimeFromReport(reportIssueId, isBatchOperation = false, spentOn = null) {
   try {
-    // 1. Get settings and current user info
-    const settings = await getSettings(); // Assumes getSettings() is available globally
-    const { redmineDomain, redmineApiKey } = settings;
-
-    if (!redmineDomain || !redmineApiKey) {
+    const settings = await getSettings();
+    const { redmineDomain, hasRedmineApiKey } = settings;
+    if (!redmineDomain || !hasRedmineApiKey) {
       throw new Error("Redmine domain or API key is not configured.");
     }
+    // Key stays in service worker; empty apiKey triggers authorized fetch proxy.
+    const redmineApiKey = "";
 
     const currentUser = await getCurrentUser(redmineDomain, redmineApiKey);
     const userLogin = currentUser.login;

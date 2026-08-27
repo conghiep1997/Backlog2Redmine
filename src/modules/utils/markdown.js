@@ -3,9 +3,9 @@
  * Converts HTML from Backlog to Markdown format for Redmine.
  *
  * Supported formats:
- * - Inline: bold, italic, strike-through, code, links
- * - Block: headings, code blocks, blockquotes, lists, tables
- * - Special: Backlog attachment images ([[TB_IMG:id]])
+ * - Inline: bold, italic, strike-through, underline, inline code, links, colored text
+ * - Block: headings, code blocks, blockquotes, lists (incl. task lists), tables, hr
+ * - Special: Backlog attachment images/files ([[TB_IMG:id]], [[TB_FILE:id:name]])
  */
 
 /**
@@ -86,13 +86,48 @@ function extractBacklogContent(element) {
         return;
       }
 
-      // Inline code: <code> (when not inside <pre>) -> `code`
-      if (tag === "code" && !isInsidePre) {
-        result += "`";
+      // Underline: <u>, <ins> -> keep HTML (Markdown has no underline; Redmine accepts <u>)
+      if (tag === "u" || tag === "ins") {
+        result += "<u>";
         for (const child of node.childNodes) {
-          walk(child, { ...options, isInsidePre: false });
+          walk(child, options);
         }
-        result += "`";
+        result += "</u>";
+        return;
+      }
+
+      // Colored / highlighted text from Backlog (&color(...), mark)
+      if (tag === "mark") {
+        result += "<mark>";
+        for (const child of node.childNodes) {
+          walk(child, options);
+        }
+        result += "</mark>";
+        return;
+      }
+      if (tag === "span" || tag === "font") {
+        const styleColor = extractCssColor(node.getAttribute("style") || "", "color");
+        const styleBg = extractCssColor(node.getAttribute("style") || "", "background-color");
+        const fontColor = tag === "font" ? node.getAttribute("color") || "" : "";
+        const color = styleColor || fontColor;
+        if (color || styleBg) {
+          const styleParts = [];
+          if (color) styleParts.push(`color: ${color}`);
+          if (styleBg) styleParts.push(`background-color: ${styleBg}`);
+          result += `<span style="${styleParts.join("; ")}">`;
+          for (const child of node.childNodes) {
+            walk(child, options);
+          }
+          result += "</span>";
+          return;
+        }
+      }
+
+      // Inline code: <code> (when not inside <pre>) -> `code`
+      // Preserve literals such as --, /*, ;, 0xAB inside backticks for Redmine.
+      if (tag === "code" && !isInsidePre) {
+        const codeText = node.textContent || "";
+        result += "`" + codeText.replace(/`/g, "\\`") + "`";
         return;
       }
 
@@ -137,6 +172,7 @@ function extractBacklogContent(element) {
       // ========================================================================
 
       // Code blocks: <pre> or <pre><code> -> ```lang\n...\n```
+      // Also treat Backlog/GFM highlight wrappers the same when they nest <pre>.
       if (tag === "pre") {
         const codeEl = node.querySelector("code");
         let codeContent = "";
@@ -156,9 +192,29 @@ function extractBacklogContent(element) {
           result += "\n";
         }
         result += "```" + language + "\n";
-        result += codeContent.trim();
+        result += codeContent.replace(/^\n+|\n+$/g, "");
         result += "\n```\n";
         return;
+      }
+
+      // Backlog/GFM highlight wrappers without relying only on nested walk order
+      if (
+        tag === "div" &&
+        /\b(highlight|code-block|codeblock|preformatted)\b/i.test(node.className || "")
+      ) {
+        const nestedPre = node.querySelector("pre");
+        if (nestedPre) {
+          walk(nestedPre, options);
+          return;
+        }
+        const codeText = (node.textContent || "").replace(/^\n+|\n+$/g, "");
+        if (codeText) {
+          if (result.length > 0 && !result.endsWith("\n")) {
+            result += "\n";
+          }
+          result += "```\n" + codeText + "\n```\n";
+          return;
+        }
       }
 
       // Headings: <h1>-<h6> -> # Heading
@@ -226,10 +282,11 @@ function extractBacklogContent(element) {
         return;
       }
 
-      // List items: <li> -> * item or 1. item
+      // List items: <li> -> * item, 1. item, or task list - [ ] / - [x]
       if (tag === "li") {
         const indent = "  ".repeat(Math.max(0, listStack.length - 1));
         const listInfo = listStack[listStack.length - 1];
+        const checkbox = findDirectCheckbox(node);
 
         if (!result.endsWith("\n")) {
           result += "\n";
@@ -238,11 +295,31 @@ function extractBacklogContent(element) {
         if (listInfo?.type === "ol") {
           listInfo.counter++;
           result += `${indent}${listInfo.counter}. `;
+        } else if (checkbox) {
+          result += `${indent}* [${checkbox.checked ? "x" : " "}] `;
         } else {
           result += `${indent}* `;
         }
 
+        let skipLeadingWhitespace = Boolean(checkbox);
         for (const child of node.childNodes) {
+          if (
+            child.nodeType === Node.ELEMENT_NODE &&
+            child.tagName.toLowerCase() === "input" &&
+            child.getAttribute("type") === "checkbox"
+          ) {
+            continue;
+          }
+          if (skipLeadingWhitespace && child.nodeType === Node.TEXT_NODE) {
+            const trimmed = child.textContent.replace(/^\s+/, "");
+            if (!trimmed) {
+              continue;
+            }
+            skipLeadingWhitespace = false;
+            result += trimmed;
+            continue;
+          }
+          skipLeadingWhitespace = false;
           walk(child, options);
         }
         return;
@@ -336,13 +413,49 @@ function extractBacklogContent(element) {
 
   walk(element);
 
-  // Cleanup: remove redundant formatting while preserving meaningful line breaks
+  // Cleanup: remove redundant formatting while preserving meaningful line breaks.
+  // Do NOT collapse backtick runs — that would destroy fenced code blocks (```).
   return result
     .split("\n")
     .map((line) => line.trimEnd())
     .join("\n")
     .replace(/\n{4,}/g, "\n\n\n") // Keep max 3 consecutive newlines (2 blank lines)
-    .replace(/\*\*\*\*/g, "**")
-    .replace(/``+/g, "`")
+    .replace(/\*\*\*\*(?!\*)/g, "**")
     .trim();
+}
+
+/**
+ * Extract a CSS color value from an inline style attribute.
+ * @param {string} style
+ * @param {string} property
+ * @returns {string}
+ */
+function extractCssColor(style, property) {
+  if (!style || !property) {
+    return "";
+  }
+  const pattern = new RegExp(
+    `${property.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*:\\s*([^;]+)`,
+    "i"
+  );
+  const match = String(style).match(pattern);
+  return match ? match[1].trim() : "";
+}
+
+/**
+ * Find a direct-child checkbox inside a list item (task list).
+ * @param {Element} listItem
+ * @returns {HTMLInputElement|null}
+ */
+function findDirectCheckbox(listItem) {
+  for (const child of listItem.childNodes) {
+    if (
+      child.nodeType === Node.ELEMENT_NODE &&
+      child.tagName.toLowerCase() === "input" &&
+      (child.getAttribute("type") || "").toLowerCase() === "checkbox"
+    ) {
+      return child;
+    }
+  }
+  return null;
 }

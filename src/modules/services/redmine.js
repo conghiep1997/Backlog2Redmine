@@ -10,11 +10,19 @@
  * @param {string} apiKey - Redmine API key
  * @param {string} issueKey - Issue key (e.g., CP-123)
  * @param {string} issueSummary - Issue summary/title
+ * @param {string} backlogIssueType - Backlog issue type (e.g., QA, Task)
  * @returns {Promise<{id: string, title: string}>} Matched issue info
  */
-async function findRedmineIssue(redmineDomain, apiKey, issueKey, issueSummary = "") {
+async function findRedmineIssue(
+  redmineDomain,
+  apiKey,
+  issueKey,
+  issueSummary = "",
+  backlogIssueType = ""
+) {
   const normalizedIssueKey = normalizeLoose(issueKey);
   const normalizedIssueSummary = normalizeLoose(issueSummary);
+  const preferredTrackers = getPreferredRedmineTrackerNames(backlogIssueType);
   const searchQuery = [issueKey, issueSummary].filter(Boolean).join(" ");
   const searchUrl = buildRedmineUrl(
     redmineDomain,
@@ -34,18 +42,40 @@ async function findRedmineIssue(redmineDomain, apiKey, issueKey, issueSummary = 
     const bestMatch = pickBestRedmineSearchResult(
       searchResults,
       normalizedIssueKey,
-      normalizedIssueSummary
+      normalizedIssueSummary,
+      preferredTrackers
     );
 
     if (bestMatch) {
-      return { id: String(bestMatch.id), title: bestMatch.subject };
+      const matchedTracker = normalizeLoose(
+        bestMatch.tracker || extractTrackerFromSearchSubject(bestMatch.subject)
+      );
+      const hasPreference = preferredTrackers.length > 0;
+      const trackerMatchesPreference =
+        matchedTracker &&
+        preferredTrackers.some((name) => normalizeLoose(name) === matchedTracker);
+
+      // Accept HTML hit when: no tracker preference, preference matches, or tracker unknown
+      // (unknown → keep candidate only if preference unset; otherwise verify via API).
+      if (!hasPreference || trackerMatchesPreference) {
+        return { id: String(bestMatch.id), title: bestMatch.subject };
+      }
+      if (!matchedTracker) {
+        // Fall through to API for tracker-aware confirmation
+      }
     }
   } catch (error) {
     console.warn("[RedmineService] Search HTML failed, falling back to API:", error.message);
   }
 
   // Fallback to API if HTML search failed
-  return findRedmineIssueViaApi(redmineDomain, apiKey, issueKey, issueSummary);
+  return findRedmineIssueViaApi(
+    redmineDomain,
+    apiKey,
+    issueKey,
+    issueSummary,
+    preferredTrackers
+  );
 }
 
 /**
@@ -57,11 +87,9 @@ async function findRedmineIssue(redmineDomain, apiKey, issueKey, issueSummary = 
  */
 async function findIssues(redmineDomain, apiKey, params) {
   const query = new URLSearchParams(params).toString();
-  const url = buildRedmineUrl(redmineDomain, `/issues.json?${query}`);
-
-  const response = await fetch(url, {
+  const path = `/issues.json?${query}`;
+  const response = await redmineAuthorizedFetch(redmineDomain, apiKey, path, {
     headers: {
-      "X-Redmine-API-Key": apiKey,
       "Content-Type": "application/json",
     },
   });
@@ -84,11 +112,9 @@ async function findIssues(redmineDomain, apiKey, params) {
  */
 async function findTimeEntries(redmineDomain, apiKey, params) {
   const query = new URLSearchParams(params).toString();
-  const url = buildRedmineUrl(redmineDomain, `/time_entries.json?${query}`);
-
-  const response = await fetch(url, {
+  const path = `/time_entries.json?${query}`;
+  const response = await redmineAuthorizedFetch(redmineDomain, apiKey, path, {
     headers: {
-      "X-Redmine-API-Key": apiKey,
       "Content-Type": "application/json",
     },
   });
@@ -106,10 +132,16 @@ async function findTimeEntries(redmineDomain, apiKey, params) {
  * Finds issue via Redmine REST API.
  * Fallback method when HTML search is unsuccessful.
  */
-async function findRedmineIssueViaApi(redmineDomain, apiKey, issueKey, issueSummary = "") {
+async function findRedmineIssueViaApi(
+  redmineDomain,
+  apiKey,
+  issueKey,
+  issueSummary = "",
+  preferredTrackers = []
+) {
   const url = buildRedmineUrl(
     redmineDomain,
-    `/issues.json?subject=${encodeURIComponent(issueKey)}&limit=5`
+    `/issues.json?subject=${encodeURIComponent(issueKey)}&limit=25`
   );
   const response = await fetch(url, {
     headers: { "X-Redmine-API-Key": apiKey, Accept: "application/json" },
@@ -126,13 +158,20 @@ async function findRedmineIssueViaApi(redmineDomain, apiKey, issueKey, issueSumm
   }
 
   const bestMatch = pickBestRedmineSearchResult(
-    issues.map((i) => ({ id: i.id, subject: i.subject })),
+    issues.map((i) => ({
+      id: i.id,
+      subject: i.subject,
+      tracker: i.tracker?.name || "",
+    })),
     normalizeLoose(issueKey),
-    normalizeLoose(issueSummary)
+    normalizeLoose(issueSummary),
+    preferredTrackers
   );
 
-  const result = bestMatch ?? issues[0];
-  return { id: String(result.id), title: result.subject };
+  if (!bestMatch) {
+    return null;
+  }
+  return { id: String(bestMatch.id), title: bestMatch.subject };
 }
 
 async function handleSendToRedmine(
@@ -211,6 +250,7 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
       project_id: issueData.project_id,
       tracker_id: issueData.tracker_id,
       priority_id: issueData.priority_id,
+      fixed_version_id: issueData.fixed_version_id || undefined,
       subject: issueData.subject,
       description: updatedDescription,
       due_date: issueData.due_date || undefined,
@@ -233,15 +273,19 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
 
     if (!response.ok) {
       const errorMsg = await readErrorMessage(response);
-      // Re-throw with enriched context
-      throw new Error(errorMsg);
+      const createError = new Error(errorMsg);
+      createError.status = response.status;
+      throw createError;
     }
 
     const result = await response.json();
     const newIssueId = result.issue.id;
 
+    let migratedCommentCount = 0;
+    const failedComments = [];
     if (Array.isArray(comments) && comments.length > 0) {
-      for (const commentText of comments) {
+      for (let index = 0; index < comments.length; index++) {
+        const commentText = comments[index];
         try {
           await handleSendToRedmine(
             {
@@ -252,11 +296,16 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
             },
             null // Sender is null, so backlogDomain will be correctly sourced from settings
           );
+          migratedCommentCount += 1;
         } catch (e) {
           console.error("Comment migration failed", e);
+          failedComments.push({
+            index: index + 1,
+            message: e?.message || String(e),
+          });
           if (typeof TB_LOGGER !== "undefined") {
             TB_LOGGER.logError("RedmineService", `Failed to migrate comment: ${e.message}`, {
-              commentText,
+              commentIndex: index + 1,
             });
           }
         }
@@ -266,17 +315,27 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
     return {
       issueId: newIssueId,
       redmineUrl: buildRedmineUrl(settings.redmineDomain, `/issues/${newIssueId}`),
+      migratedCommentCount,
+      failedCommentCount: failedComments.length,
+      failedComments,
     };
   } catch (error) {
     if (typeof TB_LOGGER !== "undefined") {
       TB_LOGGER.logError("RedmineService", `API Error during issue creation: ${error.message}`, {
-        requestPayload: payload,
+        requestPayload: {
+          project_id: payload?.issue?.project_id,
+          tracker_id: payload?.issue?.tracker_id,
+          subject: payload?.issue?.subject,
+        },
         redmineResponse: error.message,
       });
     }
     // Rethrow a user-friendly error
     throw new Error(
-      `${TB.MESSAGES.REDMINE.API_REQUEST_FAILED}: ${sanitizeErrorMessage(error.message, error.status || 500)}`
+      `${TB.MESSAGES.REDMINE.API_REQUEST_FAILED}: ${sanitizeErrorMessage(
+        error.message,
+        error.status || 500
+      )}`
     );
   }
 }
@@ -301,16 +360,55 @@ async function fetchRedmineSearchHtml(searchUrl) {
 }
 
 /**
+ * Map Backlog issue type to preferred Redmine tracker name aliases.
+ * QA → Q/A (and aliases); Task/Bug/CR when known; empty type → no preference.
+ */
+function getPreferredRedmineTrackerNames(backlogIssueType = "") {
+  const type = String(backlogIssueType || "")
+    .trim()
+    .toLowerCase();
+  if (!type) {
+    return [];
+  }
+  if (type === "qa" || type === "q/a" || type === "q&a") {
+    return ["q/a", "q&a", "qa"];
+  }
+  if (type === "bug") {
+    return ["bug"];
+  }
+  if (type === "cr") {
+    return ["cr"];
+  }
+  if (type === "task") {
+    return ["task"];
+  }
+  // Unknown Backlog types: no tracker preference (avoid forcing a miss → null lookup)
+  return [];
+}
+
+/**
+ * Extract tracker name from Redmine search link text like "Q/A #123 (New): Title".
+ */
+function extractTrackerFromSearchSubject(subject = "") {
+  const match = String(subject)
+    .trim()
+    .match(/^(.+?)\s+#\d+\b/);
+  return match ? match[1].trim() : "";
+}
+
+/**
  * Extract search results from Redmine HTML.
  */
 function extractRedmineSearchResults(html) {
   const results = [];
   const anchorPattern = /<a\b[^>]*href="([^"]*\/issues\/(\d+)[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
   for (const match of html.matchAll(anchorPattern)) {
+    const subject = decodeHtmlText(stripHtml(match[3])).replace(/\s+/g, " ").trim();
     results.push({
       id: match[2],
       href: decodeHtmlText(match[1]),
-      subject: decodeHtmlText(stripHtml(match[3])).replace(/\s+/g, " ").trim(),
+      subject,
+      tracker: extractTrackerFromSearchSubject(subject),
     });
   }
   return results;
@@ -318,15 +416,25 @@ function extractRedmineSearchResults(html) {
 
 /**
  * Pick best match from search results based on scoring.
- * Selects best result based on score (issue key + summary match).
+ * Selects best result based on score (issue key + summary + tracker match).
+ * When preferred trackers are set and candidates expose tracker info, never return a mismatched tracker.
  */
-function pickBestRedmineSearchResult(results, normalizedIssueKey, normalizedIssueSummary) {
+function pickBestRedmineSearchResult(
+  results,
+  normalizedIssueKey,
+  normalizedIssueSummary,
+  preferredTrackers = []
+) {
   if (!results?.length) {
     return null;
   }
+  const preferred = (preferredTrackers || []).map((name) => normalizeLoose(name)).filter(Boolean);
   const scored = results
     .map((item) => {
       const normalizedSubject = normalizeLoose(item.subject);
+      const trackerName = normalizeLoose(
+        item.tracker || extractTrackerFromSearchSubject(item.subject)
+      );
       let score = 0;
       if (normalizedIssueKey && normalizedSubject.includes(normalizedIssueKey)) {
         score += 10;
@@ -334,9 +442,29 @@ function pickBestRedmineSearchResult(results, normalizedIssueKey, normalizedIssu
       if (normalizedIssueSummary && normalizedSubject.includes(normalizedIssueSummary)) {
         score += 5;
       }
-      return { item, score };
+      if (preferred.length > 0 && trackerName) {
+        if (preferred.includes(trackerName)) {
+          score += 8;
+        } else {
+          score -= 4;
+        }
+      }
+      return { item, score, trackerName };
     })
     .sort((a, b) => b.score - a.score);
+
+  if (preferred.length > 0) {
+    const preferredHit = scored.find((entry) => entry.score > 0 && preferred.includes(entry.trackerName));
+    if (preferredHit) {
+      return preferredHit.item;
+    }
+    const anyTracked = scored.some((entry) => entry.trackerName);
+    // Candidates have tracker metadata but none match preference → do not guess wrong tracker
+    if (anyTracked) {
+      return null;
+    }
+  }
+
   return scored[0]?.score > 0 ? scored[0].item : results[0];
 }
 
@@ -492,12 +620,8 @@ async function uploadToRedmine(domain, apiKey, blob, filename) {
  * @returns {Promise<object>} The issue object from the API.
  */
 async function getIssueDetails(redmineDomain, apiKey, issueId) {
-  const url = buildRedmineUrl(redmineDomain, `/issues/${issueId}.json`);
-  const response = await fetch(url, {
-    headers: {
-      "X-Redmine-API-Key": apiKey,
-      "Content-Type": "application/json",
-    },
+  const response = await redmineAuthorizedFetch(redmineDomain, apiKey, `/issues/${issueId}.json`, {
+    headers: { "Content-Type": "application/json" },
   });
 
   if (!response.ok) {
@@ -527,7 +651,6 @@ async function logTimeEntry(
   spentOn = null,
   activityId = null
 ) {
-  const url = buildRedmineUrl(redmineDomain, "/time_entries.json");
   const payload = {
     time_entry: {
       issue_id: issueId,
@@ -538,12 +661,9 @@ async function logTimeEntry(
     },
   };
 
-  const response = await fetch(url, {
+  const response = await redmineAuthorizedFetch(redmineDomain, apiKey, "/time_entries.json", {
     method: "POST",
-    headers: {
-      "X-Redmine-API-Key": apiKey,
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 
@@ -566,7 +686,6 @@ async function updateTimeEntry(
   spentOn = null,
   activityId = null
 ) {
-  const url = buildRedmineUrl(redmineDomain, `/time_entries/${timeEntryId}.json`);
   const payload = {
     time_entry: {
       issue_id: issueId,
@@ -577,14 +696,16 @@ async function updateTimeEntry(
     },
   };
 
-  const response = await fetch(url, {
-    method: "PUT",
-    headers: {
-      "X-Redmine-API-Key": apiKey,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  const response = await redmineAuthorizedFetch(
+    redmineDomain,
+    apiKey,
+    `/time_entries/${timeEntryId}.json`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  );
 
   if (!response.ok) {
     const errorMsg = await readErrorMessage(response);
@@ -595,14 +716,15 @@ async function updateTimeEntry(
 }
 
 async function deleteTimeEntry(redmineDomain, apiKey, timeEntryId) {
-  const url = buildRedmineUrl(redmineDomain, `/time_entries/${timeEntryId}.json`);
-  const response = await fetch(url, {
-    method: "DELETE",
-    headers: {
-      "X-Redmine-API-Key": apiKey,
-      "Content-Type": "application/json",
-    },
-  });
+  const response = await redmineAuthorizedFetch(
+    redmineDomain,
+    apiKey,
+    `/time_entries/${timeEntryId}.json`,
+    {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    }
+  );
 
   if (!response.ok) {
     const errorMsg = await readErrorMessage(response);
@@ -617,10 +739,12 @@ async function deleteTimeEntry(redmineDomain, apiKey, timeEntryId) {
  * @returns {Promise<Array<object>>} A promise that resolves to an array of time entry activities.
  */
 async function getTimeEntryActivities(redmineDomain, apiKey) {
-  const url = buildRedmineUrl(redmineDomain, "/enumerations/time_entry_activities.json");
-  const response = await fetch(url, {
-    headers: { "X-Redmine-API-Key": apiKey, "Content-Type": "application/json" },
-  });
+  const response = await redmineAuthorizedFetch(
+    redmineDomain,
+    apiKey,
+    "/enumerations/time_entry_activities.json",
+    { headers: { "Content-Type": "application/json" } }
+  );
 
   if (!response.ok) {
     const errorMsg = await readErrorMessage(response);
@@ -638,12 +762,8 @@ async function getTimeEntryActivities(redmineDomain, apiKey) {
  * @returns {Promise<object>} The user object from the API.
  */
 async function getCurrentUser(redmineDomain, apiKey) {
-  const url = buildRedmineUrl(redmineDomain, "/my/account.json");
-  const response = await fetch(url, {
-    headers: {
-      "X-Redmine-API-Key": apiKey,
-      "Content-Type": "application/json",
-    },
+  const response = await redmineAuthorizedFetch(redmineDomain, apiKey, "/my/account.json", {
+    headers: { "Content-Type": "application/json" },
   });
 
   if (!response.ok) {
@@ -662,9 +782,8 @@ async function getCurrentUser(redmineDomain, apiKey) {
  * @returns {Promise<Array<object>>} A promise that resolves to an array of tracker objects.
  */
 async function getTrackers(redmineDomain, apiKey) {
-  const url = buildRedmineUrl(redmineDomain, "/trackers.json");
-  const response = await fetch(url, {
-    headers: { "X-Redmine-API-Key": apiKey, "Content-Type": "application/json" },
+  const response = await redmineAuthorizedFetch(redmineDomain, apiKey, "/trackers.json", {
+    headers: { "Content-Type": "application/json" },
   });
   if (!response.ok) {
     const errorMsg = await readErrorMessage(response);
@@ -673,3 +792,54 @@ async function getTrackers(redmineDomain, apiKey) {
   const data = await response.json();
   return data.trackers || [];
 }
+
+/**
+ * Authenticated Redmine fetch.
+ * With apiKey (service worker): call Redmine directly.
+ * Without apiKey (content script): proxy via background so the key never leaves SW.
+ */
+async function redmineAuthorizedFetch(redmineDomain, apiKey, pathWithQuery, init = {}) {
+  const method = (init.method || "GET").toUpperCase();
+  const headers = { ...(init.headers || {}) };
+
+  if (apiKey) {
+    const url = /^https?:\/\//i.test(pathWithQuery)
+      ? pathWithQuery
+      : buildRedmineUrl(redmineDomain, pathWithQuery);
+    return fetch(url, {
+      ...init,
+      method,
+      headers: {
+        ...headers,
+        "X-Redmine-API-Key": apiKey,
+      },
+    });
+  }
+
+  let relativePath = pathWithQuery;
+  if (/^https?:\/\//i.test(pathWithQuery)) {
+    const parsed = new URL(pathWithQuery);
+    relativePath = `${parsed.pathname}${parsed.search}`;
+  }
+
+  const response = await sendRuntimeMessage({
+    type: "REDMINE_AUTHORIZED_FETCH",
+    path: relativePath,
+    method,
+    body: typeof init.body === "string" ? init.body : null,
+    accept: headers.Accept || headers.accept || "application/json",
+    contentType: headers["Content-Type"] || headers["content-type"] || null,
+  });
+
+  return {
+    ok: true,
+    status: response.data?.status || 200,
+    async json() {
+      return response.data?.payload;
+    },
+    async text() {
+      return response.data?.text || "";
+    },
+  };
+}
+

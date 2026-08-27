@@ -7,7 +7,7 @@
   }
 
   const UI_FIELDS = ["showRedmineSuccessModal", "defaultProjectId", "manualFields"];
-  const REPORT_FIELDS = ["redmineDomain", "redmineApiKey", "reportProjectId"];
+  const REPORT_FIELDS = ["redmineDomain", "reportProjectId"];
 
   function hasSameOrigin(firstUrl, secondUrl) {
     try {
@@ -18,7 +18,10 @@
   }
 
   global.TB_SETTINGS_VIEW = Object.freeze({
-    forReport: (settings) => pick(settings, REPORT_FIELDS),
+    forReport: (settings) => ({
+      ...pick(settings, REPORT_FIELDS),
+      hasRedmineApiKey: Boolean(settings.redmineApiKey),
+    }),
     forUi: (settings) => pick(settings, UI_FIELDS),
     hasSameOrigin,
   });

@@ -11,7 +11,10 @@
     endpoint: 500,
     issueKey: 100,
     issueSummary: 1000,
+    backlogIssueType: 50,
     modelId: 300,
+    path: 2000,
+    method: 10,
     projectKey: 100,
     provider: 50,
     text: 100000,
@@ -29,6 +32,7 @@
     "LOG_ERROR",
     "LOOKUP_AND_TRANSLATE_COMMENT",
     "OPEN_OPTIONS_PAGE",
+    "REDMINE_AUTHORIZED_FETCH",
     "SEND_TO_BACKLOG",
     "SEND_TO_REDMINE",
     "TEST_MODEL_WITH_KEY",
@@ -37,6 +41,7 @@
   ]);
   const REQUIRED_FIELDS = Object.freeze({
     FETCH_REDMINE_PROJECTS_WITH_KEY: ["domain", "apiKey"],
+    REDMINE_AUTHORIZED_FETCH: ["path"],
     TEST_MODEL_WITH_KEY: ["provider", "modelId", "apiKey"],
   });
 

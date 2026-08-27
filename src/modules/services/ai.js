@@ -866,6 +866,13 @@ function fixMangledMarkers(text) {
     "[[TB_IMG:$2]]"
   );
 
+  // 7. File marker spacing / nesting
+  result = result.replace(/\[\[TB_FILE:\s*(\d+)\s*:\s*([^\]]+?)\s*\]\]/gi, "[[TB_FILE:$1:$2]]");
+  result = result.replace(
+    /\[[^\]]+\]\(\[\[TB_FILE:\s*(\d+)\s*:\s*([^\]]+?)\s*\]\]\)/gi,
+    "[[TB_FILE:$1:$2]]"
+  );
+
   return result;
 }
 
