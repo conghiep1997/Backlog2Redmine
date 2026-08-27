@@ -495,9 +495,7 @@ function openConfirmModal(options) {
         : [];
     const baselineNotes = Array.isArray(baseNotes) ? baseNotes : [];
     const baselineComments =
-      baselineNotes.length === translatedNotes.length
-        ? baselineNotes
-        : baselineNotes.slice(1);
+      baselineNotes.length === translatedNotes.length ? baselineNotes : baselineNotes.slice(1);
 
     return translatedNotes.map((translatedNote, index) => {
       const liveNote = liveCommentNotes[index];

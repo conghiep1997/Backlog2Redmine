@@ -19,7 +19,9 @@ ${text}
 [BẮT ĐẦU]
 ${text}
 [KẾT THÚC]`,
-    EXTRACT_JAPANESE: (text) => `Chỉ trích xuất phần tiếng Nhật. Bỏ tiếng Việt/thừa. Giữ markdown nếu có.
+    EXTRACT_JAPANESE: (
+      text
+    ) => `Chỉ trích xuất phần tiếng Nhật. Bỏ tiếng Việt/thừa. Giữ markdown nếu có.
 [BẮT ĐẦU]
 ${text}
 [KẾT THÚC]`,

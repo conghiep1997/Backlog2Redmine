@@ -258,17 +258,12 @@ function renderInlineTextile(escapedText) {
   let html = String(escapedText || "");
 
   // "label":url  (quotes were escaped)
-  html = html.replace(
-    /&quot;([^&]+?)&quot;:(https?:\/\/[^\s<]+)/gi,
-    (_m, label, href) => {
-      if (!isSafeMarkdownHref(href)) {
-        return label;
-      }
-      return protect(
-        `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`
-      );
+  html = html.replace(/&quot;([^&]+?)&quot;:(https?:\/\/[^\s<]+)/gi, (_m, label, href) => {
+    if (!isSafeMarkdownHref(href)) {
+      return label;
     }
-  );
+    return protect(`<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`);
+  });
 
   // Images / attachments !file! — protect before strike/bold so class names stay intact
   html = html.replace(/!([^!\s<]+)!/g, (_m, name) =>
@@ -305,9 +300,7 @@ function flushTextileList(blocks, listState) {
 
 function flushTextileQuote(blocks, quoteLines) {
   if (!quoteLines.length) return;
-  blocks.push(
-    `<blockquote>${quoteLines.map(renderInlineTextile).join("<br>")}</blockquote>`
-  );
+  blocks.push(`<blockquote>${quoteLines.map(renderInlineTextile).join("<br>")}</blockquote>`);
   quoteLines.length = 0;
 }
 
@@ -344,19 +337,14 @@ function renderTextileHtml(textile) {
   text = text.replace(/<code>([\s\S]*?)<\/code>/gi, (_m, body) =>
     protect(`<code>${normalizeEscapedHtml(body)}</code>`)
   );
-  text = text.replace(/<u>([\s\S]*?)<\/u>/gi, (_m, body) =>
-    protect(`<u>${escapeHtml(body)}</u>`)
-  );
+  text = text.replace(/<u>([\s\S]*?)<\/u>/gi, (_m, body) => protect(`<u>${escapeHtml(body)}</u>`));
   text = text.replace(/<mark>([\s\S]*?)<\/mark>/gi, (_m, body) =>
     protect(`<mark>${escapeHtml(body)}</mark>`)
   );
-  text = text.replace(
-    /<span\s+style="([^"]*)">([\s\S]*?)<\/span>/gi,
-    (_m, style, body) => {
-      const safeStyle = String(style).replace(/[<>'"`]/g, "");
-      return protect(`<span style="${escapeHtml(safeStyle)}">${escapeHtml(body)}</span>`);
-    }
-  );
+  text = text.replace(/<span\s+style="([^"]*)">([\s\S]*?)<\/span>/gi, (_m, style, body) => {
+    const safeStyle = String(style).replace(/[<>'"`]/g, "");
+    return protect(`<span style="${escapeHtml(safeStyle)}">${escapeHtml(body)}</span>`);
+  });
 
   const escaped = escapeHtml(text);
   const lines = escaped.split("\n");
@@ -438,9 +426,7 @@ function renderTextileHtml(textile) {
               )
               .join("")}</tbody>`
           : "";
-        blocks.push(
-          `<div class="tb-preview-table-wrap"><table>${thead}${tbody}</table></div>`
-        );
+        blocks.push(`<div class="tb-preview-table-wrap"><table>${thead}${tbody}</table></div>`);
         index = cursor - 1;
         continue;
       }

@@ -52,8 +52,7 @@ async function findRedmineIssue(
       );
       const hasPreference = preferredTrackers.length > 0;
       const trackerMatchesPreference =
-        matchedTracker &&
-        preferredTrackers.some((name) => normalizeLoose(name) === matchedTracker);
+        matchedTracker && preferredTrackers.some((name) => normalizeLoose(name) === matchedTracker);
 
       // Accept HTML hit when: no tracker preference, preference matches, or tracker unknown
       // (unknown → keep candidate only if preference unset; otherwise verify via API).
@@ -69,13 +68,7 @@ async function findRedmineIssue(
   }
 
   // Fallback to API if HTML search failed
-  return findRedmineIssueViaApi(
-    redmineDomain,
-    apiKey,
-    issueKey,
-    issueSummary,
-    preferredTrackers
-  );
+  return findRedmineIssueViaApi(redmineDomain, apiKey, issueKey, issueSummary, preferredTrackers);
 }
 
 /**
@@ -464,7 +457,9 @@ function pickBestRedmineSearchResult(
     .sort((a, b) => b.score - a.score);
 
   if (preferred.length > 0) {
-    const preferredHit = scored.find((entry) => entry.score > 0 && preferred.includes(entry.trackerName));
+    const preferredHit = scored.find(
+      (entry) => entry.score > 0 && preferred.includes(entry.trackerName)
+    );
     if (preferredHit) {
       return preferredHit.item;
     }
@@ -852,4 +847,3 @@ async function redmineAuthorizedFetch(redmineDomain, apiKey, pathWithQuery, init
     },
   };
 }
-
