@@ -1,9 +1,9 @@
 /**
  * Modal UI management for Backlog2Redmine Extension.
- * Uses escapeHtml, renderMarkdownHtml from render-markdown.js (loaded globally via manifest).
+ * Uses escapeHtml / renderRedmineNotePreview from render-markdown.js (loaded via manifest).
  */
 
-/* global escapeHtml, renderMarkdownHtml */
+/* global escapeHtml, renderMarkdownHtml, renderRedmineNotePreview */
 
 let modalElements = null;
 let customFieldsMetadata = [];
@@ -18,6 +18,20 @@ const DEFAULT_MANUAL_FIELDS = {
 };
 const NOTE_SEPARATOR_REGEX = /^--- Note \d+ ---\s*\n/gm;
 const NOTE_LIST_SCROLL_THRESHOLD = 4;
+
+function setModalSubtitle(el, text) {
+  if (!el) return;
+  const value = String(text || "").trim();
+  el.textContent = value;
+  el.hidden = !value;
+}
+
+function formatCharCount(length) {
+  if (typeof TB?.MESSAGES?.MODAL?.CHAR_COUNT === "function") {
+    return TB.MESSAGES.MODAL.CHAR_COUNT(length);
+  }
+  return `${length} ký tự`;
+}
 
 function escapeUiHtml(value) {
   if (typeof escapeHtml === "function") {
@@ -35,16 +49,22 @@ function setPreviewMode(previewTextarea, previewHtmlEl, previewToggleBtn, isHtml
   if (!previewToggleBtn || !previewHtmlEl || !previewTextarea) return;
 
   if (isHtmlMode) {
-    previewHtmlEl.innerHTML = renderMarkdownHtml(previewTextarea.value);
+    const renderPreview =
+      typeof renderRedmineNotePreview === "function"
+        ? renderRedmineNotePreview
+        : renderMarkdownHtml;
+    previewHtmlEl.innerHTML = renderPreview(previewTextarea.value);
     previewTextarea.style.display = "none";
     previewHtmlEl.style.display = "block";
-    previewToggleBtn.textContent = "HTML";
+    previewToggleBtn.textContent = TB.MESSAGES.MODAL.PREVIEW_TOGGLE_REDMINE;
+    previewToggleBtn.title = TB.MESSAGES.MODAL.PREVIEW_TOGGLE_REDMINE_TITLE;
     return;
   }
 
   previewTextarea.style.display = "block";
   previewHtmlEl.style.display = "none";
-  previewToggleBtn.textContent = "MD";
+  previewToggleBtn.textContent = TB.MESSAGES.MODAL.PREVIEW_TOGGLE_SHOW;
+  previewToggleBtn.title = TB.MESSAGES.MODAL.PREVIEW_TOGGLE_SHOW_TITLE;
 }
 
 function renderStructuredNoteEditors(listEl, notes, options = {}) {
@@ -77,13 +97,13 @@ function renderStructuredNoteEditors(listEl, notes, options = {}) {
 
     const meta = document.createElement("span");
     meta.className = "tb-note-card-meta";
-    meta.textContent = note.trim().length + " ky tu";
+    meta.textContent = formatCharCount(note.trim().length);
 
     const toggleBtn = document.createElement("button");
     toggleBtn.type = "button";
     toggleBtn.className = "tb-note-preview-toggle";
-    toggleBtn.textContent = "MD";
-    toggleBtn.title = "Toggle preview";
+    toggleBtn.textContent = TB.MESSAGES.MODAL.PREVIEW_TOGGLE_SHOW;
+    toggleBtn.title = TB.MESSAGES.MODAL.PREVIEW_TOGGLE_SHOW_TITLE;
 
     const headerActions = document.createElement("div");
     headerActions.className = "tb-note-card-actions";
@@ -100,7 +120,11 @@ function renderStructuredNoteEditors(listEl, notes, options = {}) {
 
     let isPreviewMode = false;
     const syncPreview = () => {
-      previewEl.innerHTML = renderMarkdownHtml(textarea.value);
+      const renderPreview =
+        typeof renderRedmineNotePreview === "function"
+          ? renderRedmineNotePreview
+          : renderMarkdownHtml;
+      previewEl.innerHTML = renderPreview(textarea.value);
     };
     toggleBtn.addEventListener("click", () => {
       isPreviewMode = !isPreviewMode;
@@ -108,16 +132,18 @@ function renderStructuredNoteEditors(listEl, notes, options = {}) {
         syncPreview();
         textarea.style.display = "none";
         previewEl.style.display = "block";
-        toggleBtn.textContent = "HTML";
+        toggleBtn.textContent = TB.MESSAGES.MODAL.PREVIEW_TOGGLE_REDMINE;
+        toggleBtn.title = TB.MESSAGES.MODAL.PREVIEW_TOGGLE_REDMINE_TITLE;
         return;
       }
       textarea.style.display = "block";
       previewEl.style.display = "none";
-      toggleBtn.textContent = "MD";
+      toggleBtn.textContent = TB.MESSAGES.MODAL.PREVIEW_TOGGLE_SHOW;
+      toggleBtn.title = TB.MESSAGES.MODAL.PREVIEW_TOGGLE_SHOW_TITLE;
     });
 
     textarea.addEventListener("input", () => {
-      meta.textContent = textarea.value.trim().length + " ky tu";
+      meta.textContent = formatCharCount(textarea.value.trim().length);
       if (isPreviewMode) {
         syncPreview();
       }
@@ -200,11 +226,11 @@ function ensureModalShell() {
           <button id="tb-modal-close" class="tb-modal-close" aria-label="${TB.MESSAGES.MODAL.CLOSE_ARIA}">&times;</button>
         </div>
         <div class="tb-modal-body">
-          <p id="tb-modal-subtitle" class="tb-modal-subtitle">${TB.MESSAGES.MODAL.SUBTITLE}</p>
+          <p id="tb-modal-subtitle" class="tb-modal-subtitle" hidden></p>
           <div id="tb-standard-fields">
             <div class="tb-field-group">
               <label for="tb-redmine-issue-id">${TB.MESSAGES.MODAL.ISSUE_ID_LABEL}</label>
-              <input type="text" id="tb-redmine-issue-id" placeholder="VD: 12345">
+              <input type="text" id="tb-redmine-issue-id" placeholder="${TB.MESSAGES.MODAL.ISSUE_ID_PLACEHOLDER}">
             </div>
             <div class="tb-field-group">
               <label id="tb-issue-title-label" for="tb-redmine-issue-title">${TB.MESSAGES.MODAL.ISSUE_TITLE_LABEL}</label>
@@ -224,22 +250,22 @@ function ensureModalShell() {
             </div>
             <div class="tb-field-row">
               <div class="tb-field-group">
-                <label for="tb-migrate-version">${TB.MESSAGES.MODAL.VERSION_LABEL || "Target Version (Milestone)"}</label>
-                <select id="tb-migrate-version"><option value="">-- Loader --</option></select>
+                <label for="tb-migrate-version">${TB.MESSAGES.MODAL.VERSION_LABEL}</label>
+                <select id="tb-migrate-version"><option value="">${TB.MESSAGES.MODAL.VERSION_LOADING}</option></select>
               </div>
               <div id="tb-migrate-due-date-group" class="tb-field-group">
-                <label id="tb-migrate-due-date-label" for="tb-migrate-due-date">${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}</label>
+                <label id="tb-migrate-due-date-label" for="tb-migrate-due-date">${TB.MESSAGES.MODAL.DUE_DATE_LABEL}</label>
                 <input type="date" id="tb-migrate-due-date">
               </div>
             </div>
             <div class="tb-field-row">
               <div class="tb-field-group">
                 <label for="tb-migrate-tracker">${TB.MESSAGES.MODAL.TRACKER_LABEL}<span class="tb-required">*</span></label>
-                <select id="tb-migrate-tracker"><option value="">-- Loader --</option></select>
+                <select id="tb-migrate-tracker"><option value="">${TB.MESSAGES.MODAL.VERSION_LOADING}</option></select>
               </div>
               <div class="tb-field-group">
                 <label for="tb-migrate-priority">${TB.MESSAGES.MODAL.PRIORITY_LABEL}<span class="tb-required">*</span></label>
-                <select id="tb-migrate-priority"><option value="">-- Loader --</option></select>
+                <select id="tb-migrate-priority"><option value="">${TB.MESSAGES.MODAL.VERSION_LOADING}</option></select>
               </div>
             </div>
             <!-- Dynamic Custom Fields Container -->
@@ -248,7 +274,7 @@ function ensureModalShell() {
           <div class="tb-field-group">
             <div class="tb-preview-header">
               <label id="tb-preview-label" for="tb-redmine-preview">${TB.MESSAGES.MODAL.PREVIEW_LABEL}</label>
-              <button type="button" id="tb-preview-toggle" class="tb-preview-toggle" title="Toggle preview">MD</button>
+              <button type="button" id="tb-preview-toggle" class="tb-preview-toggle" title="${TB.MESSAGES.MODAL.PREVIEW_TOGGLE_SHOW_TITLE}">${TB.MESSAGES.MODAL.PREVIEW_TOGGLE_SHOW}</button>
             </div>
             <div class="tb-preview-container">
               <textarea id="tb-redmine-preview" rows="10"></textarea>
@@ -257,8 +283,7 @@ function ensureModalShell() {
           </div>
           <div id="tb-comments-preview-group" class="tb-field-group" style="display: none;">
             <div class="tb-note-list-header">
-              <label class="tb-note-list-label" for="tb-redmine-comments-preview">Preview comments</label>
-              <span class="tb-note-list-helper">Each note is split for review.</span>
+              <label class="tb-note-list-label" for="tb-redmine-comments-preview">${TB.MESSAGES.MODAL.PREVIEW_COMMENTS}</label>
             </div>
             <div id="tb-comments-note-list" class="tb-note-list"></div>
             <textarea id="tb-redmine-comments-preview" rows="8" hidden></textarea>
@@ -290,7 +315,7 @@ function ensureModalShell() {
           <div class="tb-success-link-container"><a id="tb-success-link" href="#" target="_blank" class="tb-success-link"></a></div>
           <label id="tb-success-hide-label" class="tb-success-hide-option">
             <input type="checkbox" id="tb-success-hide-checkbox">
-            <span>${TB.MESSAGES.MODAL.SUCCESS_HIDE_AGAIN_LABEL || "Khong hien thi lai thong bao nay"}</span>
+            <span>${TB.MESSAGES.MODAL.SUCCESS_HIDE_AGAIN_LABEL}</span>
           </label>
         </div>
         <div class="tb-modal-footer">
@@ -494,8 +519,9 @@ function openConfirmModal(options) {
   function updateModalState() {
     if (isMigration) {
       titleEl.textContent = TB.MESSAGES.MODAL.MIGRATE_TITLE;
-      subtitleEl.textContent = TB.MESSAGES.MODAL.MIGRATE_SUBTITLE(commentsCount);
+      setModalSubtitle(subtitleEl, TB.MESSAGES.MODAL.MIGRATE_SUBTITLE(commentsCount));
       previewFieldGroup.hidden = false;
+      if (previewLabel) previewLabel.textContent = TB.MESSAGES.MODAL.PREVIEW_DESCRIPTION;
       standardFields.hidden = true;
       migrationFields.hidden = false;
 
@@ -511,7 +537,7 @@ function openConfirmModal(options) {
         const commentNotes = memoizedBatchNotes || [];
         setCombinedNotesTextareaValue(commentsPreviewTextarea, commentNotes);
         renderStructuredBatchNotes(commentsPreviewList, commentNotes, {
-          titlePrefix: "Comment",
+          titlePrefix: TB.MESSAGES.MODAL.NOTE_PREFIX,
           startIndex: 1,
           helperText: TB.MESSAGES.MODAL.WAITING_TRANSLATION,
           targetTextarea: commentsPreviewTextarea,
@@ -526,9 +552,12 @@ function openConfirmModal(options) {
     } else {
       previewFieldGroup.hidden = true;
       titleEl.textContent = TB.MESSAGES.MODAL.TITLE;
-      subtitleEl.textContent = currentMode
-        ? TB.MESSAGES.MODAL.BATCH_SUBTITLE_PREPARING(remainingComments.length + 1)
-        : TB.MESSAGES.MODAL.SUBTITLE;
+      setModalSubtitle(
+        subtitleEl,
+        currentMode
+          ? TB.MESSAGES.MODAL.BATCH_SUBTITLE_PREPARING(remainingComments.length + 1)
+          : TB.MESSAGES.MODAL.SUBTITLE
+      );
       standardFields.hidden = false;
       migrationFields.hidden = true;
       setCommentsPreviewVisible(true);
@@ -543,7 +572,7 @@ function openConfirmModal(options) {
           const batchNotes = [primaryNote, ...memoizedBatchNotes];
           currentNotesList = batchNotes;
           renderStructuredBatchNotes(commentsPreviewList, batchNotes, {
-            titlePrefix: "Note",
+            titlePrefix: TB.MESSAGES.MODAL.NOTE_PREFIX,
             startIndex: 1,
             targetTextarea: commentsPreviewTextarea,
             onNotesChange: (nextNotes) => {
@@ -560,7 +589,7 @@ function openConfirmModal(options) {
           pendingBatchNotes = placeholderNotes.slice();
           currentNotesList = placeholderNotes.slice();
           renderStructuredBatchNotes(commentsPreviewList, placeholderNotes, {
-            titlePrefix: "Note",
+            titlePrefix: TB.MESSAGES.MODAL.NOTE_PREFIX,
             startIndex: 1,
             targetTextarea: commentsPreviewTextarea,
             onNotesChange: (nextNotes) => {
@@ -572,7 +601,7 @@ function openConfirmModal(options) {
         previewTextarea.readOnly = false;
         currentNotesList = [primaryNote];
         renderStructuredBatchNotes(commentsPreviewList, currentNotesList, {
-          titlePrefix: "Note",
+          titlePrefix: TB.MESSAGES.MODAL.NOTE_PREFIX,
           startIndex: 1,
           targetTextarea: commentsPreviewTextarea,
           onNotesChange: (nextNotes) => {
@@ -592,12 +621,12 @@ function openConfirmModal(options) {
     // Handle defaults when switching tracker
     if (selectedTracker === "Bug") {
       migrateDueDateInput.value = getPlus3WorkingDays();
-      modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}<span class="tb-required">*</span>`;
+      modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL}<span class="tb-required">*</span>`;
     } else if (selectedTracker === "Task") {
-      modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}<span class="tb-required">*</span>`;
+      modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL}<span class="tb-required">*</span>`;
     } else {
       migrateDueDateInput.value = "";
-      modalElements.migrateDueDateLabel.innerHTML = TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date";
+      modalElements.migrateDueDateLabel.innerHTML = TB.MESSAGES.MODAL.DUE_DATE_LABEL;
     }
 
     // Hide Due Date for others
@@ -615,9 +644,9 @@ function openConfirmModal(options) {
 
     if (initialTracker === "Bug") {
       migrateDueDateInput.value = getPlus3WorkingDays();
-      modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}<span class="tb-required">*</span>`;
+      modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL}<span class="tb-required">*</span>`;
     } else if (initialTracker === "Task") {
-      modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL || "Due Date"}<span class="tb-required">*</span>`;
+      modalElements.migrateDueDateLabel.innerHTML = `${TB.MESSAGES.MODAL.DUE_DATE_LABEL}<span class="tb-required">*</span>`;
     }
 
     const isDueDateVisible = ["Bug", "Task"].includes(initialTracker);
@@ -860,9 +889,9 @@ function openBacklogModal({
   };
 
   titleEl.textContent = TB.MESSAGES.MODAL.BACKLOG_TITLE;
-  subtitleEl.textContent = TB.MESSAGES.MODAL.BACKLOG_SUBTITLE;
+  setModalSubtitle(subtitleEl, TB.MESSAGES.MODAL.BACKLOG_SUBTITLE);
   issueIdLabel.textContent = TB.MESSAGES.MODAL.BACKLOG_ISSUE_KEY_LABEL;
-  if (issueTitleLabel) issueTitleLabel.textContent = "Backlog issue title";
+  if (issueTitleLabel) issueTitleLabel.textContent = TB.MESSAGES.MODAL.BACKLOG_ISSUE_TITLE_LABEL;
   if (previewLabel) previewLabel.textContent = TB.MESSAGES.MODAL.PREVIEW_LABEL;
   issueIdInput.value = backlogIssueKey;
   issueTitleInput.value = "";
@@ -1301,14 +1330,14 @@ async function fetchRedmineMetadataForModal(backlogIssueType, backlogMilestone) 
 
 async function updateVersionsDropdown(projectId, backlogMilestone) {
   const { versionSelect } = modalElements;
-  versionSelect.innerHTML = '<option value="">-- Loading version --</option>';
+  versionSelect.innerHTML = `<option value="">${TB.MESSAGES.MODAL.VERSION_LOADING}</option>`;
   try {
     const versionsRes = await sendRuntimeMessage({
       type: "FETCH_REDMINE_METADATA",
       endpoint: `/projects/${projectId}/versions.json`,
     });
     const versions = versionsRes.data?.versions || [];
-    versionSelect.innerHTML = '<option value="">-- Empty --</option>';
+    versionSelect.innerHTML = `<option value="">${TB.MESSAGES.MODAL.VERSION_EMPTY}</option>`;
     versions.forEach((v) => {
       const opt = document.createElement("option");
       opt.value = v.id;
@@ -1320,7 +1349,7 @@ async function updateVersionsDropdown(projectId, backlogMilestone) {
       versionSelect.appendChild(opt);
     });
   } catch (err) {
-    versionSelect.innerHTML = '<option value="">-- Error loading version --</option>';
+    versionSelect.innerHTML = `<option value="">${TB.MESSAGES.MODAL.VERSION_ERROR}</option>`;
   }
 }
 
@@ -1405,7 +1434,7 @@ function renderTrackerFields(trackerName, validateCallback) {
       const select = document.createElement("select");
       select.className = "tb-cf-input";
       select.dataset.cfId = cfId;
-      select.innerHTML = '<option value="">-- Select --</option>';
+      select.innerHTML = `<option value="">${TB.MESSAGES.MODAL.SELECT_PLACEHOLDER}</option>`;
       optionsMap[fieldName].forEach((opt) => {
         const o = document.createElement("option");
         o.value = opt;
@@ -1445,10 +1474,18 @@ globalThis.TB_MODAL = { openConfirmModal, openBacklogModal, openSuccessModal };
 
 function getMappedTrackerName(backlogType) {
   if (!backlogType) return "";
-  const type = backlogType.toLowerCase();
+  const type = backlogType.toLowerCase().trim();
   if (type === "qa" || type === "q/a" || type === "q&a") return "Q/A";
-  if (type === "bug") return "Bug";
-  if (type === "task") return "Task";
+  if (type === "bug" || type === "バグ" || type === "不具合") return "Bug";
   if (type === "cr") return "CR";
+  if (
+    type === "task" ||
+    type === "タスク" ||
+    type === "課題" ||
+    type.startsWith("要望") ||
+    type.includes("実装")
+  ) {
+    return "Task";
+  }
   return backlogType;
 }

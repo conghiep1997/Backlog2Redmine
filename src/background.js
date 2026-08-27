@@ -18,6 +18,7 @@ importScripts(
   "modules/utils/helpers.js",
   "modules/utils/crypto.js",
   "modules/utils/logger.js",
+  "modules/utils/markdown.js",
   "modules/services/ai.js",
   "modules/services/redmine.js",
   "modules/services/backlog.js"

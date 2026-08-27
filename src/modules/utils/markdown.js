@@ -459,3 +459,110 @@ function findDirectCheckbox(listItem) {
   }
   return null;
 }
+
+/**
+ * Convert Markdown (used in modal preview) to Textile for Redmine notes.
+ * Redmine uses Textile macros ({{collapse}}, !image!), so MD fences/bold
+ * would otherwise show as raw text on the issue page.
+ *
+ * @param {string} markdown
+ * @returns {string}
+ */
+function escapeHtmlText(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function markdownToTextile(markdown) {
+  if (!markdown) {
+    return "";
+  }
+
+  const protections = [];
+  const protect = (value) => {
+    const token = `§§TBPROT${protections.length}§§`;
+    protections.push(value);
+    return token;
+  };
+
+  let text = String(markdown);
+
+  // Protect Textile attachments / markers that must stay untouched
+  text = text.replace(/!([^!\s\n]+)!/g, (m) => protect(m));
+  text = text.replace(/attachment:[^\s]+/gi, (m) => protect(m));
+  text = text.replace(/\{\{video\([^)]+\)\}\}/gi, (m) => protect(m));
+  text = text.replace(/\[\[TB_(?:IMG|FILE):[^\]]+\]\]/gi, (m) => protect(m));
+
+  // Fenced code blocks → <pre> (widely rendered by Redmine Textile)
+  text = text.replace(/```([^\n`]*)\n([\s\S]*?)```/g, (_m, _lang, code) => {
+    const body = escapeHtmlText(String(code).replace(/^\n+|\n+$/g, ""));
+    return protect(`<pre>\n${body}\n</pre>`);
+  });
+
+  // Inline code → <code> (avoids clashing with @mentions in Textile)
+  text = text.replace(/`([^`\n]+)`/g, (_m, code) =>
+    protect(`<code>${escapeHtmlText(code)}</code>`)
+  );
+
+  // Links [label](url) → "label":url
+  text = text.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/gi, (_m, label, url) =>
+    protect(`"${label}":${url}`)
+  );
+
+  // Images ![alt](src) → !src! (Redmine Textile attachment/image syntax)
+  text = text.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_m, _alt, src) => protect(`!${src}!`));
+
+  // Headings
+  text = text.replace(/^######\s+(.+)$/gm, "h6. $1");
+  text = text.replace(/^#####\s+(.+)$/gm, "h5. $1");
+  text = text.replace(/^####\s+(.+)$/gm, "h4. $1");
+  text = text.replace(/^###\s+(.+)$/gm, "h3. $1");
+  text = text.replace(/^##\s+(.+)$/gm, "h2. $1");
+  text = text.replace(/^#\s+(.+)$/gm, "h1. $1");
+
+  // Blockquotes
+  text = text.replace(/^>\s?/gm, "bq. ");
+
+  // Bold **text** → Textile *text* (protect so later passes leave it alone)
+  text = text.replace(/\*\*(.+?)\*\*/g, (_m, inner) => protect(`*${inner}*`));
+  text = text.replace(/~~(.+?)~~/g, "-$1-");
+  // Keep single *text* untouched: in Textile that is bold; MD italic should use _text_
+  // (already valid Textile italic), so we do not rewrite *…* → _…_.
+
+  // Ordered lists 1. → #
+  text = text.replace(/^(\s*)\d+\.\s+/gm, "$1# ");
+
+  // Task lists keep checkbox marker under Textile list syntax
+  text = text.replace(/^(\s*)[*-]\s+\[(x|X| )\]\s+/gm, (_m, indent, mark) => {
+    return `${indent}* [${mark === " " ? " " : "x"}] `;
+  });
+
+  // Unordered lists: leading "-" → "*"
+  text = text.replace(/^(\s*)-\s+/gm, "$1* ");
+
+  // Markdown tables → Textile pipe rows (drop separator)
+  text = text.replace(/^\|(.+)\|$/gm, (line) => {
+    if (/^\|\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?$/.test(line.trim())) {
+      return "";
+    }
+    const cells = line
+      .trim()
+      .replace(/^\|/, "")
+      .replace(/\|$/, "")
+      .split("|")
+      .map((cell) => cell.trim());
+    return `|${cells.join("|")}|`;
+  });
+
+  for (let i = protections.length - 1; i >= 0; i--) {
+    text = text.split(`§§TBPROT${i}§§`).join(protections[i]);
+  }
+
+  return text.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+if (typeof globalThis !== "undefined") {
+  globalThis.markdownToTextile = markdownToTextile;
+}

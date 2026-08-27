@@ -454,12 +454,12 @@ function showSettingsErrorLink(message) {
 
   const messageEl = document.createElement("span");
   messageEl.style.color = "#92400E";
-  messageEl.textContent = String(message || "Extension settings are incomplete.");
+  messageEl.textContent = String(message || TB.MESSAGES.SETTINGS.INCOMPLETE);
 
   const settingsLink = document.createElement("a");
   settingsLink.href = "#";
   settingsLink.id = "tb-open-settings-link";
-  settingsLink.textContent = "Click here to fix.";
+  settingsLink.textContent = TB.MESSAGES.SETTINGS.OPEN_LINK;
   Object.assign(settingsLink.style, {
     color: "#05668D",
     textDecoration: "underline",
@@ -486,7 +486,7 @@ function showSettingsErrorLink(message) {
     if (runtime?.sendMessage) {
       runtime.sendMessage({ type: "OPEN_OPTIONS_PAGE" });
     } else {
-      showToast("Extension runtime is unavailable. Please reload the page.", "error");
+      showToast(TB.MESSAGES.SETTINGS.RUNTIME_UNAVAILABLE, "error");
     }
     container.remove();
   };
@@ -501,7 +501,7 @@ function sendRuntimeMessageWithResponse(message) {
   return new Promise((resolve, reject) => {
     const runtime = getContentRuntime();
     if (!runtime?.sendMessage) {
-      reject({ error: "Extension runtime is unavailable. Please reload the page." });
+      reject({ error: TB.MESSAGES.SETTINGS.RUNTIME_UNAVAILABLE });
       return;
     }
 

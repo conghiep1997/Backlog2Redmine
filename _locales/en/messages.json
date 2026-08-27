@@ -53,7 +53,7 @@
     "message": "Send Comment to Redmine"
   },
   "modal_subtitle": {
-    "message": "Edit content before sending if necessary."
+    "message": ""
   },
   "modal_issue_id_label": {
     "message": "Redmine Issue ID"
@@ -62,7 +62,24 @@
     "message": "Redmine Issue Title"
   },
   "modal_preview_label": {
-    "message": "Preview Content"
+    "message": "Content"
+  },
+  "modal_preview_description": {
+    "message": "Description"
+  },
+  "modal_preview_comments": {
+    "message": "Comments"
+  },
+  "modal_note_prefix": {
+    "message": "Comment"
+  },
+  "modal_char_count": {
+    "message": "$count$ chars",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "modal_hint": {
     "message": "Tip: You can type @username before sending, Redmine will auto-detect if the name is correct."
@@ -110,7 +127,7 @@
     "message": "Create New Issue on Redmine"
   },
   "modal_migrate_subtitle": {
-    "message": "Will create 1 ticket and attach $count$ comments.",
+    "message": "Create 1 ticket with $count$ comments.",
     "placeholders": {
       "count": {
         "content": "$1"
@@ -154,7 +171,7 @@
     "message": "Send comment to Backlog"
   },
   "modal_backlog_subtitle": {
-    "message": "Contains only the Japanese portion extracted by AI."
+    "message": ""
   },
   "modal_backlog_placeholder": {
     "message": "Example: CP-123"

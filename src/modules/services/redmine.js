@@ -1,4 +1,4 @@
-/* global downloadBacklogFile, TB_LOGGER */
+/* global downloadBacklogFile, TB_LOGGER, markdownToTextile */
 /**
  * Redmine API Service for Backlog2Redmine Extension.
  * Handles operations with Redmine API: finding issues, sending notes, and uploading files.
@@ -190,10 +190,14 @@ async function handleSendToRedmine(
     processedAttachments
   );
 
+  // Modal edits/preview use Markdown; Redmine notes use Textile.
+  const textileNotes =
+    typeof markdownToTextile === "function" ? markdownToTextile(updatedNotes) : updatedNotes;
+
   const endpoint = buildRedmineUrl(settings.redmineDomain, `/issues/${redmineIssueId}.json`);
   const payload = {
     issue: {
-      notes: updatedNotes,
+      notes: textileNotes,
       uploads: uploads.length > 0 ? uploads : undefined,
     },
   };
@@ -244,6 +248,11 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
     processedAttachments
   );
 
+  const textileDescription =
+    typeof markdownToTextile === "function"
+      ? markdownToTextile(updatedDescription)
+      : updatedDescription;
+
   const createUrl = buildRedmineUrl(settings.redmineDomain, "/issues.json");
   const payload = {
     issue: {
@@ -252,7 +261,7 @@ async function handleCreateRedmineIssue({ issueData, comments }) {
       priority_id: issueData.priority_id,
       fixed_version_id: issueData.fixed_version_id || undefined,
       subject: issueData.subject,
-      description: updatedDescription,
+      description: textileDescription,
       due_date: issueData.due_date || undefined,
       category_id: issueData.category_id || undefined,
       uploads: descUploads.length > 0 ? descUploads : undefined,
@@ -361,7 +370,7 @@ async function fetchRedmineSearchHtml(searchUrl) {
 
 /**
  * Map Backlog issue type to preferred Redmine tracker name aliases.
- * QA → Q/A (and aliases); Task/Bug/CR when known; empty type → no preference.
+ * QA → Q/A; Bug/CR/Task when known; 要望* → Task; empty/unknown → no preference.
  */
 function getPreferredRedmineTrackerNames(backlogIssueType = "") {
   const type = String(backlogIssueType || "")
@@ -373,16 +382,17 @@ function getPreferredRedmineTrackerNames(backlogIssueType = "") {
   if (type === "qa" || type === "q/a" || type === "q&a") {
     return ["q/a", "q&a", "qa"];
   }
-  if (type === "bug") {
+  if (type === "bug" || type === "バグ" || type === "不具合") {
     return ["bug"];
   }
   if (type === "cr") {
     return ["cr"];
   }
-  if (type === "task") {
+  // Task + Japanese request types (要望 / 要望（実装） / …) prefer Task, not Q/A
+  if (type === "task" || type === "タスク" || type === "課題" || type.startsWith("要望")) {
     return ["task"];
   }
-  // Unknown Backlog types: no tracker preference (avoid forcing a miss → null lookup)
+  // Unknown Backlog types: no tracker preference
   return [];
 }
 

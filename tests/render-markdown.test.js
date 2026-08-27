@@ -71,3 +71,62 @@ test("renders fenced code without applying inline markdown", () => {
     "<pre><code>**not bold**</code></pre>"
   );
 });
+
+function createRedminePreview() {
+  const markdownSource = fs.readFileSync(
+    path.join(__dirname, "..", "src", "modules", "utils", "markdown.js"),
+    "utf8"
+  );
+  const context = vm.createContext({
+    window: {},
+    globalThis: {},
+  });
+  context.globalThis = context;
+  vm.runInContext(markdownSource, context);
+  vm.runInContext(source, context);
+  return context.window.renderRedmineNotePreview;
+}
+
+test("Redmine preview shows Textile collapse and attachments", () => {
+  const renderRedmineNotePreview = createRedminePreview();
+  const html = renderRedmineNotePreview(
+    [
+      "**bold** and [docs](https://example.com)",
+      "",
+      "```",
+      "line--with--dashes",
+      "```",
+      "",
+      "{{collapse(VN)",
+      "",
+      "noi dung",
+      "}}",
+      "",
+      "!shot.png!",
+    ].join("\n")
+  );
+
+  assert.match(html, /<strong>bold<\/strong>/);
+  assert.match(html, /href="https:\/\/example\.com"/);
+  assert.match(html, /<pre><code>line--with--dashes<\/code><\/pre>/);
+  assert.match(html, /tb-redmine-collapse/);
+  assert.match(html, /<summary>VN<\/summary>/);
+  assert.match(html, /tb-redmine-attachment/);
+  assert.match(html, />shot\.png</);
+  assert.doesNotMatch(html, /```/);
+  assert.doesNotMatch(html, /\*\*bold\*\*/);
+});
+
+test("Redmine preview escapes unsafe content in collapse titles", () => {
+  const renderRedmineNotePreview = createRedminePreview();
+  const html = renderRedmineNotePreview("{{collapse(<script>x</script>)\n\nbody\n}}");
+  assert.match(html, /&lt;script&gt;x&lt;\/script&gt;/);
+  assert.doesNotMatch(html, /<script>x<\/script>/);
+});
+
+test("Redmine preview keeps literal </pre> inside fenced code", () => {
+  const renderRedmineNotePreview = createRedminePreview();
+  const html = renderRedmineNotePreview("```\n</pre>hack\n```");
+  assert.match(html, /<pre><code>&lt;\/pre&gt;hack<\/code><\/pre>/);
+  assert.equal((html.match(/<\/pre>/gi) || []).length, 1);
+});

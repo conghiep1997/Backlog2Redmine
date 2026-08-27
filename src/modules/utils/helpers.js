@@ -107,7 +107,11 @@ function sendRuntimeMessage(payload) {
   return new Promise((resolve, reject) => {
     const runtime = getChromeRuntime();
     if (!runtime?.sendMessage) {
-      reject(new Error("Extension runtime is unavailable. Please reload the page."));
+      const unavailable =
+        typeof TB !== "undefined" && TB.MESSAGES?.SETTINGS?.RUNTIME_UNAVAILABLE
+          ? TB.MESSAGES.SETTINGS.RUNTIME_UNAVAILABLE
+          : "Runtime extension không khả dụng. Vui lòng tải lại trang.";
+      reject(new Error(unavailable));
       return;
     }
 
@@ -118,7 +122,7 @@ function sendRuntimeMessage(payload) {
         return;
       }
       if (!response?.ok) {
-        reject(new Error(response?.error || "Unknown background error."));
+        reject(new Error(response?.error || "Lỗi không xác định từ background."));
         return;
       }
       resolve(response);

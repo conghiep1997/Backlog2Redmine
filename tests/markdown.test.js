@@ -66,13 +66,17 @@ function querySelector(root, selector) {
 function createExtractor() {
   const context = vm.createContext({
     Node: { TEXT_NODE, ELEMENT_NODE },
+    globalThis: {},
   });
-  vm.runInContext(`${source}\nthis.extractBacklogContent = extractBacklogContent;`, context);
-  return context.extractBacklogContent;
+  vm.runInContext(
+    `${source}\nthis.extractBacklogContent = extractBacklogContent;\nthis.markdownToTextile = markdownToTextile;`,
+    context
+  );
+  return context;
 }
 
 test("preserves fenced code blocks with special URL characters", () => {
-  const extractBacklogContent = createExtractor();
+  const { extractBacklogContent } = createExtractor();
   const codeText =
     "https://example.com/my--page\nhttps://example.com/base/*\nhttps://example.com/a;b\nhttps://example.com/p?id=0xAB";
   const root = createElement("div", { class: "markdown-body" }, [
@@ -88,7 +92,7 @@ test("preserves fenced code blocks with special URL characters", () => {
 });
 
 test("preserves inline code literals used in the QA note", () => {
-  const extractBacklogContent = createExtractor();
+  const { extractBacklogContent } = createExtractor();
   const root = createElement("p", {}, [
     createTextNode("blocked by "),
     createElement("code", {}, [createTextNode("--")]),
@@ -104,7 +108,7 @@ test("preserves inline code literals used in the QA note", () => {
 });
 
 test("converts underline, color span, and task list checkboxes", () => {
-  const extractBacklogContent = createExtractor();
+  const { extractBacklogContent } = createExtractor();
   const checked = createElement("input", { type: "checkbox" });
   checked.checked = true;
   const unchecked = createElement("input", { type: "checkbox" });
@@ -127,4 +131,49 @@ test("converts underline, color span, and task list checkboxes", () => {
   assert.match(markdown, /<span style="color: red">red<\/span>/);
   assert.match(markdown, /\* \[x\] done/);
   assert.match(markdown, /\* \[ \] todo/);
+});
+
+test("markdownToTextile converts fences, bold, links for Redmine notes", () => {
+  const { markdownToTextile } = createExtractor();
+  const input = [
+    "**bold** and `inline`",
+    "",
+    "```",
+    "https://example.com/my--page",
+    "```",
+    "",
+    "[docs](https://example.com)",
+    "",
+    "{{collapse(VN)",
+    "",
+    "**dich**",
+    "}}",
+  ].join("\n");
+
+  const textile = markdownToTextile(input);
+  assert.match(textile, /\*bold\*/);
+  assert.match(textile, /<code>inline<\/code>/);
+  assert.match(textile, /<pre>\nhttps:\/\/example\.com\/my--page\n<\/pre>/);
+  assert.match(textile, /"docs":https:\/\/example\.com/);
+  assert.match(textile, /\{\{collapse\(VN\)/);
+  assert.match(textile, /\*dich\*/);
+  assert.doesNotMatch(textile, /```/);
+  assert.doesNotMatch(textile, /\*\*bold\*\*/);
+});
+
+test("markdownToTextile escapes closing pre/code tags inside fences", () => {
+  const { markdownToTextile } = createExtractor();
+  const textile = markdownToTextile("```\n</pre>hack\n```");
+  assert.match(textile, /<pre>\n&lt;\/pre&gt;hack\n<\/pre>/);
+  assert.equal((textile.match(/<\/pre>/gi) || []).length, 1);
+});
+
+test("markdownToTextile keeps single-asterisk Textile bold intact", () => {
+  const { markdownToTextile } = createExtractor();
+  assert.equal(markdownToTextile("*already* and **md**"), "*already* and *md*");
+});
+
+test("markdownToTextile escapes html special chars in inline code", () => {
+  const { markdownToTextile } = createExtractor();
+  assert.equal(markdownToTextile("`a<b>&c`"), "<code>a&lt;b&gt;&amp;c</code>");
 });
