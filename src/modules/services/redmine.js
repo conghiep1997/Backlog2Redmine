@@ -53,10 +53,14 @@ async function findRedmineIssue(
       const hasPreference = preferredTrackers.length > 0;
       const trackerMatchesPreference =
         matchedTracker && preferredTrackers.some((name) => normalizeLoose(name) === matchedTracker);
+      const strongTextMatch = hasStrongRedmineTextMatch(
+        normalizeLoose(bestMatch.subject),
+        normalizedIssueKey,
+        normalizedIssueSummary
+      );
 
-      // Accept HTML hit when: no tracker preference, preference matches, or tracker unknown
-      // (unknown → keep candidate only if preference unset; otherwise verify via API).
-      if (!hasPreference || trackerMatchesPreference) {
+      // Accept HTML hit when tracker matches, is unknown, or text match is strong enough.
+      if (!hasPreference || trackerMatchesPreference || strongTextMatch) {
         return { id: String(bestMatch.id), title: bestMatch.subject };
       }
       if (!matchedTracker) {
@@ -132,20 +136,29 @@ async function findRedmineIssueViaApi(
   issueSummary = "",
   preferredTrackers = []
 ) {
-  const url = buildRedmineUrl(
-    redmineDomain,
-    `/issues.json?subject=${encodeURIComponent(issueKey)}&limit=25`
-  );
-  const response = await fetch(url, {
-    headers: { "X-Redmine-API-Key": apiKey, Accept: "application/json" },
-  });
+  const normalizedIssueKey = normalizeLoose(issueKey);
+  const normalizedIssueSummary = normalizeLoose(issueSummary);
+  const subjectQueries = [issueKey, issueSummary].filter(Boolean);
+  const seenIds = new Set();
+  const issues = [];
 
-  if (!response.ok) {
-    throw new Error(`${TB.MESSAGES.REDMINE.LOOKUP_FAILED}: ${response.status}`);
+  for (const subjectQuery of subjectQueries) {
+    const batch = await fetchIssuesBySubjectQuery(redmineDomain, apiKey, subjectQuery);
+    for (const issue of batch) {
+      if (!seenIds.has(issue.id)) {
+        seenIds.add(issue.id);
+        issues.push(issue);
+      }
+    }
+    if (
+      issues.some((issue) =>
+        hasStrongRedmineTextMatch(normalizeLoose(issue.subject), normalizedIssueKey, normalizedIssueSummary)
+      )
+    ) {
+      break;
+    }
   }
 
-  const data = await safeReadJson(response);
-  const issues = Array.isArray(data?.issues) ? data.issues : [];
   if (issues.length === 0) {
     return null;
   }
@@ -156,8 +169,8 @@ async function findRedmineIssueViaApi(
       subject: i.subject,
       tracker: i.tracker?.name || "",
     })),
-    normalizeLoose(issueKey),
-    normalizeLoose(issueSummary),
+    normalizedIssueKey,
+    normalizedIssueSummary,
     preferredTrackers
   );
 
@@ -165,6 +178,23 @@ async function findRedmineIssueViaApi(
     return null;
   }
   return { id: String(bestMatch.id), title: bestMatch.subject };
+}
+
+async function fetchIssuesBySubjectQuery(redmineDomain, apiKey, subjectQuery) {
+  const url = buildRedmineUrl(
+    redmineDomain,
+    `/issues.json?subject=${encodeURIComponent(subjectQuery)}&limit=25`
+  );
+  const response = await fetch(url, {
+    headers: { "X-Redmine-API-Key": apiKey, Accept: "application/json" },
+  });
+
+  if (!response.ok) {
+    throw new Error(`${TB.MESSAGES.REDMINE.LOOKUP_FAILED}: ${response.status}`);
+  }
+
+  const data = await safeReadJson(response);
+  return Array.isArray(data?.issues) ? data.issues : [];
 }
 
 async function handleSendToRedmine(
@@ -417,6 +447,22 @@ function extractRedmineSearchResults(html) {
   return results;
 }
 
+const STRONG_SUMMARY_MIN_LENGTH = 12;
+
+function hasStrongRedmineTextMatch(normalizedSubject, normalizedIssueKey, normalizedIssueSummary) {
+  if (!normalizedSubject) {
+    return false;
+  }
+  if (normalizedIssueKey && normalizedSubject.includes(normalizedIssueKey)) {
+    return true;
+  }
+  return (
+    Boolean(normalizedIssueSummary) &&
+    normalizedIssueSummary.length >= STRONG_SUMMARY_MIN_LENGTH &&
+    normalizedSubject.includes(normalizedIssueSummary)
+  );
+}
+
 /**
  * Pick best match from search results based on scoring.
  * Selects best result based on score (issue key + summary + tracker match).
@@ -452,7 +498,7 @@ function pickBestRedmineSearchResult(
           score -= 4;
         }
       }
-      return { item, score, trackerName };
+      return { item, score, trackerName, normalizedSubject };
     })
     .sort((a, b) => b.score - a.score);
 
@@ -463,8 +509,20 @@ function pickBestRedmineSearchResult(
     if (preferredHit) {
       return preferredHit.item;
     }
+    const strongest = scored[0];
+    if (
+      strongest &&
+      hasStrongRedmineTextMatch(
+        strongest.normalizedSubject,
+        normalizedIssueKey,
+        normalizedIssueSummary
+      )
+    ) {
+      return strongest.item;
+    }
     const anyTracked = scored.some((entry) => entry.trackerName);
-    // Candidates have tracker metadata but none match preference → do not guess wrong tracker
+    // Candidates have tracker metadata but none match preference → do not guess wrong tracker.
+    // If the best textual hit is weak, keep searching instead of returning a risky mismatch.
     if (anyTracked) {
       return null;
     }

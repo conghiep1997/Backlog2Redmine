@@ -202,7 +202,7 @@ function renderMarkdownHtml(text) {
       continue;
     }
 
-    const quoteMatch = line.match(/^&gt;\s?(.+)$/);
+    const quoteMatch = line.match(/^&gt;\s?(.*)$/);
     if (quoteMatch) {
       flushParagraph(blocks, paragraphLines);
       flushList(blocks, listState);
@@ -390,7 +390,8 @@ function renderTextileHtml(textile) {
       continue;
     }
 
-    const quoteMatch = trimmed.match(/^bq\.\s+(.*)$/);
+    const quoteMatch =
+      trimmed.match(/^bq\.\s+(.*)$/) || trimmed.match(/^&gt;\s?(.*)$/);
     if (quoteMatch) {
       flushTextileParagraph(blocks, paragraphLines);
       flushTextileList(blocks, listState);

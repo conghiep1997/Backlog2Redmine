@@ -161,6 +161,12 @@ test("markdownToTextile converts fences, bold, links for Redmine notes", () => {
   assert.doesNotMatch(textile, /\*\*bold\*\*/);
 });
 
+test("markdownToTextile preserves markdown blockquote markers", () => {
+  const { markdownToTextile } = createExtractor();
+  const textile = markdownToTextile("> first line\n> second line\n\nplain text");
+  assert.equal(textile, "> first line\n> second line\n\nplain text");
+});
+
 test("markdownToTextile escapes closing pre/code tags inside fences", () => {
   const { markdownToTextile } = createExtractor();
   const textile = markdownToTextile("```\n</pre>hack\n```");

@@ -744,6 +744,19 @@ function extractCleanedTranslation(rawText) {
   return cleaned;
 }
 
+function isPromptBoundaryMarkerLine(line) {
+  const trimmed = String(line || "").trim();
+  return /^\[(?:BẮT ĐẦU|KẾT THÚC)(?:\s+NỘI DUNG)?\]$/iu.test(trimmed) || /^\[TB_(?:START|END)\]$/i.test(trimmed);
+}
+
+function stripPromptBoundaryMarkers(text) {
+  return String(text || "")
+    .split("\n")
+    .filter((line) => !isPromptBoundaryMarkerLine(line))
+    .join("\n")
+    .trim();
+}
+
 function normalizeTranslationOutput(rawText) {
   // Normalize output from AI: remove unnecessary markers and tags
   let cleaned = rawText.trim();
@@ -788,9 +801,9 @@ function normalizeTranslationOutput(rawText) {
       if (!line) {
         continue;
       }
-      const isNoise = noiseMarkers.some((marker) =>
-        line.toUpperCase().includes(marker.toUpperCase())
-      );
+      const isNoise =
+        isPromptBoundaryMarkerLine(line) ||
+        noiseMarkers.some((marker) => line.toUpperCase().includes(marker.toUpperCase()));
       if (isNoise || isSafetyMetadataLine(line) || /^\d+\.\s+[A-Z\s]+/.test(line)) {
         firstValidLineIndex = i + 1;
         continue;
@@ -806,13 +819,16 @@ function normalizeTranslationOutput(rawText) {
   // --- End Added Logic ---
 
   cleaned = cleaned
-    .replace(/\[KẾT THÚC NỘI DUNG\]\s*$/g, "")
-    .replace(/\[BẮT ĐẦU NỘI DUNG\]\s*$/g, "")
+    .replace(/\[KẾT THÚC(?:\s+NỘI DUNG)?\]\s*$/giu, "")
+    .replace(/\[BẮT ĐẦU(?:\s+NỘI DUNG)?\]\s*$/giu, "")
+    .replace(/^\[BẮT ĐẦU(?:\s+NỘI DUNG)?\]\s*\r?\n?/giu, "")
+    .replace(/\r?\n\[KẾT THÚC(?:\s+NỘI DUNG)?\]\s*$/giu, "")
     .replace(/\[TB_END\]\s*$/g, "")
     .replace(/\[TB_START\]\s*$/g, "")
     .replace(/\[\/?result\]/gi, "")
     .replace(/<\/?result>/gi, "")
     .trim();
+  cleaned = stripPromptBoundaryMarkers(cleaned);
   if (!cleaned || cleaned.length < 2) {
     cleaned = rawText.trim();
   }

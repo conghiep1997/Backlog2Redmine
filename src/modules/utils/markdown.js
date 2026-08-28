@@ -519,8 +519,7 @@ function markdownToTextile(markdown) {
   text = text.replace(/^##\s+(.+)$/gm, "h2. $1");
   text = text.replace(/^#\s+(.+)$/gm, "h1. $1");
 
-  // Blockquotes
-  text = text.replace(/^>\s?/gm, "bq. ");
+  // Blockquotes: keep Markdown `>` markers intact for this Redmine instance.
 
   // Bold **text** → Textile *text* (protect so later passes leave it alone)
   text = text.replace(/\*\*(.+?)\*\*/g, (_m, inner) => protect(`*${inner}*`));

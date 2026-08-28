@@ -130,3 +130,19 @@ test("Redmine preview keeps literal </pre> inside fenced code", () => {
   assert.match(html, /<pre><code>&lt;\/pre&gt;hack<\/code><\/pre>/);
   assert.equal((html.match(/<\/pre>/gi) || []).length, 1);
 });
+
+test("Redmine preview renders markdown blockquotes instead of showing raw markers", () => {
+  const renderRedmineNotePreview = createRedminePreview();
+  const html = renderRedmineNotePreview(
+    ["> 【Merge Request】", "> ", "> ・couix-api:", "> https://example.com"].join("\n")
+  );
+
+  assert.match(html, /<blockquote>【Merge Request】<br><br>・couix-api:<br>https:\/\/example\.com<\/blockquote>/);
+  assert.doesNotMatch(html, /&gt; 【Merge Request】/);
+});
+
+test("markdown preview renders empty blockquote lines", () => {
+  const renderMarkdownHtml = createRenderer();
+  const html = renderMarkdownHtml("> first\n> \n> second");
+  assert.equal(html, "<blockquote>first<br><br>second</blockquote>");
+});
