@@ -137,7 +137,10 @@ test("Redmine preview renders markdown blockquotes instead of showing raw marker
     ["> 【Merge Request】", "> ", "> ・couix-api:", "> https://example.com"].join("\n")
   );
 
-  assert.match(html, /<blockquote>【Merge Request】<br><br>・couix-api:<br>https:\/\/example\.com<\/blockquote>/);
+  assert.match(
+    html,
+    /<blockquote>【Merge Request】<br><br>・couix-api:<br>https:\/\/example\.com<\/blockquote>/
+  );
   assert.doesNotMatch(html, /&gt; 【Merge Request】/);
 });
 

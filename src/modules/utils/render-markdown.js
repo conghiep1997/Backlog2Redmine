@@ -390,8 +390,7 @@ function renderTextileHtml(textile) {
       continue;
     }
 
-    const quoteMatch =
-      trimmed.match(/^bq\.\s+(.*)$/) || trimmed.match(/^&gt;\s?(.*)$/);
+    const quoteMatch = trimmed.match(/^bq\.\s+(.*)$/) || trimmed.match(/^&gt;\s?(.*)$/);
     if (quoteMatch) {
       flushTextileParagraph(blocks, paragraphLines);
       flushTextileList(blocks, listState);

@@ -746,7 +746,10 @@ function extractCleanedTranslation(rawText) {
 
 function isPromptBoundaryMarkerLine(line) {
   const trimmed = String(line || "").trim();
-  return /^\[(?:BẮT ĐẦU|KẾT THÚC)(?:\s+NỘI DUNG)?\]$/iu.test(trimmed) || /^\[TB_(?:START|END)\]$/i.test(trimmed);
+  return (
+    /^\[(?:BẮT ĐẦU|KẾT THÚC)(?:\s+NỘI DUNG)?\]$/iu.test(trimmed) ||
+    /^\[TB_(?:START|END)\]$/i.test(trimmed)
+  );
 }
 
 function stripPromptBoundaryMarkers(text) {

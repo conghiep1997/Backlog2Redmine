@@ -4,11 +4,17 @@ const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 
-const source = fs.readFileSync(path.join(__dirname, "..", "src", "modules", "services", "ai.js"), "utf8");
+const source = fs.readFileSync(
+  path.join(__dirname, "..", "src", "modules", "services", "ai.js"),
+  "utf8"
+);
 
 function createNormalizer() {
   const context = vm.createContext({ console, globalThis: {} });
-  vm.runInContext(`${source}\nthis.normalizeTranslationOutput = normalizeTranslationOutput;`, context);
+  vm.runInContext(
+    `${source}\nthis.normalizeTranslationOutput = normalizeTranslationOutput;`,
+    context
+  );
   return context.normalizeTranslationOutput;
 }
 
