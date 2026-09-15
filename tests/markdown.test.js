@@ -67,9 +67,11 @@ function createExtractor() {
   const context = vm.createContext({
     Node: { TEXT_NODE, ELEMENT_NODE },
     globalThis: {},
+    window: { location: { origin: "https://example.backlog.com" } },
+    URL,
   });
   vm.runInContext(
-    `${source}\nthis.extractBacklogContent = extractBacklogContent;\nthis.markdownToTextile = markdownToTextile;`,
+    `${source}\nthis.extractBacklogContent = extractBacklogContent;\nthis.markdownToTextile = markdownToTextile;\nthis.resolveBacklogHref = resolveBacklogHref;`,
     context
   );
   return context;
@@ -159,6 +161,37 @@ test("markdownToTextile converts fences, bold, links for Redmine notes", () => {
   assert.match(textile, /\*dich\*/);
   assert.doesNotMatch(textile, /```/);
   assert.doesNotMatch(textile, /\*\*bold\*\*/);
+});
+
+test("extractBacklogContent absolutizes relative Backlog issue links", () => {
+  const { extractBacklogContent } = createExtractor();
+  const root = createElement("p", {}, [
+    createElement("a", { href: "/view/COUIX_PJ-3649" }, [createTextNode("COUIX_PJ-3649")]),
+    createTextNode(" 【性能改善】title"),
+  ]);
+
+  const markdown = extractBacklogContent(root);
+  assert.match(
+    markdown,
+    /\[COUIX_PJ-3649\]\(https:\/\/example\.backlog\.com\/view\/COUIX_PJ-3649\)/
+  );
+});
+
+test("markdownToTextile converts relative Backlog issue links to Textile", () => {
+  const { markdownToTextile } = createExtractor();
+  const textile = markdownToTextile(
+    "[COUIX_PJ-3649](/view/COUIX_PJ-3649) 【性能改善】デザインテーマ"
+  );
+  assert.match(textile, /"COUIX_PJ-3649":https:\/\/example\.backlog\.com\/view\/COUIX_PJ-3649/);
+  assert.doesNotMatch(textile, /\[COUIX_PJ-3649\]\(\/view\/COUIX_PJ-3649\)/);
+});
+
+test("markdownToTextile drops unsafe link schemes", () => {
+  const { markdownToTextile } = createExtractor();
+  const textile = markdownToTextile("[x](javascript:alert(1)) and [ok](https://example.com)");
+  assert.doesNotMatch(textile, /javascript:/i);
+  assert.match(textile, /"ok":https:\/\/example\.com/);
+  assert.match(textile, /\bx\b/);
 });
 
 test("markdownToTextile preserves markdown blockquote markers", () => {

@@ -400,6 +400,8 @@ function openConfirmModal(options) {
     hasBatchOption = false,
     isMigration = false,
     commentsCount = 0,
+    initialBatchNotes = null,
+    migrateCommentsByDefault = false,
     onCancel,
     onConfirm,
     translateBatch,
@@ -448,7 +450,7 @@ function openConfirmModal(options) {
 
   let currentMode = false;
   let currentNotesList = [previewText];
-  let memoizedBatchNotes = null;
+  let memoizedBatchNotes = Array.isArray(initialBatchNotes) ? initialBatchNotes.slice() : null;
   let pendingBatchNotes = null;
 
   const validateMigrationForm = () => {
@@ -701,7 +703,13 @@ function openConfirmModal(options) {
       ? TB.MESSAGES.MODAL.MIGRATE_COMMENTS_TEXT(commentsCount)
       : TB.MESSAGES.MODAL.BATCH_TEXT(remainingComments.length + 1);
 
-    batchOptionCheckbox.checked = false;
+    // Migrate: include comments/notes by default when present.
+    const shouldEnableComments =
+      (isMigration && migrateCommentsByDefault && commentsCount > 0) ||
+      (isMigration && Array.isArray(initialBatchNotes) && initialBatchNotes.length > 0);
+    batchOptionCheckbox.checked = shouldEnableComments;
+    currentMode = shouldEnableComments;
+
     batchOptionCheckbox.onchange = async (e) => {
       currentMode = e.target.checked;
       updateModalState();
@@ -725,9 +733,11 @@ function openConfirmModal(options) {
         } finally {
           confirmButton.disabled = false;
           updateModalState();
+          if (isMigration) validateMigrationForm();
         }
       } else {
         updateModalState();
+        if (isMigration) validateMigrationForm();
       }
     };
   } else {
@@ -809,7 +819,17 @@ function openConfirmModal(options) {
           setModalLoading(false);
           return;
         }
-        const comments = batchOptionCheckbox.checked ? (memoizedBatchNotes || []).slice() : [];
+        // When migrate comments is enabled, require translated notes before create.
+        let comments = [];
+        if (batchOptionCheckbox.checked) {
+          comments = (memoizedBatchNotes || []).slice().filter((note) => String(note || "").trim());
+          if (commentsCount > 0 && comments.length === 0) {
+            showToast(TB.MESSAGES.TOAST.EMPTY_COMMENT, "error");
+            confirmButton.disabled = false;
+            setModalLoading(false);
+            return;
+          }
+        }
         await onConfirm({
           issueData,
           comments,
@@ -1171,7 +1191,13 @@ function openBacklogModal({
   document.body.classList.add("tb-modal-open");
 }
 
-async function openSuccessModal({ redmineUrl, commentCount = 1, onClose, isBacklog = false }) {
+async function openSuccessModal({
+  redmineUrl,
+  commentCount = 1,
+  onClose,
+  isBacklog = false,
+  forceShow = false,
+}) {
   ensureModalShell();
   const {
     overlay,
@@ -1183,7 +1209,8 @@ async function openSuccessModal({ redmineUrl, commentCount = 1, onClose, isBackl
     successViewButton,
     successCloseButton,
   } = modalElements;
-  if (!isBacklog) {
+  // Preference only applies to comment sync; migrate always shows the Redmine link modal.
+  if (!isBacklog && !forceShow) {
     try {
       const settingsResponse = await sendRuntimeMessage({ type: "GET_UI_SETTINGS" });
       const settings = settingsResponse.data || settingsResponse;
@@ -1218,7 +1245,8 @@ async function openSuccessModal({ redmineUrl, commentCount = 1, onClose, isBackl
   successLinkEl.href = redmineUrl;
   if (successHideLabel && successHideCheckbox) {
     successHideCheckbox.checked = false;
-    successHideLabel.hidden = isBacklog;
+    // Hide preference toggle on migrate / Backlog flows — setting is comment-sync only.
+    successHideLabel.hidden = isBacklog || forceShow;
     successHideCheckbox.onchange = async () => {
       if (!successHideCheckbox.checked) return;
       try {

@@ -15,6 +15,8 @@ Guidance for Backlog2Redmine options UI, injected Backlog/Redmine controls, shar
 - Keep options UI settings aligned with encrypted storage keys and background `getSettings`.
 - Avoid API/user/page data in `innerHTML`; sanitize, use `textContent`, `new Option`, or DOM nodes.
 - Keep markdown preview links limited to safe protocols.
+- `showRedmineSuccessModal` applies to comment-sync success only; migrate uses `forceShow` and always shows the Redmine link modal.
+- Migrate modal should default-enable “move all comments” when comments exist (`initialBatchNotes` / `migrateCommentsByDefault`).
 - Preserve SPA navigation handling and observer cleanup in content scripts.
 - Keep Vietnamese/i18n fallbacks consistent with `_locales/` and `src/constants.js`.
 - Do not move privileged API calls into page-facing UI code.

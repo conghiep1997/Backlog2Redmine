@@ -21,50 +21,55 @@ async function findRedmineIssue(
   backlogIssueType = ""
 ) {
   const normalizedIssueKey = normalizeLoose(issueKey);
-  const normalizedIssueSummary = normalizeLoose(issueSummary);
+  // Backlog summary is JP; Redmine often appends " / (VN translation)" — match JP only.
+  const normalizedIssueSummary = normalizeLoose(extractJapaneseTitlePart(issueSummary));
   const preferredTrackers = getPreferredRedmineTrackerNames(backlogIssueType);
-  const searchQuery = [issueKey, issueSummary].filter(Boolean).join(" ");
-  const searchUrl = buildRedmineUrl(
-    redmineDomain,
-    `/search?${new URLSearchParams({
-      q: searchQuery,
-      scope: "all",
-      titles_only: "1",
-      issues: "1",
-      commit: "Search",
-    }).toString()}`
-  );
+  // Search key and JP title separately. Combining them AND-fails when subject has no key
+  // or when VN translation differs from what was indexed with the JP title.
+  const searchQueries = [issueKey, extractJapaneseTitlePart(issueSummary)].filter(Boolean);
 
   try {
-    // Attempt to search HTML first for the best match
-    const html = await fetchRedmineSearchHtml(searchUrl);
-    const searchResults = extractRedmineSearchResults(html);
-    const bestMatch = pickBestRedmineSearchResult(
-      searchResults,
-      normalizedIssueKey,
-      normalizedIssueSummary,
-      preferredTrackers
-    );
-
-    if (bestMatch) {
-      const matchedTracker = normalizeLoose(
-        bestMatch.tracker || extractTrackerFromSearchSubject(bestMatch.subject)
+    for (const searchQuery of searchQueries) {
+      const searchUrl = buildRedmineUrl(
+        redmineDomain,
+        `/search?${new URLSearchParams({
+          q: searchQuery,
+          scope: "all",
+          titles_only: "1",
+          issues: "1",
+          commit: "Search",
+        }).toString()}`
       );
-      const hasPreference = preferredTrackers.length > 0;
-      const trackerMatchesPreference =
-        matchedTracker && preferredTrackers.some((name) => normalizeLoose(name) === matchedTracker);
-      const strongTextMatch = hasStrongRedmineTextMatch(
-        normalizeLoose(bestMatch.subject),
+      const html = await fetchRedmineSearchHtml(searchUrl);
+      const searchResults = extractRedmineSearchResults(html);
+      const bestMatch = pickBestRedmineSearchResult(
+        searchResults,
         normalizedIssueKey,
-        normalizedIssueSummary
+        normalizedIssueSummary,
+        preferredTrackers
       );
 
-      // Accept HTML hit when tracker matches, is unknown, or text match is strong enough.
-      if (!hasPreference || trackerMatchesPreference || strongTextMatch) {
-        return { id: String(bestMatch.id), title: bestMatch.subject };
-      }
-      if (!matchedTracker) {
-        // Fall through to API for tracker-aware confirmation
+      if (bestMatch) {
+        const matchedTracker = normalizeLoose(
+          bestMatch.tracker || extractTrackerFromSearchSubject(bestMatch.subject)
+        );
+        const hasPreference = preferredTrackers.length > 0;
+        const trackerMatchesPreference =
+          matchedTracker &&
+          preferredTrackers.some((name) => normalizeLoose(name) === matchedTracker);
+        const strongTextMatch = hasStrongRedmineTextMatch(
+          bestMatch.subject,
+          normalizedIssueKey,
+          normalizedIssueSummary
+        );
+
+        // Accept HTML hit when tracker matches, is unknown, or text match is strong enough.
+        if (!hasPreference || trackerMatchesPreference || strongTextMatch) {
+          return { id: String(bestMatch.id), title: bestMatch.subject };
+        }
+        if (!matchedTracker) {
+          // Fall through to next query / API for tracker-aware confirmation
+        }
       }
     }
   } catch (error) {
@@ -137,8 +142,8 @@ async function findRedmineIssueViaApi(
   preferredTrackers = []
 ) {
   const normalizedIssueKey = normalizeLoose(issueKey);
-  const normalizedIssueSummary = normalizeLoose(issueSummary);
-  const subjectQueries = [issueKey, issueSummary].filter(Boolean);
+  const normalizedIssueSummary = normalizeLoose(extractJapaneseTitlePart(issueSummary));
+  const subjectQueries = [issueKey, extractJapaneseTitlePart(issueSummary)].filter(Boolean);
   const seenIds = new Set();
   const issues = [];
 
@@ -152,7 +157,7 @@ async function findRedmineIssueViaApi(
     }
     if (
       issues.some((issue) =>
-        hasStrongRedmineTextMatch(normalizeLoose(issue.subject), normalizedIssueKey, normalizedIssueSummary)
+        hasStrongRedmineTextMatch(issue.subject, normalizedIssueKey, normalizedIssueSummary)
       )
     ) {
       break;
@@ -181,9 +186,14 @@ async function findRedmineIssueViaApi(
 }
 
 async function fetchIssuesBySubjectQuery(redmineDomain, apiKey, subjectQuery) {
+  // Use contains (~) and all statuses — same pattern as report-log-time lookup.
   const url = buildRedmineUrl(
     redmineDomain,
-    `/issues.json?subject=${encodeURIComponent(subjectQuery)}&limit=25`
+    `/issues.json?${new URLSearchParams({
+      subject: `~${subjectQuery}`,
+      status_id: "*",
+      limit: "25",
+    }).toString()}`
   );
   const response = await fetch(url, {
     headers: { "X-Redmine-API-Key": apiKey, Accept: "application/json" },
@@ -449,16 +459,53 @@ function extractRedmineSearchResults(html) {
 
 const STRONG_SUMMARY_MIN_LENGTH = 12;
 
-function hasStrongRedmineTextMatch(normalizedSubject, normalizedIssueKey, normalizedIssueSummary) {
-  if (!normalizedSubject) {
+/**
+ * Strip Redmine search link prefix like "Task #123 (New): ".
+ */
+function stripRedmineSearchSubjectPrefix(subject = "") {
+  return String(subject || "")
+    .replace(/^.+?\s+#\d+\s*\([^)]*\):\s*/u, "")
+    .trim();
+}
+
+/**
+ * Prefer the Japanese title segment for matching.
+ * Common Redmine subject shapes:
+ * - "【調査】... / ([Điều tra] ...)"  → JP before " / ("
+ * - "COUIX_PJ-1 【調査】... (VN)"     → full title still compared via includes()
+ */
+function extractJapaneseTitlePart(subject = "") {
+  const title = stripRedmineSearchSubjectPrefix(subject);
+  if (!title) {
+    return "";
+  }
+  const bilingualSplit = title.split(/\s\/\s+(?=[([])/u);
+  if (bilingualSplit.length > 1) {
+    return bilingualSplit[0].trim();
+  }
+  return title.trim();
+}
+
+function hasStrongRedmineTextMatch(subject, normalizedIssueKey, normalizedIssueSummary) {
+  const normalizedSubject = normalizeLoose(subject);
+  const normalizedComparable = normalizeLoose(extractJapaneseTitlePart(subject));
+  if (!normalizedSubject && !normalizedComparable) {
     return false;
   }
-  if (normalizedIssueKey && normalizedSubject.includes(normalizedIssueKey)) {
+  if (
+    normalizedIssueKey &&
+    (normalizedSubject.includes(normalizedIssueKey) ||
+      normalizedComparable.includes(normalizedIssueKey))
+  ) {
     return true;
   }
+  if (!normalizedIssueSummary || normalizedIssueSummary.length < STRONG_SUMMARY_MIN_LENGTH) {
+    return false;
+  }
+  // Compare JP segments; ignore VN translation differences after " / (...)".
   return (
-    Boolean(normalizedIssueSummary) &&
-    normalizedIssueSummary.length >= STRONG_SUMMARY_MIN_LENGTH &&
+    normalizedComparable === normalizedIssueSummary ||
+    normalizedComparable.includes(normalizedIssueSummary) ||
     normalizedSubject.includes(normalizedIssueSummary)
   );
 }
@@ -481,14 +528,24 @@ function pickBestRedmineSearchResult(
   const scored = results
     .map((item) => {
       const normalizedSubject = normalizeLoose(item.subject);
+      const normalizedComparable = normalizeLoose(extractJapaneseTitlePart(item.subject));
       const trackerName = normalizeLoose(
         item.tracker || extractTrackerFromSearchSubject(item.subject)
       );
       let score = 0;
-      if (normalizedIssueKey && normalizedSubject.includes(normalizedIssueKey)) {
+      if (
+        normalizedIssueKey &&
+        (normalizedSubject.includes(normalizedIssueKey) ||
+          normalizedComparable.includes(normalizedIssueKey))
+      ) {
         score += 10;
       }
-      if (normalizedIssueSummary && normalizedSubject.includes(normalizedIssueSummary)) {
+      if (
+        normalizedIssueSummary &&
+        (normalizedComparable === normalizedIssueSummary ||
+          normalizedComparable.includes(normalizedIssueSummary) ||
+          normalizedSubject.includes(normalizedIssueSummary))
+      ) {
         score += 5;
       }
       if (preferred.length > 0 && trackerName) {
@@ -498,7 +555,7 @@ function pickBestRedmineSearchResult(
           score -= 4;
         }
       }
-      return { item, score, trackerName, normalizedSubject };
+      return { item, score, trackerName, subject: item.subject };
     })
     .sort((a, b) => b.score - a.score);
 
@@ -512,11 +569,7 @@ function pickBestRedmineSearchResult(
     const strongest = scored[0];
     if (
       strongest &&
-      hasStrongRedmineTextMatch(
-        strongest.normalizedSubject,
-        normalizedIssueKey,
-        normalizedIssueSummary
-      )
+      hasStrongRedmineTextMatch(strongest.subject, normalizedIssueKey, normalizedIssueSummary)
     ) {
       return strongest.item;
     }

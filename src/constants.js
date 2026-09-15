@@ -47,7 +47,7 @@
     modal_success_subtitle: "Bình luận đã được gửi thành công sang Redmine.",
     modal_success_view_button: "Xem trên Redmine",
     modal_success_close_button: "Đóng",
-    modal_success_hide_again_label: "Không hiển thị lại thông báo này",
+    modal_success_hide_again_label: "Không hiển thị lại (chỉ áp dụng khi dịch comment)",
     modal_notify_users_label: "Gắn thêm người (ví dụ: 12345, 67890)",
     modal_loading_title: "Đang tải tiêu đề...",
     modal_error_numeric_id: "⚠️ ID phải là chữ số!",

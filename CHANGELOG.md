@@ -1,5 +1,31 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.12] - 2026-09-15
+
+> Lookup theo title JP (bỏ qua bản dịch VN), migrate kèm comment mặc định, giữ link Backlog khi sync sang Redmine.
+
+### Added
+- Lookup Redmine tách phần title tiếng Nhật trước ` / (…)` để khớp dù bản dịch VN khác.
+- HTML/API search thử **riêng** issue key và title JP (không AND cả hai); API dùng `subject=~` + `status_id=*`.
+- **Di chuyển Issue** dịch sẵn và bật mặc định di chuyển toàn bộ comment/note bên dưới (nếu có).
+- Migrate luôn hiện success modal kèm link Redmine (`forceShow`), không phụ thuộc tùy chọn ẩn modal.
+- Absolutize link Backlog tương đối (`/view/KEY`) và convert sang Textile `"label":url` khi gửi Redmine.
+- Unit test cho match JP/VN bilingual subject, relative Backlog links, và drop `javascript:` links.
+
+### Fixed
+- Không còn miss issue Redmine khi subject dạng `【調査】… / ([Điều tra] …)` không chứa Backlog key.
+- Link issue trong comment không còn mất / hiện raw Markdown `[KEY](/view/KEY)` trên Redmine.
+- Dịch 1 comment lỗi không chặn cả flow migrate (fallback text gốc).
+- Chỉ coi `/user/` trên host Backlog là profile link; chỉ emit Textile link `http/https`.
+
+### Improved
+- Options: copy “Hiển thị modal thành công…” làm rõ **chỉ áp dụng dịch/gửi comment**; Di chuyển Issue luôn hiện modal + link.
+- Checkbox “Không hiển thị lại” trên success modal ghi chú chỉ ảnh hưởng dịch comment.
+
+### Docs
+- Cập nhật `CHANGELOG.md`, `README.md` (migrate + options), skill `cross-platform-sync` / `extension-ui`.
+
+
 ## [1.8.11] - 2026-08-27
 
 > Ưu tiên tracker khi lookup Redmine, giữ đúng format Markdown, hotfix migrate/batch/security P0.

@@ -261,25 +261,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
           onClose: () => setButtonLoading(button, false),
         });
       },
-      translateBatch: async (comments) => {
-        const results = [];
-        const BATCH_SIZE = TRANSLATE_BATCH_SIZE;
-        for (let i = 0; i < comments.length; i += BATCH_SIZE) {
-          const batch = comments.slice(i, i + BATCH_SIZE);
-          const batchResults = await Promise.all(
-            batch.map(async (c) => {
-              const r = await sendRuntimeMessageWithResponse({
-                type: "TRANSLATE_COMMENT_FULL",
-                commentText: c.text,
-                commentUrl: c.url,
-              });
-              return c.userInfo ? `${c.userInfo}\n${r.data.translatedText}` : r.data.translatedText;
-            })
-          );
-          results.push(...batchResults);
-        }
-        return results;
-      },
+      translateBatch: async (comments) => translateCommentBatch(comments),
     });
     setButtonLoading(button, false);
   } catch (err) {
@@ -292,6 +274,58 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
   }
 }
 
+async function translateCommentBatch(commentsList) {
+  const results = [];
+  for (let i = 0; i < commentsList.length; i += TRANSLATE_BATCH_SIZE) {
+    const batch = commentsList.slice(i, i + TRANSLATE_BATCH_SIZE);
+    const batchResults = await Promise.all(
+      batch.map(async (c) => {
+        try {
+          const r = await sendRuntimeMessageWithResponse({
+            type: "TRANSLATE_COMMENT_FULL",
+            commentText: c.text,
+            commentUrl: c.url,
+          });
+          return c.userInfo ? `${c.userInfo}\n${r.data.translatedText}` : r.data.translatedText;
+        } catch (err) {
+          console.warn("[TB-Content] Comment translation failed, using original text:", err);
+          // Keep migrate usable even if one comment translation fails.
+          return c.userInfo ? `${c.userInfo}\n${c.text}` : c.text;
+        }
+      })
+    );
+    results.push(...batchResults);
+  }
+  return results;
+}
+
+function collectBacklogCommentsForMigrate() {
+  // Prefer visible comment list; skip dummy/editor stubs from Backlog UI.
+  const nodes = Array.from(
+    document.querySelectorAll(
+      ".comment-item:not(.-dammy):not(.-dummy), [data-testid='commentItem']:not(.-dammy):not(.-dummy)"
+    )
+  );
+  const seen = new Set();
+  const comments = [];
+
+  for (const node of nodes) {
+    if (seen.has(node)) continue;
+    seen.add(node);
+    // Skip reply/editor shells that are not real posted comments.
+    if (node.querySelector("textarea, [contenteditable='true']")) continue;
+
+    const { text, userInfo } = getCommentFullText(node);
+    if (!text?.trim()) continue;
+    comments.push({
+      text,
+      userInfo,
+      url: getCommentUrl(node),
+    });
+  }
+  return comments;
+}
+
 async function handleIssueMigration(button) {
   const { issueKey, issueSummary, backlogIssueType, backlogMilestone } = getBacklogHeaderInfo();
   if (!issueKey) {
@@ -299,17 +333,8 @@ async function handleIssueMigration(button) {
     return;
   }
 
-  // Collect all comments to migrate with the issue
-  const comments = Array.from(document.querySelectorAll(".comment-item:not(.-dammy)"))
-    .map((i) => {
-      const { text, userInfo } = getCommentFullText(i);
-      return {
-        text,
-        userInfo,
-        url: getCommentUrl(i),
-      };
-    })
-    .filter((c) => c.text);
+  // Collect all comments/notes under the issue to migrate together.
+  const comments = collectBacklogCommentsForMigrate();
 
   setButtonLoading(button, true);
   try {
@@ -338,7 +363,8 @@ async function handleIssueMigration(button) {
       }
     });
 
-    const [descRes, subRes] = await Promise.all([
+    // Translate description, subject, and all comments up-front so migrate includes notes by default.
+    const [descRes, subRes, initialBatchNotes] = await Promise.all([
       sendRuntimeMessageWithResponse({
         type: "LOOKUP_AND_TRANSLATE_COMMENT",
         issueKey,
@@ -352,6 +378,7 @@ async function handleIssueMigration(button) {
         type: "TRANSLATE_TEXT_SIMPLE",
         text: issueSummary,
       }),
+      comments.length > 0 ? translateCommentBatch(comments) : Promise.resolve([]),
     ]);
 
     openConfirmModal({
@@ -360,6 +387,8 @@ async function handleIssueMigration(button) {
       previewText: descRes.data.previewText,
       remainingComments: comments,
       commentsCount: comments.length,
+      initialBatchNotes,
+      migrateCommentsByDefault: comments.length > 0,
       backlogIssueType,
       backlogMilestone,
       onCancel: () => setButtonLoading(button, false),
@@ -371,7 +400,7 @@ async function handleIssueMigration(button) {
         const result = await sendRuntimeMessageWithResponse({
           type: "CREATE_REDMINE_ISSUE",
           issueData: issueDataToSend,
-          comments: translatedComments, // Use translated comments from modal if any
+          comments: translatedComments, // Translated comments/notes migrated with the issue
         });
         const failedCommentCount = result.data?.failedCommentCount || 0;
         const failedComments = result.data?.failedComments || [];
@@ -394,28 +423,11 @@ async function handleIssueMigration(button) {
         await openSuccessModal({
           redmineUrl: result.data.redmineUrl,
           commentCount: (result.data?.migratedCommentCount || 0) + 1,
+          forceShow: true,
           onClose: () => setButtonLoading(button, false),
         });
       },
-      translateBatch: async (commentsList) => {
-        const results = [];
-        const BATCH_SIZE = TRANSLATE_BATCH_SIZE;
-        for (let i = 0; i < commentsList.length; i += BATCH_SIZE) {
-          const batch = commentsList.slice(i, i + BATCH_SIZE);
-          const batchResults = await Promise.all(
-            batch.map(async (c) => {
-              const r = await sendRuntimeMessageWithResponse({
-                type: "TRANSLATE_COMMENT_FULL",
-                commentText: c.text,
-                commentUrl: c.url,
-              });
-              return c.userInfo ? `${c.userInfo}\n${r.data.translatedText}` : r.data.translatedText;
-            })
-          );
-          results.push(...batchResults);
-        }
-        return results;
-      },
+      translateBatch: translateCommentBatch,
     });
     setButtonLoading(button, false);
   } catch (err) {

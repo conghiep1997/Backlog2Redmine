@@ -15,6 +15,9 @@ Guidance for Backlog, Redmine, and Google Sheets API flows used to sync comments
 - Never log raw URLs or error payloads that may include `apiKey` or authorization tokens.
 - Build external URLs with `URL`, `URLSearchParams`, or existing helpers.
 - Preserve Backlog issue-key parsing and Redmine matching heuristics unless intentionally changing behavior.
+- Redmine issue lookup: prefer JP title segment (strip ` / (VN…)`), search key and JP title separately, API `subject=~` + `status_id=*`.
+- Migrate issue should collect/translate comments by default and post them as Redmine notes after create.
+- Absolutize Backlog-relative links (`/view/…`) before Markdown→Textile; only emit `http/https` Textile links.
 - Keep attachment download/upload paths explicit about source credentials and target API requirements.
 - Sanitize API error messages before showing users or storing logs.
 - Keep service code separate from DOM rendering; route UI work through content/options modules.

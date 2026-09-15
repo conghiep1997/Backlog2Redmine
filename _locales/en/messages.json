@@ -115,7 +115,7 @@
     "message": "Close"
   },
   "modal_success_hide_again_label": {
-    "message": "Do not show this message again"
+    "message": "Do not show again (comment sync only)"
   },
   "modal_notify_users_label": {
     "message": "Notify users (Example: 12345, 67890)"

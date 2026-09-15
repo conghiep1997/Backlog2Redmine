@@ -2,7 +2,7 @@
 
 Chrome extension dịch comment từ Backlog sang tiếng Việt và đồng bộ dữ liệu thông minh sang Redmine. Tên mới: **B2R**.
 
-**Latest Update:** Curated Groq/Cerebras translation models, streamlined version bump workflow with `npm run bump`, and added release-safe version sync checks.
+**Latest Update (1.8.12):** Lookup Redmine theo title JP (bỏ qua bản dịch VN), Di chuyển Issue mặc định kèm comment/note, giữ link Backlog `/view/…` khi sync sang Redmine, success modal migrate luôn hiện kèm link issue.
 
 ---
 
@@ -119,13 +119,16 @@ npm run build
 ### 1. Di chuyển Issue (Migrate)
 
 1. Mở issue chi tiết trên Backlog
-2. Click nút **Migrate Issue** (góc trên phải)
-3. Điền thông tin Redmine:
+2. Click nút **Di chuyển Issue** (góc trên phải)
+3. Extension dịch description, subject và **toàn bộ comment/note** (nếu có) trước khi mở modal
+4. Điền thông tin Redmine:
    - Project
    - Tracker
    - Priority
    - Subject
-4. Preview nội dung dịch → Click **Tạo & Di cư toàn bộ**
+5. Checkbox **Dịch và di chuyển tất cả N bình luận** bật mặc định khi có comment — có thể bỏ tick nếu chỉ muốn tạo issue
+6. Preview nội dung → Click **Tạo & Di chuyển toàn bộ**
+7. Success modal luôn hiện kèm **link issue Redmine** (không bị tắt bởi tùy chọn ẩn modal của dịch comment)
 
 ### 0. Cấu hình AI
 
@@ -135,15 +138,16 @@ npm run build
    - Có thể nhập 1 key ở ô thông thường, hoặc
    - Mở phần **Multiple Gemini Keys** để nhập nhiều key, mỗi dòng một key
 4. Nếu dùng Groq hoặc Cerebras: nhập API key tương ứng
-5. Click **Lưu cấu hình**
+5. (Tuỳ chọn) **Hiển thị modal thành công khi dịch/gửi comment sang Redmine** — chỉ áp dụng chức năng dịch comment; Di chuyển Issue luôn hiện modal + link
+6. Click **Lưu cấu hình**
 
 ### 2. Dịch và Gửi Comment
 
 1. Tìm comment cần dịch trên Backlog
 2. Click nút **Redmine** (icon translate)
 3. Modal hiện ra với:
-   - Redmine Issue ID (auto-fill nếu tìm thấy)
-   - Preview nội dung dịch
+   - Redmine Issue ID (auto-fill nếu tìm thấy — ưu tiên khớp key / title JP, kể cả subject có thêm bản dịch VN)
+   - Preview nội dung dịch (giữ link Backlog dạng tuyệt đối)
    - Option: Dịch batch (từ vị trí click → cuối)
 4. Click **Xác nhận & Gửi**
 

@@ -9,6 +9,80 @@
  */
 
 /**
+ * Resolve Backlog-relative hrefs (e.g. /view/KEY) to absolute URLs for Redmine.
+ * @param {string} href
+ * @returns {string}
+ */
+function resolveBacklogHref(href) {
+  const raw = String(href || "").trim();
+  if (!raw || raw.startsWith("#")) {
+    return raw;
+  }
+  // Drop unsafe schemes early (also blocks javascript:/data: before protocol passthrough).
+  if (/^(javascript|data|vbscript):/i.test(raw)) {
+    return "";
+  }
+  if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) {
+    return raw;
+  }
+  try {
+    const origin =
+      (typeof window !== "undefined" && window.location?.origin) ||
+      (typeof location !== "undefined" && location.origin) ||
+      (typeof TB !== "undefined" && TB.BACKLOG_DOMAIN) ||
+      "";
+    if (!origin) {
+      return raw;
+    }
+    return new URL(raw, origin).href;
+  } catch {
+    return raw;
+  }
+}
+
+/**
+ * True for Backlog profile links (/user/...), not arbitrary URLs containing "/user/".
+ * @param {string} href
+ * @returns {boolean}
+ */
+function isBacklogUserProfileHref(href) {
+  const raw = String(href || "").trim();
+  if (!raw) {
+    return false;
+  }
+  if (raw.startsWith("/user/")) {
+    return true;
+  }
+  try {
+    const url = new URL(raw);
+    return url.pathname.startsWith("/user/") && /\.backlog\./i.test(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Only http(s) URLs are safe to emit as Redmine Textile links.
+ * @param {string} url
+ * @returns {boolean}
+ */
+function isSafeHttpUrl(url) {
+  const raw = String(url || "").trim();
+  if (!/^https?:\/\//i.test(raw)) {
+    return false;
+  }
+  try {
+    if (typeof URL === "undefined") {
+      return true;
+    }
+    const parsed = new URL(raw);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Extracts text content from Backlog comment HTML and converts to Markdown.
  *
  * @param {HTMLElement} element - DOM element containing comment content
@@ -133,7 +207,7 @@ function extractBacklogContent(element) {
 
       // Links: <a> -> [text](url) or plain text (user links)
       if (tag === "a") {
-        const href = node.getAttribute("href") || "";
+        const href = resolveBacklogHref(node.getAttribute("href") || "");
         const textBefore = result;
         for (const child of node.childNodes) {
           walk(child, options);
@@ -152,16 +226,15 @@ function extractBacklogContent(element) {
           }
 
           // User profile links: keep as text, do not create markdown link
-          if (
-            href.startsWith("/user/") ||
-            (href.startsWith("https://") && href.includes(".backlog.com/user/"))
-          ) {
+          if (isBacklogUserProfileHref(href)) {
             result = textBefore + linkText;
-          } else {
-            // External/other links: create markdown link [text](url)
+          } else if (isSafeHttpUrl(href)) {
+            // External/issue/other links: create markdown link [text](absolute-url)
             result = textBefore + `[${linkText}](${href})`;
+          } else {
+            result = textBefore + linkText;
           }
-        } else if (href) {
+        } else if (href && isSafeHttpUrl(href)) {
           result = textBefore + `[${href}](${href})`;
         }
         return;
@@ -503,13 +576,18 @@ function markdownToTextile(markdown) {
     protect(`<code>${escapeHtmlText(code)}</code>`)
   );
 
-  // Links [label](url) → "label":url
-  text = text.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/gi, (_m, label, url) =>
-    protect(`"${label}":${url}`)
-  );
-
-  // Images ![alt](src) → !src! (Redmine Textile attachment/image syntax)
+  // Images ![alt](src) → !src! before link pass (avoid matching [alt](src) inside images)
   text = text.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_m, _alt, src) => protect(`!${src}!`));
+
+  // Links [label](url) → "label":url (absolute or relative Backlog paths)
+  // Also absolutize leftover relative /view/... links for Redmine.
+  text = text.replace(/(?<!!)\[([^\]]+)\]\(([^)\s]+)\)/gi, (_m, label, url) => {
+    const resolved = resolveBacklogHref(url);
+    if (!isSafeHttpUrl(resolved)) {
+      return label;
+    }
+    return protect(`"${label}":${resolved}`);
+  });
 
   // Headings
   text = text.replace(/^######\s+(.+)$/gm, "h6. $1");

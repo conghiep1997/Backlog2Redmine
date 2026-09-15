@@ -395,5 +395,5 @@ chrome.storage.local.get(null, console.log); // Show all stored data
 
 ---
 
-**Last Updated:** 2024-05-24
-**Version:** 1.8.4
+**Last Updated:** 2026-09-15
+**Version:** 1.8.12
