@@ -3,6 +3,8 @@
  * Handles operations with Backlog API: sending comments, fetching issue info.
  */
 
+/* global normalizeBacklogOrigin */
+
 async function getBacklogUsers(projectKeyOrIssueKey = null) {
   const settings = await getSettings();
   if (!settings.backlogApiKey) {
@@ -187,37 +189,77 @@ function redactBacklogApiKey(url) {
   }
 }
 
+function isUsableAttachmentBlob(blob, contentType = "") {
+  if (!blob || blob.size <= 0) {
+    return false;
+  }
+  const type = String(contentType || blob.type || "").toLowerCase();
+  // Login HTML / JSON error bodies are not real attachment bytes.
+  if (type.includes("text/html") || type.includes("application/json")) {
+    return false;
+  }
+  return true;
+}
+
 async function downloadBacklogFile(domain, attachmentId, filename = "", issueKey = "") {
   const settings = await getSettings();
+  const backlogBase = settings.backlogDomain || TB.BACKLOG_DOMAIN;
+  const safeFilename = filename || String(attachmentId);
 
   // Try API first if we have a key and issueKey
   if (settings.backlogApiKey && issueKey) {
     try {
+      const normalizedBase = backlogBase.endsWith("/") ? backlogBase : `${backlogBase}/`;
       const apiUrl = new URL(
         `api/v2/issues/${issueKey}/attachments/${attachmentId}`,
-        settings.backlogDomain || TB.BACKLOG_DOMAIN
+        normalizedBase
       );
       apiUrl.searchParams.set("apiKey", settings.backlogApiKey);
 
       const apiRes = await fetch(apiUrl.toString());
       if (apiRes.ok) {
-        return await apiRes.blob();
+        const contentType = apiRes.headers.get("content-type") || "";
+        const blob = await apiRes.blob();
+        if (isUsableAttachmentBlob(blob, contentType)) {
+          return blob;
+        }
+        console.warn(
+          `[BacklogService] API download returned unusable body (${contentType || "unknown"}, ${blob.size} bytes), falling back to web URL.`
+        );
+      } else {
+        console.warn(
+          `[BacklogService] API download failed (${apiRes.status}), falling back to web URL.`
+        );
       }
-      console.warn(
-        `[BacklogService] API download failed (${apiRes.status}), falling back to web URL.`
-      );
     } catch (e) {
       console.warn("[BacklogService] API download error, falling back to web URL:", e);
     }
   }
 
-  // Fallback to web download URL (requires user session)
-  const webUrl = `https://${domain}/downloadAttachment/${attachmentId}/${encodeURIComponent(filename)}`;
+  // Fallback to web download URL (requires user session).
+  // domain may be hostname (from tab) or full URL (from settings) — normalize either form.
+  const origin =
+    normalizeBacklogOrigin(domain) ||
+    normalizeBacklogOrigin(backlogBase) ||
+    normalizeBacklogOrigin(TB.BACKLOG_DOMAIN);
+  if (!origin) {
+    throw new Error("Backlog domain is not configured. Cannot download attachments.");
+  }
+
+  const webUrl = `${origin}/downloadAttachment/${attachmentId}/${encodeURIComponent(safeFilename)}`;
   const response = await fetch(webUrl, { credentials: "include" });
 
   if (!response.ok) {
     throw new Error(`Backlog file download failed: ${response.status}`);
   }
 
-  return await response.blob();
+  const contentType = response.headers.get("content-type") || "";
+  const blob = await response.blob();
+  if (!isUsableAttachmentBlob(blob, contentType)) {
+    throw new Error(
+      `Backlog file download returned invalid content (${contentType || "unknown"}, ${blob.size} bytes). Check login session.`
+    );
+  }
+
+  return blob;
 }

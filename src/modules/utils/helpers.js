@@ -68,6 +68,35 @@ function buildRedmineUrl(baseUrl, path) {
 }
 
 /**
+ * Normalizes a Backlog domain or URL to an origin (https://host).
+ * Accepts hostname (`space.backlog.com`) or full URL (`https://space.backlog.com/`).
+ */
+function normalizeBacklogOrigin(domainOrUrl) {
+  const raw = String(domainOrUrl || "").trim();
+  if (!raw) {
+    return "";
+  }
+  try {
+    const withProtocol = raw.includes("://") ? raw : `https://${raw}`;
+    return new URL(withProtocol).origin;
+  } catch (_error) {
+    return "";
+  }
+}
+
+/**
+ * Builds Redmine upload endpoint with required filename query param.
+ * Without filename, Redmine may reject the upload when extension filters are enabled.
+ */
+function buildRedmineUploadUrl(baseUrl, filename) {
+  const url = new URL(buildRedmineUrl(baseUrl, "/uploads.json"));
+  if (filename) {
+    url.searchParams.set("filename", filename);
+  }
+  return url.toString();
+}
+
+/**
  * Safely parses the JSON response body.
  * Returns null if the response is empty or if parsing fails.
  */

@@ -1,5 +1,23 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.13] - 2026-09-18
+
+> Fix sync attachment Backlog → Redmine (đặc biệt file video `.mp4` / tên tiếng Nhật).
+
+### Fixed
+- Upload Redmine gửi đủ `?filename=` trên `/uploads.json` (tránh 422 khi server bật lọc extension; hỗ trợ tên file tiếng Nhật như `3653_API呼び出しあり.mp4`).
+- Chuẩn hóa Backlog origin khi fallback download web (không còn ghép `https://https://...` khi domain lấy từ settings).
+- Từ chối blob download không hợp lệ (HTML login / JSON lỗi / rỗng) trước khi upload.
+- Scrape thêm link `downloadAttachment/` và `ViewAttachmentVideo` cho comment và description.
+- Thông báo `[Attachment Error: …]` kèm lý do ngắn (status/upload failed) để dễ debug (ví dụ vượt max file size trên Redmine).
+
+### Improved
+- Helper `normalizeBacklogOrigin` / `buildRedmineUploadUrl`; unit test cho URL upload + normalize domain.
+
+### Docs
+- Cập nhật `CHANGELOG.md` cho bản 1.8.13.
+
+
 ## [1.8.12] - 2026-09-15
 
 > Lookup theo title JP (bỏ qua bản dịch VN), migrate kèm comment mặc định, giữ link Backlog khi sync sang Redmine.

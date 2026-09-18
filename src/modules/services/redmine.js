@@ -1,4 +1,4 @@
-/* global downloadBacklogFile, TB_LOGGER, markdownToTextile */
+/* global downloadBacklogFile, TB_LOGGER, markdownToTextile, buildRedmineUploadUrl */
 /**
  * Redmine API Service for Backlog2Redmine Extension.
  * Handles operations with Redmine API: finding issues, sending notes, and uploading files.
@@ -686,7 +686,10 @@ async function processNotesAttachments(
       }
     } catch (e) {
       console.error(`[TB] Attachment processing failed for ID ${attachmentId}:`, e.message);
-      info.markup = `[Attachment Error: ${info.filename}]`;
+      const reason = String(e?.message || "unknown error")
+        .replace(/https?:\/\/[^\s]+/gi, "[URL]")
+        .slice(0, 120);
+      info.markup = `[Attachment Error: ${info.filename} — ${reason}]`;
     }
   }
 
@@ -709,16 +712,25 @@ async function processNotesAttachments(
 
 /**
  * Upload file to Redmine and get token.
+ * Redmine requires ?filename= so extension allowlists / content detection work.
  */
 async function uploadToRedmine(domain, apiKey, blob, filename) {
-  const url = buildRedmineUrl(domain, "/uploads.json");
+  if (!blob || blob.size <= 0) {
+    throw new Error("Cannot upload empty attachment.");
+  }
+
+  const url = buildRedmineUploadUrl(domain, filename);
   const response = await fetch(url, {
     method: "POST",
     headers: { "X-Redmine-API-Key": apiKey, "Content-Type": "application/octet-stream" },
     body: blob,
   });
   if (!response.ok) {
-    throw new Error(`Redmine upload failed: ${response.status}`);
+    const errorMsg = await readErrorMessage(response);
+    const shortMsg = String(errorMsg)
+      .replace(/https?:\/\/[^\s]+/gi, "[URL]")
+      .slice(0, 180);
+    throw new Error(`Redmine upload failed: ${response.status} ${shortMsg}`.trim());
   }
   const data = await response.json();
   return data?.upload?.token;

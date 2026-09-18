@@ -347,10 +347,14 @@ async function handleIssueMigration(button) {
     // Scrape attachments for description (it has its own attachment list in Modern UI)
     let fullDescription = descriptionText;
     const descAttachments = document.querySelectorAll(
-      '.issue-attachments .upload-item-list li a[href*="attachmentId="]'
+      '.issue-attachments .upload-item-list li a[href*="attachmentId="], ' +
+        '.issue-attachments .upload-item-list li a[href*="downloadAttachment/"], ' +
+        '.issue-attachments a[href*="ViewAttachmentVideo.action"]'
     );
     descAttachments.forEach((link) => {
-      const match = link.getAttribute("href").match(/attachmentId=(\d+)/);
+      const href = link.getAttribute("href") || "";
+      const match =
+        href.match(/attachmentId=(\d+)/) || href.match(/downloadAttachment\/(\d+)/);
       if (match) {
         const id = match[1];
         const filename = link.textContent.trim();
@@ -611,13 +615,19 @@ function scrapeAttachments(itemEl) {
   const attachments = new Map();
   const links = itemEl.querySelectorAll(
     ".comment-changelog__item a[href*='attachmentId='], " +
+      ".comment-changelog__item a[href*='downloadAttachment/'], " +
       ".upload-item-list li a[href*='attachmentId='], " +
+      ".upload-item-list li a[href*='downloadAttachment/'], " +
       ".comment-attachments a[href*='attachmentId='], " +
-      "a.attachment-file[href*='attachmentId=']"
+      ".comment-attachments a[href*='downloadAttachment/'], " +
+      "a.attachment-file[href*='attachmentId='], " +
+      "a.attachment-file[href*='downloadAttachment/'], " +
+      "a[href*='ViewAttachmentVideo.action']"
   );
   links.forEach((link) => {
-    const href = link.getAttribute("href");
-    const match = href.match(/attachmentId=(\d+)/);
+    const href = link.getAttribute("href") || "";
+    const match =
+      href.match(/attachmentId=(\d+)/) || href.match(/downloadAttachment\/(\d+)/);
     if (match) {
       const id = match[1];
       const filename = link.textContent.trim();
