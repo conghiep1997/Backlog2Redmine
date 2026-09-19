@@ -1,5 +1,30 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.14] - 2026-09-19
+
+### Added
+- Thêm popup cho extension khi click icon, hiển thị trạng thái cấu hình và project Redmine hiện tại.
+- Thêm khu vực Donate coffee với tab ngân hàng, MoMo và PayPal.
+- Thêm icon mới cho extension và các icon trực quan cho thao tác trong popup.
+
+### Fixed
+- Đồng bộ kích thước button, layout popup và modal donate để tránh text bị cắt/tràn.
+- Hiển thị rõ luồng đang hoạt động `Backlog → Redmine`; đánh dấu `Redmine → Backlog` chưa sẵn sàng.
+- Popup lấy tên project Redmine qua background service thay vì hiển thị ID cho end-user.
+- Bổ sung validation cho message `GET_DEFAULT_PROJECT_SUMMARY` và validate URL trước khi mở tab.
+- Giảm thông tin trùng lặp giữa status card và project card.
+
+### Improved
+- Popup sử dụng thiết kế phẳng, màu hài hòa, icon rõ ràng và hierarchy dễ quét hơn.
+- Giữ API key không hiển thị trong popup; request lấy project chỉ được phép từ extension pages.
+
+### Docs
+- Cập nhật changelog cho popup, project summary, donate và icon mới.
+- **✨ Added**:
+- **🔧 Fixed**:
+- **📝 Docs**:
+
+
 ## [1.8.13] - 2026-09-18
 
 > Fix sync attachment Backlog → Redmine (đặc biệt file video `.mp4` / tên tiếng Nhật).

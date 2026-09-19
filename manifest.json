@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "B2R",
-  "version": "1.8.13",
+  "version": "1.8.14",
   "description": "Dịch và đồng bộ comment từ Backlog sang Redmine (B2R).",
   "icons": {
     "16": "assets/icons/icon-16.png",
@@ -79,6 +79,7 @@
   ],
   "options_page": "src/options.html",
   "action": {
-    "default_title": "B2R - Backlog to Redmine"
+    "default_title": "B2R - Backlog to Redmine",
+    "default_popup": "src/popup.html"
   }
 }

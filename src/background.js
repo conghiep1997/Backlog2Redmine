@@ -192,6 +192,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return TB_SETTINGS_VIEW.forReport(settings);
     },
     LOG_ERROR: ({ log }) => TB_LOGGER?.saveLogToStorage(log),
+    GET_DEFAULT_PROJECT_SUMMARY: async () => {
+      const allowedUrls = [
+        chrome.runtime.getURL("src/popup.html"),
+        chrome.runtime.getURL("src/options.html"),
+      ];
+      if (!allowedUrls.includes(sender?.url)) {
+        throw new Error("This operation is only available from an extension page.");
+      }
+      const settings = await getSettings();
+      if (!settings.defaultProjectId || !settings.redmineApiKey) return null;
+      return fetchRedmineProjectById(
+        settings.redmineDomain,
+        settings.redmineApiKey,
+        settings.defaultProjectId
+      );
+    },
 
     TEST_MODEL_WITH_KEY: ({ provider, modelId, apiKey }) => {
       assertOptionsSender(sender);
@@ -569,6 +585,21 @@ async function handleFetchProjectsWithCredentials(domain, apiKey) {
   }
   const data = await safeReadJson(response);
   return data?.projects || [];
+}
+
+async function fetchRedmineProjectById(domain, apiKey, projectId) {
+  await assertRedmineHostPermission(domain);
+  if (!apiKey || !projectId) return null;
+  const safeProjectId = encodeURIComponent(String(projectId));
+  const response = await timeoutFetch(
+    new URL(`/projects/${safeProjectId}.json`, domain).toString(),
+    { headers: { "X-Redmine-API-Key": apiKey, Accept: "application/json" } },
+    10000
+  );
+  if (!response.ok) throw new Error(`Redmine project request failed (${response.status}).`);
+  const data = await safeReadJson(response);
+  const project = data?.project;
+  return project ? { id: project.id, name: project.name } : null;
 }
 
 async function assertRedmineHostPermission(domain) {

@@ -28,6 +28,9 @@ test("accepts known messages from the current extension", () => {
       apiKey: "key",
     })
   );
+  assert.doesNotThrow(() =>
+    context.TB_MESSAGE_VALIDATION.assertMessage({ type: "GET_DEFAULT_PROJECT_SUMMARY" })
+  );
 });
 
 test("rejects unknown, oversized, and malformed messages", () => {

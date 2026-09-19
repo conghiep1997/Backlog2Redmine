@@ -240,6 +240,12 @@ document.addEventListener("DOMContentLoaded", () => {
       fallbackProvider: fallbackProviderSelect.value,
       fallbackModel: fallbackModels[0] || getDefaultModel(fallbackProviderSelect.value),
       defaultProjectId: document.getElementById("defaultProjectId").value,
+      defaultProjectName: (() => {
+        const projectSelect = document.getElementById("defaultProjectId");
+        return projectSelect.value
+          ? projectSelect.selectedOptions[0]?.textContent?.trim() || ""
+          : "";
+      })(),
       reportProjectId: document.getElementById("reportProjectId").value,
       manualFields: document.getElementById("manualFields").value.trim(),
       showRedmineSuccessModal: showRedmineSuccessModalInput?.checked !== false,
