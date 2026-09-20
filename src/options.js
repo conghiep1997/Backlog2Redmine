@@ -77,6 +77,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       "label[for='bugScreenshot']": "options_screenshot",
       "#bugTitle": "options_unused",
       "label[for='showRedmineSuccessModal']": "options_success_modal",
+      "#redmineDomain ~ p": "options_redmine_help",
+      "#manualFields + p": "options_custom_fields_help",
+      "#backlogDomain + p": "options_backlog_help",
     };
     Object.entries(textBySelector).forEach(([selector, key]) => {
       const element = document.querySelector(selector);
@@ -131,6 +134,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (customFieldsHelp) {
       customFieldsHelp.textContent = om("options_custom_fields_help", customFieldsHelp.textContent);
     }
+
+    const staticTextBySelector = {
+      "#primaryGeminiConfig p:nth-of-type(1)": "options_models_help",
+      "#primaryGeminiConfig p:nth-of-type(2)": "options_selected",
+      "#primaryGeminiConfig p:nth-of-type(3)": "options_keys_help",
+      "#primaryGeminiConfig p:nth-of-type(4)": "options_added",
+      "#fallbackGeminiConfig p:nth-of-type(1)": "options_models_help",
+      "#fallbackGeminiConfig p:nth-of-type(2)": "options_selected",
+      "#fallbackGeminiConfig p:nth-of-type(3)": "options_keys_help",
+      "#fallbackGeminiConfig p:nth-of-type(4)": "options_added",
+    };
+    Object.entries(staticTextBySelector).forEach(([selector, key]) => {
+      const element = document.querySelector(selector);
+      if (element) setFirstTextNode(element, key, element.textContent.trim());
+    });
 
     document
       .querySelectorAll(
@@ -223,6 +241,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     const updateStatus = document.querySelector("#updateStatus p");
     if (updateStatus) {
       updateStatus.textContent = om("options_update_checking", updateStatus.textContent);
+    }
+    const logsDescription = document
+      .getElementById("exportLogsBtn")
+      ?.closest("div")?.previousElementSibling;
+    if (logsDescription?.tagName === "P") {
+      logsDescription.textContent = om("options_logs_description", logsDescription.textContent);
     }
     const supportNote = document.querySelector(".note");
     if (supportNote) supportNote.textContent = om("options_support_note", supportNote.textContent);

@@ -98,12 +98,47 @@
       :root[data-theme="dark"] textarea,
       :root[data-theme="dark"] select {
         color: var(--text);
+        background: #111827 !important;
+        border-color: var(--border) !important;
+        caret-color: var(--text);
+      }
+
+      :root[data-theme="dark"] input::placeholder,
+      :root[data-theme="dark"] textarea::placeholder {
+        color: #94a3b8;
+        opacity: 1;
+      }
+
+      :root[data-theme="dark"] select option {
+        color: var(--text);
         background: #111827;
+      }
+
+      :root[data-theme="dark"] input[readonly] {
+        color: var(--muted) !important;
+        background: #1e293b !important;
       }
 
       :root[data-theme="dark"] .secondary {
         color: var(--text);
         background: #1e293b;
+      }
+
+      :root[data-theme="dark"] details summary {
+        color: var(--text) !important;
+      }
+
+      :root[data-theme="dark"] .provider-models-list button,
+      :root[data-theme="dark"] .provider-keys-list button {
+        background: #1e3a5f !important;
+        color: #dbeafe !important;
+        border-color: #60a5fa !important;
+      }
+
+      :root[data-theme="dark"] .provider-models-list button.selected {
+        background: #047857 !important;
+        color: #ecfdf5 !important;
+        border-color: #34d399 !important;
       }
 
       :root[data-theme="dark"] .disclaimer {
@@ -406,7 +441,7 @@
             </summary>
             <div style="padding-top: 12px">
               <div class="field" style="margin-bottom: 0">
-                <label for="redmineDomain">Redmine Domain</label>
+                <label for="redmineDomain" data-i18n="options_redmine_domain">Redmine Domain</label>
                 <input
                   id="redmineDomain"
                   type="url"
@@ -420,7 +455,9 @@
               </div>
 
               <div class="field" style="margin-bottom: 0">
-                <label for="redmineApiKey">Redmine API Key</label>
+                <label for="redmineApiKey" data-i18n="options_redmine_api_key"
+                  >Redmine API Key</label
+                >
                 <input id="redmineApiKey" type="text" placeholder="Nhập API key" />
                 <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
                   🔑 Lấy API Key tại:
@@ -464,7 +501,9 @@
 
               <!-- REPORT PROJECT ID -->
               <div class="field" style="margin-bottom: 0">
-                <label for="reportProjectId">Project cho Report (Log Time Tháng)</label>
+                <label for="reportProjectId" data-i18n="options_report_project"
+                  >Project cho Report (Log Time Tháng)</label
+                >
                 <select
                   id="reportProjectId"
                   style="
@@ -542,14 +581,16 @@
             </summary>
             <div style="padding-top: 12px">
               <div class="field" style="margin-bottom: 0">
-                <label for="backlogDomain">Backlog Domain</label>
+                <label for="backlogDomain" data-i18n="options_backlog_domain">Backlog Domain</label>
                 <input id="backlogDomain" type="url" placeholder="https://shift7.backlog.com" />
                 <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
                   💡 Mặc định: https://shift7.backlog.com
                 </p>
               </div>
               <div class="field">
-                <label for="backlogApiKey">Backlog API Key</label>
+                <label for="backlogApiKey" data-i18n="options_backlog_api_key"
+                  >Backlog API Key</label
+                >
                 <input id="backlogApiKey" type="text" placeholder="Nhập Backlog API key" />
                 <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
                   🔑 Lấy tại: <strong>Tài khoản > API</strong> trong Backlog của bạn. Cần thiết để
@@ -575,7 +616,7 @@
             </summary>
             <div class="grid" style="padding-top: 12px; gap: 12px">
               <div class="field" style="margin-bottom: 0">
-                <label for="primaryProvider">Nhà cung cấp</label>
+                <label for="primaryProvider" data-i18n="options_provider">Nhà cung cấp</label>
                 <select
                   id="primaryProvider"
                   style="
@@ -689,7 +730,9 @@
             </summary>
             <div class="grid" style="padding-top: 12px; gap: 12px">
               <div class="field" style="margin-bottom: 0">
-                <label for="fallbackProvider">Nhà cung cấp dự phòng</label>
+                <label for="fallbackProvider" data-i18n="options_fallback_provider"
+                  >Nhà cung cấp dự phòng</label
+                >
                 <select
                   id="fallbackProvider"
                   style="
