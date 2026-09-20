@@ -30,10 +30,7 @@ this.buildRedmineUrl = buildRedmineUrl;`,
 test("normalizeBacklogOrigin accepts hostname and full URL", () => {
   const { normalizeBacklogOrigin } = loadHelpers();
   assert.equal(normalizeBacklogOrigin("space.backlog.com"), "https://space.backlog.com");
-  assert.equal(
-    normalizeBacklogOrigin("https://space.backlog.com/"),
-    "https://space.backlog.com"
-  );
+  assert.equal(normalizeBacklogOrigin("https://space.backlog.com/"), "https://space.backlog.com");
   assert.equal(
     normalizeBacklogOrigin("https://space.backlog.jp/view/PROJ-1"),
     "https://space.backlog.jp"
@@ -43,10 +40,7 @@ test("normalizeBacklogOrigin accepts hostname and full URL", () => {
 
 test("buildRedmineUploadUrl includes encoded filename query param", () => {
   const { buildRedmineUploadUrl } = loadHelpers();
-  const url = buildRedmineUploadUrl(
-    "https://redmine.example.com",
-    "3653_API呼び出しあり.mp4"
-  );
+  const url = buildRedmineUploadUrl("https://redmine.example.com", "3653_API呼び出しあり.mp4");
   const parsed = new URL(url);
   assert.equal(parsed.pathname.endsWith("/uploads.json"), true);
   assert.equal(parsed.searchParams.get("filename"), "3653_API呼び出しあり.mp4");

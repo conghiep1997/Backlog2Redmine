@@ -353,8 +353,7 @@ async function handleIssueMigration(button) {
     );
     descAttachments.forEach((link) => {
       const href = link.getAttribute("href") || "";
-      const match =
-        href.match(/attachmentId=(\d+)/) || href.match(/downloadAttachment\/(\d+)/);
+      const match = href.match(/attachmentId=(\d+)/) || href.match(/downloadAttachment\/(\d+)/);
       if (match) {
         const id = match[1];
         const filename = link.textContent.trim();
@@ -626,8 +625,7 @@ function scrapeAttachments(itemEl) {
   );
   links.forEach((link) => {
     const href = link.getAttribute("href") || "";
-    const match =
-      href.match(/attachmentId=(\d+)/) || href.match(/downloadAttachment\/(\d+)/);
+    const match = href.match(/attachmentId=(\d+)/) || href.match(/downloadAttachment\/(\d+)/);
     if (match) {
       const id = match[1];
       const filename = link.textContent.trim();
