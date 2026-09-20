@@ -2,11 +2,11 @@
 cross-platform-sync
 
 # description
-Guidance for Backlog, Redmine, and Google Sheets API flows used to sync comments, issues, attachments, logs, and testcase data.
+Guidance for Backlog and Redmine API flows used to sync comments, issues, attachments, logs, and report time.
 
 # when to use
-- Editing `src/modules/services/backlog.js`, `redmine.js`, `sheetsApi.js`, `report-log-time.js`, or `testcaseConverter.js`.
-- Changing sync logic in `src/background.js`, `src/content.js`, `src/redmine_content.js`, or Sheets/testcase entrypoints.
+- Editing `src/modules/services/backlog.js`, `redmine.js`, or `report-log-time.js`.
+- Changing sync logic in `src/background.js`, `src/content.js`, or `src/redmine_content.js`.
 - Debugging issue lookup, comment posting, attachment transfer, metadata loading, or project/user sync.
 
 # concise rules
@@ -24,7 +24,7 @@ Guidance for Backlog, Redmine, and Google Sheets API flows used to sync comments
 
 # validation checklist
 - Decrypted settings are used only inside privileged/background or service flows.
-- Backlog, Redmine, and Sheets host permissions cover any new endpoint.
+- Backlog and Redmine host permissions cover any new endpoint.
 - Comment markdown and attachment links remain usable after sync.
 - Success/error toasts or modal states still fire for user actions.
 - Network failures produce clear errors without exposing credentials.

@@ -2,11 +2,11 @@
 extension-ui
 
 # description
-Guidance for Backlog2Redmine options UI, injected Backlog/Redmine controls, shared modal/toast styling, and Sheets/testcase extension pages.
+Guidance for Backlog2Redmine popup and Options UI, injected Backlog/Redmine controls, shared modal/toast styling, themes, i18n, and end-user bug reports.
 
 # when to use
 - Editing `src/options.html`, `src/options.js`, content-script UI, or `src/modules/ui/*`.
-- Changing injected Backlog buttons, modals, toasts, Redmine controls, Sheets sidebar, or testcase converter pages.
+- Changing the popup, Options page, injected Backlog buttons, modals, toasts, or Redmine controls.
 - Updating i18n messages or UI text surfaced through `TB.MESSAGES`.
 
 # concise rules
@@ -19,6 +19,8 @@ Guidance for Backlog2Redmine options UI, injected Backlog/Redmine controls, shar
 - Migrate modal should default-enable “move all comments” when comments exist (`initialBatchNotes` / `migrateCommentsByDefault`).
 - Preserve SPA navigation handling and observer cleanup in content scripts.
 - Keep Vietnamese/i18n fallbacks consistent with `_locales/` and `src/constants.js`.
+- Keep the user-selected `languagePreference` and `themePreference` in `chrome.storage.local`; support `system` theme through `prefers-color-scheme`.
+- Keep bug reports local-first: redact logs, bound screenshot type/size, and make external issue creation explicit.
 - Do not move privileged API calls into page-facing UI code.
 
 # validation checklist

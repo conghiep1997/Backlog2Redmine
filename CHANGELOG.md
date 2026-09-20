@@ -1,5 +1,32 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.15] - 2026-09-20
+
+### Added
+- Bổ sung i18n cho popup, Options và luồng Log Time Redmine với tiếng Việt/English.
+- Thêm lựa chọn ngôn ngữ thủ công và theme Sáng/Tối/Theo hệ thống, lưu cục bộ.
+- Thêm luồng Báo lỗi end-user: mô tả, bước tái hiện, URL, môi trường, log gần nhất và ảnh chụp tùy chọn.
+- Cho phép tải report JSON + ảnh, sao chép report hoặc mở GitHub Issue đã điền sẵn.
+- Tạo skill dùng chung `extension-ui` cho các extension tiếp theo: design tokens, theme, accessibility, i18n và bug-report privacy.
+- Hoàn thiện catalog locale đồng bộ toàn bộ message keys giữa tiếng Việt và tiếng Anh cho popup, Options và modal/report UI.
+
+### Improved
+- Popup được chuyển thành dashboard trạng thái với message keys và fallback locale.
+- Redmine Log Time dùng locale cho trạng thái, modal, bảng kết quả và lỗi.
+- Options bổ sung card hỗ trợ, xem trước ảnh và cảnh báo dữ liệu trước khi gửi bug report.
+
+### Security / Privacy
+- Bug report không tự động upload dữ liệu; người dùng chủ động tải xuống hoặc mở GitHub.
+- Ảnh đính kèm giới hạn 5 MB và chỉ nhận PNG/JPEG/WebP.
+- API key không được đưa vào popup hoặc metadata report.
+
+### Verification
+- `npm run lint` đạt.
+- `npm run check:version-sync` đạt.
+- Locale JSON và manifest hợp lệ.
+- `npm test` bị môi trường Windows chặn với `spawn EPERM` trước khi chạy assertion.
+
+
 ## [1.8.14] - 2026-09-19
 
 ### Added

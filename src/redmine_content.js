@@ -9,17 +9,32 @@ globalThis.__B2R_REDMINE_LOADED__ = true;
 
 const BUTTON_CLASS = "tb-backlog-btn";
 const BACKLOG_ICON = TB?.ICONS?.BACKLOG;
+let reportMessages = null;
+const reportMessage = (key, substitutions) =>
+  reportMessages?.[key]?.message || chrome.i18n.getMessage(key, substitutions) || key;
 
 let journalObserver = null;
 
 // ====================
 // INITIALIZATION
 // ====================
-injectStyles();
-scanAndInjectButtons();
-observeJournalActions();
-injectLogTimeButton(); // For single report issue
-injectMonthlyLogButton(); // For logging the entire month
+initializeRedmineContent();
+
+async function initializeRedmineContent() {
+  try {
+    const { languagePreference } = await chrome.storage.local.get("languagePreference");
+    const language = languagePreference || "vi";
+    const response = await fetch(chrome.runtime.getURL(`_locales/${language}/messages.json`));
+    if (response.ok) reportMessages = await response.json();
+  } catch (_error) {
+    // Chrome's built-in locale remains the fallback.
+  }
+  injectStyles();
+  scanAndInjectButtons();
+  observeJournalActions();
+  injectLogTimeButton(); // For single report issue
+  injectMonthlyLogButton(); // For logging the entire month
+}
 
 // Cleanup on page unload
 window.addEventListener("beforeunload", () => {
@@ -56,7 +71,7 @@ function injectMonthlyLogButton() {
   link.href = "#";
   link.id = "tb-monthly-log-btn";
   link.className = "icon icon-time-add";
-  link.textContent = "Log Time Tháng";
+  link.textContent = reportMessage("report_log_month");
   link.onclick = (e) => {
     e.preventDefault();
     logTimeForMonth();
@@ -74,9 +89,7 @@ async function logTimeForMonth() {
   const { redmineDomain, reportProjectId, hasRedmineApiKey } = settings;
 
   if (!redmineDomain || !hasRedmineApiKey || !reportProjectId) {
-    alert(
-      "Lỗi: Vui lòng cấu hình đầy đủ Redmine Domain, API Key, và Report Project ID trong trang Options của extension."
-    );
+    alert(reportMessage("report_settings_required"));
     return;
   }
 
@@ -87,11 +100,7 @@ async function logTimeForMonth() {
   openMonthlyLogModal({
     monthLabel: currentMonthLabel,
     onDelete: async (modalInstance) => {
-      if (
-        !confirm(
-          "Xác nhận xóa toàn bộ spent time của bạn trong tháng hiện tại?\n\nHành động này chỉ xóa entry thuộc đúng user hiện tại và đúng ngày trong tháng."
-        )
-      ) {
+      if (!confirm(reportMessage("report_confirm_delete"))) {
         return;
       }
 
@@ -100,7 +109,7 @@ async function logTimeForMonth() {
       startButton.disabled = true;
       deleteButton.disabled = true;
       closeButton.disabled = true;
-      statusText.textContent = "Đang xóa spent time tháng...";
+      statusText.textContent = reportMessage("report_deleting");
 
       const updateProgress = (message, type = "info") => {
         const item = document.createElement("div");
@@ -118,14 +127,14 @@ async function logTimeForMonth() {
         );
         stats.logged.textContent = "0";
         stats.skipped.textContent = String(deletedCount);
-        statusText.textContent = "Đã xóa spent time tháng";
+        statusText.textContent = reportMessage("report_deleted");
         updateProgress(
           `Đã xóa ${deletedCount} spent time entr${deletedCount === 1 ? "y" : "ies"}.`,
           "success"
         );
       } catch (error) {
-        statusText.textContent = "Xóa thất bại";
-        updateProgress(`Không xóa: ${error.message}`, "error");
+        statusText.textContent = reportMessage("report_delete_failed");
+        updateProgress(`${reportMessage("report_delete_error")}: ${error.message}`, "error");
       } finally {
         startButton.disabled = false;
         deleteButton.disabled = false;
@@ -136,7 +145,7 @@ async function logTimeForMonth() {
       const { startButton, closeButton, progressList, resultBody, copyButton, statusText, stats } =
         modalInstance;
       startButton.disabled = true;
-      startButton.textContent = "Đang xử lý...";
+      startButton.textContent = reportMessage("report_processing");
       closeButton.disabled = true;
 
       const updateProgress = (message, type = "info") => {
@@ -166,8 +175,8 @@ async function logTimeForMonth() {
       };
 
       try {
-        statusText.textContent = "Đang quét report tháng...";
-        updateProgress('Đang tìm kiếm các issue "Report" của tháng...');
+        statusText.textContent = reportMessage("report_scanning");
+        updateProgress(reportMessage("report_searching"));
         const now = new Date();
         const year = now.getFullYear();
         const month = now.getMonth() + 1;
@@ -190,16 +199,18 @@ async function logTimeForMonth() {
         });
 
         if (issues.length === 0) {
-          statusText.textContent = "Không tìm thấy report";
-          updateProgress('Không tìm thấy issue "Report" nào khớp với tháng này.');
-          startButton.textContent = "Đã xong";
+          statusText.textContent = reportMessage("report_not_found");
+          updateProgress(reportMessage("report_no_matching_issue"));
+          startButton.textContent = reportMessage("report_done");
           closeButton.disabled = false;
           return;
         }
 
         setStat("reports", issues.length);
-        statusText.textContent = `Tìm thấy ${issues.length} report, đang log time...`;
-        updateProgress(`Tìm thấy ${issues.length} issue(s). Bắt đầu log time...`);
+        statusText.textContent = `${reportMessage("report_found")} ${issues.length} ${reportMessage("report_logging_now")}`;
+        updateProgress(
+          `${reportMessage("report_found")} ${issues.length} issue(s). ${reportMessage("report_starting_logging")}`
+        );
 
         const resultsForSheet = [];
         let loggedCount = 0;
@@ -278,7 +289,7 @@ async function logTimeForMonth() {
           }
         }
 
-        statusText.textContent = "Hoàn tất";
+        statusText.textContent = reportMessage("report_complete");
         updateProgress("Hoàn tất! Dưới đây là dữ liệu để copy vào Timesheet:");
 
         copyButton.disabled = resultsForSheet.length === 0;
@@ -295,12 +306,12 @@ async function logTimeForMonth() {
             });
         };
 
-        startButton.textContent = "Đã xong";
+        startButton.textContent = reportMessage("report_done");
         closeButton.disabled = false;
       } catch (error) {
-        statusText.textContent = "Có lỗi";
+        statusText.textContent = reportMessage("report_error");
         updateProgress(`Đã xảy ra lỗi nghiêm trọng: ${error.message}`);
-        startButton.textContent = "Lỗi";
+        startButton.textContent = reportMessage("report_error_short");
         closeButton.disabled = false;
       }
     },
@@ -356,7 +367,9 @@ async function deleteCurrentMonthSpentTime(redmineDomain, redmineApiKey, updateP
   const dates = [...createMonthlyCopyRows(year, month).keys()];
   const entriesToDelete = [];
 
-  updateProgress(`Kiểm tra spent time của ${year}-${String(month).padStart(2, "0")}...`);
+  updateProgress(
+    `${reportMessage("report_checking_spent_time")} ${year}-${String(month).padStart(2, "0")}...`
+  );
 
   for (const spentOn of dates) {
     const entries = await findTimeEntries(redmineDomain, redmineApiKey, {
@@ -368,14 +381,14 @@ async function deleteCurrentMonthSpentTime(redmineDomain, redmineApiKey, updateP
     for (const entry of entries) {
       if (!isSafeMonthlyDeleteEntry(entry, currentUser, spentOn)) {
         throw new Error(
-          `Entry #${entry?.id || "unknown"} không xác nhận được đúng user/ngày ${spentOn}.`
+          `${reportMessage("report_entry_not_verified")} #${entry?.id || "unknown"} (${spentOn}).`
         );
       }
       entriesToDelete.push(entry);
     }
   }
 
-  updateProgress(`Tìm thấy ${entriesToDelete.length} spent time entries cần xóa.`);
+  updateProgress(`${reportMessage("report_entries_to_delete")} ${entriesToDelete.length}.`);
 
   for (const entry of entriesToDelete) {
     await deleteTimeEntry(redmineDomain, redmineApiKey, entry.id);
@@ -402,30 +415,30 @@ function openMonthlyLogModal({ monthLabel, onStart, onDelete }) {
     <section class="tb-monthly-log-dialog" role="dialog" aria-modal="true" aria-labelledby="tb-monthly-log-title">
       <header class="tb-monthly-log-header">
         <div>
-          <p class="tb-monthly-log-kicker">Redmine spent time</p>
-          <h2 id="tb-monthly-log-title">Log time tháng ${monthLabel}</h2>
-          <p id="tb-monthly-log-status" class="tb-monthly-log-status">Sẵn sàng quét các report trong tháng hiện tại.</p>
+          <p class="tb-monthly-log-kicker">${reportMessage("report_spent_time")}</p>
+          <h2 id="tb-monthly-log-title">${reportMessage("report_log_time_month")} ${monthLabel}</h2>
+          <p id="tb-monthly-log-status" class="tb-monthly-log-status">${reportMessage("report_ready_to_scan")}</p>
         </div>
-        <button type="button" class="tb-monthly-log-close" aria-label="Đóng">&times;</button>
+        <button type="button" class="tb-monthly-log-close" aria-label="${reportMessage("modal_close_aria")}">&times;</button>
       </header>
       <div class="tb-monthly-log-body">
         <div class="tb-monthly-log-stats">
-          <div><span id="tb-monthly-stat-reports">0</span><small>Reports</small></div>
-          <div><span id="tb-monthly-stat-logged">0</span><small>Logged</small></div>
-          <div><span id="tb-monthly-stat-skipped">0</span><small>Skipped</small></div>
-          <div><span id="tb-monthly-stat-failed">0</span><small>Failed</small></div>
+          <div><span id="tb-monthly-stat-reports">0</span><small>${reportMessage("report_reports")}</small></div>
+          <div><span id="tb-monthly-stat-logged">0</span><small>${reportMessage("report_logged")}</small></div>
+          <div><span id="tb-monthly-stat-skipped">0</span><small>${reportMessage("report_skipped")}</small></div>
+          <div><span id="tb-monthly-stat-failed">0</span><small>${reportMessage("report_failed")}</small></div>
         </div>
         <div class="tb-monthly-log-grid">
           <section class="tb-monthly-log-panel">
-            <div class="tb-monthly-log-panel-title">Tiến trình</div>
+            <div class="tb-monthly-log-panel-title">${reportMessage("report_progress")}</div>
             <div id="tb-monthly-log-progress" class="tb-monthly-log-progress"></div>
           </section>
           <section class="tb-monthly-log-panel">
-            <div class="tb-monthly-log-panel-title">Timesheet output</div>
+            <div class="tb-monthly-log-panel-title">${reportMessage("report_timesheet_output")}</div>
             <div class="tb-monthly-log-table-wrap">
               <table id="timesheet-results-table" class="tb-monthly-log-table">
                 <thead>
-                  <tr><th>Ngày</th><th>Tasks</th><th>Trạng thái</th></tr>
+                  <tr><th>${reportMessage("report_date")}</th><th>${reportMessage("report_tasks")}</th><th>${reportMessage("report_status")}</th></tr>
                 </thead>
                 <tbody id="tb-monthly-log-results"></tbody>
               </table>
@@ -434,9 +447,9 @@ function openMonthlyLogModal({ monthLabel, onStart, onDelete }) {
         </div>
       </div>
       <footer class="tb-monthly-log-footer">
-        <button type="button" id="tb-monthly-log-delete" class="tb-btn tb-btn-danger">Delete spent time tháng</button>
-        <button type="button" id="tb-monthly-log-copy" class="tb-btn tb-btn-secondary" disabled>Copy bảng</button>
-        <button type="button" id="tb-monthly-log-start" class="tb-btn tb-btn-primary">Bắt đầu log</button>
+        <button type="button" id="tb-monthly-log-delete" class="tb-btn tb-btn-danger">${reportMessage("report_delete_spent_time")}</button>
+        <button type="button" id="tb-monthly-log-copy" class="tb-btn tb-btn-secondary" disabled>${reportMessage("report_copy_table")}</button>
+        <button type="button" id="tb-monthly-log-start" class="tb-btn tb-btn-primary">${reportMessage("report_start_logging")}</button>
       </footer>
     </section>
   `;
@@ -488,7 +501,7 @@ async function findMonthlyReportIssues(
   const issuesById = new Map();
 
   for (const subjectQuery of uniqueTerms) {
-    updateProgress(`Tìm report theo subject chứa "${subjectQuery}"`);
+    updateProgress(`${reportMessage("report_search_subject")} "${subjectQuery}"`);
     const issues = await findIssues(redmineDomain, redmineApiKey, {
       project_id: projectId,
       tracker_id: trackerId,
@@ -551,17 +564,17 @@ async function injectLogTimeButton() {
     button.href = "#";
     button.id = "tb-log-time-btn";
     button.className = "icon icon-time-add";
-    button.innerText = "Log 8h From Report";
+    button.innerText = reportMessage("report_log_8h");
 
     button.onclick = async (e) => {
       e.preventDefault();
-      button.innerText = "Processing...";
+      button.innerText = reportMessage("report_processing");
       button.classList.add("disabled");
       try {
         await logTimeFromReport(issueId, false); // false for single, interactive mode
-        button.innerText = "Success!";
+        button.innerText = reportMessage("report_success");
       } catch (error) {
-        button.innerText = "Error! Check Console";
+        button.innerText = reportMessage("report_error_check_console");
         console.error("Failed to log time from report:", error);
       }
     };

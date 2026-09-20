@@ -25,6 +25,26 @@
         --warning-text: #9a3412;
       }
 
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #0f172a;
+        --panel: #172033;
+        --text: #e5edf8;
+        --muted: #a8b4c5;
+        --border: #334155;
+        --primary: #60a5fa;
+        --primary-strong: #93c5fd;
+        --success-bg: #123326;
+        --success-border: #276749;
+        --success-text: #a7f3d0;
+        --danger-bg: #3a1b24;
+        --danger-border: #7f1d1d;
+        --danger-text: #fecaca;
+        --warning-bg: #3a2815;
+        --warning-border: #92400e;
+        --warning-text: #fed7aa;
+      }
+
       body {
         margin: 0;
         font-family:
@@ -34,7 +54,7 @@
           BlinkMacSystemFont,
           "Segoe UI",
           sans-serif;
-        background: #f8fafc;
+        background: var(--bg);
         color: var(--text);
       }
 
@@ -64,6 +84,31 @@
         border-radius: 18px;
         padding: 20px;
         box-shadow: 0 4px 12px rgba(31, 41, 55, 0.08);
+      }
+
+      :root[data-theme="dark"] .card,
+      :root[data-theme="dark"] details,
+      :root[data-theme="dark"] .status,
+      :root[data-theme="dark"] .note {
+        background: var(--panel) !important;
+        color: var(--text);
+      }
+
+      :root[data-theme="dark"] input,
+      :root[data-theme="dark"] textarea,
+      :root[data-theme="dark"] select {
+        color: var(--text);
+        background: #111827;
+      }
+
+      :root[data-theme="dark"] .secondary {
+        color: var(--text);
+        background: #1e293b;
+      }
+
+      :root[data-theme="dark"] .disclaimer {
+        background: var(--warning-bg);
+        color: var(--warning-text);
       }
 
       .grid {
@@ -320,7 +365,20 @@
   <body>
     <div class="wrap">
       <div class="hero">
-        <h1>Translate Backlog & Redmine</h1>
+        <h1 data-i18n="options_title">Translate Backlog & Redmine</h1>
+        <label for="languagePreference" data-i18n="options_language_label"
+          >Language / Ngôn ngữ</label
+        >
+        <select id="languagePreference" style="max-width: 220px; margin: 8px 0 12px">
+          <option value="vi">Tiếng Việt</option>
+          <option value="en">English</option>
+        </select>
+        <label for="themePreference" data-i18n="options_theme_label">Theme / Giao diện</label>
+        <select id="themePreference" style="max-width: 220px; margin: 8px 0 12px">
+          <option value="system" data-i18n="options_theme_system">Theo hệ thống</option>
+          <option value="light" data-i18n="options_theme_light">Sáng</option>
+          <option value="dark" data-i18n="options_theme_dark">Tối</option>
+        </select>
         <p>
           Lưu cấu hình Redmine, Backlog và AI để extension có thể dịch và đồng bộ comment qua lại
           giữa 2 hệ thống.
@@ -342,7 +400,9 @@
             "
           >
             <summary style="padding: 4px 0; font-weight: 600; color: #1e40af; cursor: pointer">
-              💎 Cấu hình Redmine - Click để thu gọn/mở rộng
+              <span data-i18n="options_redmine_section"
+                >💎 Cấu hình Redmine - Click để thu gọn/mở rộng</span
+              >
             </summary>
             <div style="padding-top: 12px">
               <div class="field" style="margin-bottom: 0">
@@ -756,7 +816,7 @@
             "
           >
             <summary style="padding: 4px 0; font-weight: 600; color: #334155; cursor: pointer">
-              Tùy chọn giao diện
+              <span data-i18n="options_ui_section">Tùy chọn giao diện</span>
             </summary>
             <div class="field check-field" style="padding-top: 12px; margin-bottom: 0">
               <input id="showRedmineSuccessModal" type="checkbox" />
@@ -773,10 +833,80 @@
           </details>
 
           <div class="actions">
-            <button class="primary" type="submit">Lưu cấu hình</button>
+            <button class="primary" type="submit" data-i18n="options_save">Lưu cấu hình</button>
             <div id="status" class="status"></div>
           </div>
         </form>
+
+        <!-- Bug Report Section -->
+        <section class="card" style="margin-top: 24px; background: #fff7ed; border-color: #fb923c">
+          <h3
+            style="margin: 0 0 8px; font-size: 16px; color: #9a3412"
+            data-i18n="options_bug_title"
+          >
+            🐞 Báo lỗi
+          </h3>
+          <p style="margin: 0 0 16px; color: var(--muted); font-size: 14px">
+            Tạo báo cáo có cấu trúc kèm ảnh chụp và thông tin môi trường. Dữ liệu chỉ được tải xuống
+            hoặc mở trong GitHub khi bạn xác nhận.
+          </p>
+          <div class="field">
+            <label for="bugTitle">Tiêu đề lỗi</label>
+            <input
+              id="bugTitle"
+              type="text"
+              maxlength="120"
+              placeholder="Ví dụ: Không gửi được comment sang Redmine"
+            />
+          </div>
+          <div class="field">
+            <label for="bugDescription">Mô tả lỗi</label>
+            <textarea
+              id="bugDescription"
+              rows="4"
+              maxlength="4000"
+              placeholder="Điều gì đã xảy ra?"
+            ></textarea>
+          </div>
+          <div class="field">
+            <label for="bugSteps">Các bước tái hiện</label>
+            <textarea
+              id="bugSteps"
+              rows="3"
+              maxlength="2000"
+              placeholder="1. ...\n2. ..."
+            ></textarea>
+          </div>
+          <div class="field">
+            <label for="bugPageUrl">URL trang xảy ra lỗi (không bắt buộc)</label>
+            <input id="bugPageUrl" type="url" placeholder="https://..." />
+          </div>
+          <div class="field">
+            <label for="bugScreenshot">Ảnh chụp màn hình (PNG/JPEG, tối đa 5 MB)</label>
+            <input id="bugScreenshot" type="file" accept="image/png,image/jpeg,image/webp" />
+            <img
+              id="bugScreenshotPreview"
+              alt="Xem trước ảnh lỗi"
+              hidden
+              style="
+                display: block;
+                max-width: 100%;
+                max-height: 240px;
+                margin-top: 10px;
+                border-radius: 8px;
+                border: 1px solid var(--border);
+              "
+            />
+          </div>
+          <div class="actions">
+            <button id="downloadBugReportBtn" type="button" class="secondary">
+              📥 Tải báo cáo
+            </button>
+            <button id="copyBugReportBtn" type="button" class="secondary">📋 Sao chép</button>
+            <button id="openGithubIssueBtn" type="button" class="primary">Mở GitHub Issue</button>
+          </div>
+          <div id="bugReportStatus" class="status" aria-live="polite"></div>
+        </section>
 
         <!-- Log Management Section -->
         <div style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px">

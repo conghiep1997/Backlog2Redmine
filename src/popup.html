@@ -12,7 +12,7 @@
         <img class="brand-icon" src="../assets/icons/icon-48.png" alt="B2R" />
         <div>
           <h1>Backlog to Redmine</h1>
-          <p>Trợ lý dịch và đồng bộ công việc</p>
+          <p data-i18n="popup_subtitle"></p>
         </div>
         <span id="version" class="version"></span>
       </header>
@@ -20,22 +20,27 @@
       <section class="status-card" aria-labelledby="statusTitle">
         <div class="section-heading">
           <div>
-            <h2 id="statusTitle">Trạng thái cấu hình</h2>
-            <p id="overallStatus">Đang kiểm tra...</p>
+            <h2 id="statusTitle" data-i18n="popup_status_title"></h2>
+            <p id="overallStatus" data-i18n="popup_checking"></p>
           </div>
           <span id="statusBadge" class="status-badge">...</span>
         </div>
         <div class="status-grid">
           <div class="status-item">
-            <span><i class="status-icon flow-icon">↗</i> Backlog → Redmine</span
+            <span
+              ><i class="status-icon flow-icon">↗</i>
+              <span data-i18n="popup_forward_label"></span></span
             ><strong id="forwardStatus">...</strong>
           </div>
           <div class="status-item">
-            <span><i class="status-icon reverse-icon">↙</i> Redmine → Backlog</span
+            <span
+              ><i class="status-icon reverse-icon">↙</i>
+              <span data-i18n="popup_reverse_label"></span></span
             ><strong id="reverseStatus">...</strong>
           </div>
           <div class="status-item">
-            <span><i class="status-icon ai-icon">✦</i> AI chính</span
+            <span
+              ><i class="status-icon ai-icon">✦</i> <span data-i18n="popup_ai_label"></span></span
             ><strong id="providerStatus">...</strong>
           </div>
         </div>
@@ -44,53 +49,57 @@
       <section class="project-card" aria-labelledby="projectTitle">
         <div class="section-heading">
           <div>
-            <h2 id="projectTitle">Thông tin dự án</h2>
-            <p id="projectSummary">Project dùng cho thao tác trên Redmine</p>
+            <h2 id="projectTitle" data-i18n="popup_project_title"></h2>
+            <p id="projectSummary"></p>
           </div>
           <span class="project-icon">⌁</span>
         </div>
         <div class="project-details">
           <div>
-            <span>Nguồn</span><strong><i class="mini-icon">◈</i> Backlog</strong>
+            <span data-i18n="popup_source"></span
+            ><strong><i class="mini-icon">◈</i> Backlog</strong>
           </div>
           <div>
-            <span>Đích</span><strong><i class="mini-icon">◉</i> Redmine</strong>
+            <span data-i18n="popup_target"></span
+            ><strong><i class="mini-icon">◉</i> Redmine</strong>
           </div>
           <div>
-            <span>Project mặc định</span><strong id="defaultProjectValue">Chưa chọn</strong>
+            <span data-i18n="popup_default_project"></span
+            ><strong id="defaultProjectValue"></strong>
           </div>
         </div>
       </section>
 
       <div class="actions">
         <button id="openSettings" class="button button-primary">
-          <span class="button-icon">⚙</span> Mở full settings
+          <span class="button-icon">⚙</span> <span data-i18n="popup_open_settings"></span>
         </button>
         <button id="donateButton" class="button button-donate">
-          <span class="button-icon">♥</span> Donate coffee
+          <span class="button-icon">♥</span> <span data-i18n="popup_donate"></span>
         </button>
       </div>
 
-      <section class="quick-links" aria-label="Thao tác nhanh">
+      <section
+        class="quick-links"
+        aria-label="Thao tác nhanh"
+        data-i18n-aria-label="popup_quick_actions"
+      >
         <button id="openRedmine" class="link-button">
-          <span class="link-icon">↗</span> Mở Redmine
+          <span class="link-icon">↗</span> <span data-i18n="popup_open_redmine"></span>
         </button>
         <button id="openBacklog" class="link-button">
-          <span class="link-icon">↗</span> Mở Backlog
+          <span class="link-icon">↗</span> <span data-i18n="popup_open_backlog"></span>
         </button>
       </section>
 
-      <p class="footer-note">API key được bảo vệ và không hiển thị trong popup.</p>
+      <p class="footer-note" data-i18n="popup_footer_note"></p>
     </main>
 
     <div id="donateModal" class="modal-backdrop" hidden>
       <section class="donate-modal" role="dialog" aria-modal="true" aria-labelledby="donateTitle">
-        <button id="closeDonate" class="close-button" aria-label="Đóng">×</button>
-        <h2 id="donateTitle">Ủng hộ tác giả ☕</h2>
-        <p class="donate-intro">
-          Nếu extension hữu ích với bạn, một ly coffee sẽ là động lực rất lớn để mình tiếp tục phát
-          triển.
-        </p>
+        <button id="closeDonate" class="close-button" data-i18n-aria-label="popup_close">×</button>
+        <h2 id="donateTitle" data-i18n="popup_donate_title"></h2>
+        <p class="donate-intro" data-i18n="popup_donate_intro"></p>
         <div id="donateTabs" class="donate-tabs" role="tablist"></div>
         <div id="donateContent" class="donate-content"></div>
       </section>

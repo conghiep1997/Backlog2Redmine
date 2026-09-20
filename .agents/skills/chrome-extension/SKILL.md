@@ -24,7 +24,7 @@ Manifest V3 extension guidance for Backlog2Redmine lifecycle, content scripts, m
 # validation checklist
 - `manifest_version` remains `3`.
 - Service worker loads all required globals before handlers run.
-- Content scripts match only intended Backlog, Redmine, or Google Sheets URLs.
+- Content scripts match only the intended Backlog and Redmine URLs declared in `manifest.json`.
 - Message handlers return async responses correctly.
 - Permission changes are necessary and documented by code usage.
 - `npm run check:version-sync` passes after version edits.

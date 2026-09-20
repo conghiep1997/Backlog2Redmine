@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   if (typeof TB === "undefined") {
     console.error("[OPTIONS] TB is not defined! constants.js may not have loaded.");
     return;
@@ -14,6 +14,223 @@ document.addEventListener("DOMContentLoaded", () => {
     "QC Activity": 8,
     "Q&A Category": 58,
   };
+
+  let optionsMessages = {};
+  await localizeOptions();
+
+  async function localizeOptions() {
+    const { languagePreference } = await chrome.storage.local.get("languagePreference");
+    const language = languagePreference || "vi";
+    try {
+      const response = await fetch(`../_locales/${language}/messages.json`);
+      if (!response.ok) return;
+      const messages = await response.json();
+      optionsMessages = messages;
+      document.querySelectorAll("[data-i18n]").forEach((element) => {
+        const message = messages[element.dataset.i18n]?.message;
+        if (message) element.textContent = message;
+      });
+    } catch (_error) {
+      // Keep the default Vietnamese labels when the catalog is unavailable.
+    }
+  }
+
+  function om(key, fallback = key) {
+    return optionsMessages[key]?.message || fallback;
+  }
+
+  function setFirstTextNode(element, key, fallback = "") {
+    if (!element) return;
+    const textNode = [...element.childNodes].find((node) => node.nodeType === Node.TEXT_NODE);
+    if (textNode) textNode.nodeValue = om(key, fallback);
+  }
+
+  function localizeOptionsDetails() {
+    document.title = om("options_document_title", document.title);
+    const heroSubtitle = document.querySelector(".hero > p");
+    if (heroSubtitle) heroSubtitle.textContent = om("options_subtitle", heroSubtitle.textContent);
+    const sectionKeys = [
+      "options_redmine_section",
+      "options_custom_fields_section",
+      "options_backlog_section",
+      "options_primary_ai_section",
+      "options_fallback_ai_section",
+      "options_ui_section",
+    ];
+    document.querySelectorAll("#optionsForm details > summary").forEach((summary, index) => {
+      const key = sectionKeys[index];
+      if (key) summary.textContent = om(key, summary.textContent);
+    });
+    const textBySelector = {
+      "#redmineDomain + p": "options_redmine_domain",
+      "label[for='redmineDomain']": "options_redmine_domain",
+      "label[for='redmineApiKey']": "options_redmine_api_key",
+      "label[for='reportProjectId']": "options_report_project",
+      "label[for='backlogDomain']": "options_backlog_domain",
+      "label[for='backlogApiKey']": "options_backlog_api_key",
+      "label[for='primaryProvider']": "options_provider",
+      "label[for='fallbackProvider']": "options_fallback_provider",
+      "label[for='bugTitle']": "options_bug_subject",
+      "label[for='bugDescription']": "options_bug_description_label",
+      "label[for='bugSteps']": "options_bug_steps",
+      "label[for='bugPageUrl']": "options_bug_url",
+      "label[for='bugScreenshot']": "options_screenshot",
+      "#bugTitle": "options_unused",
+      "label[for='showRedmineSuccessModal']": "options_success_modal",
+    };
+    Object.entries(textBySelector).forEach(([selector, key]) => {
+      const element = document.querySelector(selector);
+      if (element && key !== "options_unused") element.textContent = om(key, element.textContent);
+    });
+
+    const placeholders = {
+      redmineApiKey: "options_api_key_placeholder",
+      backlogApiKey: "options_backlog_key_placeholder",
+      groqApiKey: "options_api_key_placeholder",
+      cerebrasApiKey: "options_api_key_placeholder",
+      openrouterApiKey: "options_api_key_placeholder",
+      fallbackGroqApiKey: "options_api_key_placeholder",
+      fallbackCerebrasApiKey: "options_api_key_placeholder",
+      fallbackOpenrouterApiKey: "options_api_key_placeholder",
+      geminiApiKeys: "options_key_quick_add",
+      fallbackGeminiApiKeys: "options_key_quick_add",
+      bugTitle: "options_bug_subject_placeholder",
+      bugDescription: "options_bug_description_placeholder",
+      bugSteps: "options_bug_steps_placeholder",
+    };
+    Object.entries(placeholders).forEach(([id, key]) => {
+      const element = document.getElementById(id);
+      if (element) element.placeholder = om(key, element.placeholder);
+    });
+    const redmineHelp = document.querySelector("#redmineApiKey")?.parentElement?.querySelector("p");
+    setFirstTextNode(redmineHelp, "options_api_account_help", "🔑 Get the API key from:");
+    if (redmineHelp?.lastChild?.nodeType === Node.TEXT_NODE) {
+      redmineHelp.lastChild.nodeValue = ` ${om("options_redmine_account_hint", "(See your API access key.)")}`;
+    }
+    const backlogHelp = document.querySelector("#backlogApiKey")?.parentElement?.querySelector("p");
+    setFirstTextNode(
+      backlogHelp,
+      "options_backlog_help",
+      "🔑 Get it from Account > API in your Backlog."
+    );
+    setFirstTextNode(
+      document.querySelector("#defaultProjectId")?.parentElement?.querySelector("label"),
+      "options_default_project",
+      "Project mặc định (Dùng cho Migrate)"
+    );
+    if (backlogHelp?.lastChild?.nodeType === Node.TEXT_NODE) {
+      backlogHelp.lastChild.nodeValue = ` ${om("options_backlog_suffix", "Required to send comments and sync data.")}`;
+    }
+    const reportHelp = document
+      .querySelector("#reportProjectId")
+      ?.parentElement?.querySelector("p");
+    if (reportHelp) reportHelp.textContent = om("options_report_help", reportHelp.textContent);
+    const customFieldsHelp = document
+      .querySelector("#manualFields")
+      ?.parentElement?.querySelector("p");
+    if (customFieldsHelp) {
+      customFieldsHelp.textContent = om("options_custom_fields_help", customFieldsHelp.textContent);
+    }
+
+    document
+      .querySelectorAll(
+        "#primaryGroqConfig p, #primaryCerebrasConfig p, #primaryOpenrouterConfig p, #fallbackGroqConfig p, #fallbackCerebrasConfig p, #fallbackOpenrouterConfig p"
+      )
+      .forEach((help) => {
+        setFirstTextNode(help, "options_get_key_from", "🔑 Get it from:");
+        if (
+          help.closest("#primaryOpenrouterConfig, #fallbackOpenrouterConfig") &&
+          help.lastChild?.nodeType === Node.TEXT_NODE
+        ) {
+          help.lastChild.nodeValue = om(
+            "options_openrouter_suffix",
+            " 💡 Many free models (suffix :free)."
+          );
+        }
+      });
+
+    ["defaultProjectId", "reportProjectId"].forEach((id) => {
+      const element = document.getElementById(id);
+      const option = element?.querySelector("option[value='']");
+      if (option) {
+        option.textContent = om("options_save_api_first", option.textContent);
+      }
+    });
+    const primaryFallback = document.querySelector("#fallbackProvider option[value='none']");
+    if (primaryFallback) {
+      primaryFallback.textContent = om("options_no_fallback", primaryFallback.textContent);
+    }
+
+    const providerOptions = {
+      "#primaryProvider option[value='gemini']": "options_gemini_provider",
+      "#primaryProvider option[value='groq']": "options_groq_provider",
+      "#primaryProvider option[value='cerebras']": "options_cerebras_provider",
+      "#primaryProvider option[value='openrouter']": "options_openrouter_provider",
+      "#fallbackProvider option[value='gemini']": "options_gemini_fallback",
+      "#fallbackProvider option[value='groq']": "options_groq_fallback",
+      "#fallbackProvider option[value='cerebras']": "options_cerebras_fallback",
+      "#fallbackProvider option[value='openrouter']": "options_openrouter_fallback",
+    };
+    Object.entries(providerOptions).forEach(([selector, key]) => {
+      const element = document.querySelector(selector);
+      if (element) {
+        element.textContent = om(key, element.textContent);
+      }
+    });
+    const successHelp = document
+      .getElementById("showRedmineSuccessModal")
+      ?.parentElement?.querySelector("p");
+    if (successHelp) {
+      successHelp.textContent = om("options_success_modal_help", successHelp.textContent);
+    }
+
+    const bugSection = document.getElementById("bugTitle")?.closest("section");
+    const bugDescription = bugSection?.querySelector("p");
+    if (bugDescription) {
+      bugDescription.textContent = om("options_bug_description", bugDescription.textContent);
+    }
+    const actionText = {
+      downloadBugReportBtn: "options_download_report",
+      copyBugReportBtn: "options_copy_report",
+      openGithubIssueBtn: "options_open_github",
+      exportLogsBtn: "options_export_logs",
+      clearLogsBtn: "options_clear_logs",
+      checkUpdateBtn: "options_check_update",
+      goToDashboardBtn: "options_download_page",
+      syncProjectsBtn: "options_sync_projects",
+    };
+    Object.entries(actionText).forEach(([id, key]) => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = om(key, element.textContent);
+      }
+    });
+
+    const logHeading = document
+      .getElementById("exportLogsBtn")
+      ?.closest("div[style]")
+      ?.querySelector("h3");
+    if (logHeading) {
+      logHeading.textContent = om("options_logs_title", logHeading.textContent);
+    }
+    const updateHeading = document
+      .getElementById("checkUpdateBtn")
+      ?.closest(".card")
+      ?.querySelector("h3");
+    if (updateHeading) {
+      updateHeading.textContent = om("options_update_title", updateHeading.textContent);
+    }
+    const updateStatus = document.querySelector("#updateStatus p");
+    if (updateStatus) {
+      updateStatus.textContent = om("options_update_checking", updateStatus.textContent);
+    }
+    const supportNote = document.querySelector(".note");
+    if (supportNote) supportNote.textContent = om("options_support_note", supportNote.textContent);
+    const disclaimer = document.querySelector(".disclaimer");
+    if (disclaimer) disclaimer.textContent = om("options_disclaimer", disclaimer.textContent);
+  }
+
+  localizeOptionsDetails();
 
   function sendBackgroundRequest(message) {
     return new Promise((resolve, reject) => {
@@ -32,6 +249,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const form = document.getElementById("optionsForm");
+  const languagePreference = document.getElementById("languagePreference");
+  const themePreference = document.getElementById("themePreference");
   const redmineApiKeyInput = document.getElementById("redmineApiKey");
   const backlogApiKeyInput = document.getElementById("backlogApiKey");
   const groqApiKeyInput = document.getElementById("groqApiKey");
@@ -45,6 +264,34 @@ document.addEventListener("DOMContentLoaded", () => {
   const fallbackProviderSelect = document.getElementById("fallbackProvider");
   const showRedmineSuccessModalInput = document.getElementById("showRedmineSuccessModal");
   const statusEl = document.getElementById("status");
+  chrome.storage.local.get(["languagePreference", "themePreference"], (settings) => {
+    const storedLanguage = settings.languagePreference;
+    const storedTheme = settings.themePreference;
+    languagePreference.value = storedLanguage || "vi";
+    themePreference.value = storedTheme || "system";
+    applyTheme(themePreference.value);
+  });
+  languagePreference.addEventListener("change", () => {
+    chrome.storage.local.set({ languagePreference: languagePreference.value });
+    window.location.reload();
+  });
+  themePreference.addEventListener("change", () => {
+    chrome.storage.local.set({ themePreference: themePreference.value });
+    applyTheme(themePreference.value);
+  });
+
+  function applyTheme(theme) {
+    const resolved =
+      theme === "system"
+        ? matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light"
+        : theme;
+    document.documentElement.dataset.theme = resolved;
+  }
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (themePreference.value === "system") applyTheme("system");
+  });
   const PRIMARY_PROVIDER_CONFIGS = [
     {
       provider: "groq",
@@ -111,16 +358,109 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener("click", () => chrome.tabs.create({ url: "https://hipppo.vercel.app/" }));
   document.getElementById("exportLogsBtn")?.addEventListener("click", handleExportLogs);
   document.getElementById("clearLogsBtn")?.addEventListener("click", handleClearLogs);
+  setupBugReport();
+
+  function setupBugReport() {
+    const fileInput = document.getElementById("bugScreenshot");
+    const preview = document.getElementById("bugScreenshotPreview");
+    fileInput?.addEventListener("change", () => {
+      const file = fileInput.files?.[0];
+      if (!file) {
+        preview.hidden = true;
+        preview.removeAttribute("src");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        fileInput.value = "";
+        setBugReportStatus("Ảnh vượt quá giới hạn 5 MB.", true);
+        return;
+      }
+      preview.src = URL.createObjectURL(file);
+      preview.hidden = false;
+    });
+    document.getElementById("downloadBugReportBtn")?.addEventListener("click", downloadBugReport);
+    document.getElementById("copyBugReportBtn")?.addEventListener("click", copyBugReport);
+    document.getElementById("openGithubIssueBtn")?.addEventListener("click", openGithubIssue);
+  }
+
+  async function buildBugReport() {
+    const manifest = chrome.runtime.getManifest();
+    const logs = (await globalThis.TB_LOGGER?.getLogs?.()) || [];
+    const file = document.getElementById("bugScreenshot")?.files?.[0];
+    return {
+      title: document.getElementById("bugTitle")?.value.trim() || "B2R bug report",
+      description: document.getElementById("bugDescription")?.value.trim() || "",
+      steps: document.getElementById("bugSteps")?.value.trim() || "",
+      pageUrl: document.getElementById("bugPageUrl")?.value.trim() || "",
+      environment: {
+        extensionVersion: manifest.version,
+        browser: navigator.userAgent,
+        language: navigator.language,
+        viewport: `${window.innerWidth}x${window.innerHeight}`,
+        timestamp: new Date().toISOString(),
+      },
+      logs: logs.slice(-50),
+      screenshot: file ? { name: file.name, type: file.type, size: file.size } : null,
+    };
+  }
+
+  async function downloadBugReport() {
+    const report = await buildBugReport();
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    downloadBlob(blob, `b2r-bug-report-${Date.now()}.json`);
+    const file = document.getElementById("bugScreenshot")?.files?.[0];
+    if (file) downloadBlob(file, `b2r-bug-screenshot-${Date.now()}-${file.name}`);
+    setBugReportStatus(om("options_bug_downloaded", "Đã tải báo cáo và ảnh đính kèm."));
+  }
+
+  async function copyBugReport() {
+    try {
+      const report = await buildBugReport();
+      await navigator.clipboard.writeText(formatBugReport(report));
+      setBugReportStatus(om("options_bug_copied", "Đã sao chép nội dung báo cáo."));
+    } catch (_error) {
+      setBugReportStatus(
+        om("options_bug_copy_failed", "Không thể sao chép tự động. Hãy dùng nút Tải báo cáo."),
+        true
+      );
+    }
+  }
+
+  async function openGithubIssue() {
+    const report = await buildBugReport();
+    const url = `https://github.com/conghiep1997/Backlog2Redmine/issues/new?title=${encodeURIComponent(report.title)}&body=${encodeURIComponent(formatBugReport(report) + "\n\nĐính kèm ảnh đã tải xuống nếu có.")}`;
+    chrome.tabs.create({ url });
+  }
+
+  function formatBugReport(report) {
+    return `## Mô tả\n${report.description || "Chưa cung cấp"}\n\n## Các bước tái hiện\n${report.steps || "Chưa cung cấp"}\n\n## URL\n${report.pageUrl || "Không cung cấp"}\n\n## Môi trường\n- Extension: ${report.environment.extensionVersion}\n- Browser: ${report.environment.browser}\n- Language: ${report.environment.language}\n- Viewport: ${report.environment.viewport}\n- Time: ${report.environment.timestamp}\n\n## Logs gần nhất\n\`\`\`json\n${JSON.stringify(report.logs, null, 2)}\n\`\`\``;
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function setBugReportStatus(message, isError = false) {
+    const element = document.getElementById("bugReportStatus");
+    if (!element) return;
+    element.textContent = message;
+    element.className = `status ${isError ? "status-error" : "status-success"}`;
+  }
 
   async function handleExportLogs() {
     if (!globalThis.TB_LOGGER?.getLogs) {
-      setStatus("Không thể đọc log lỗi.", true);
+      setStatus(om("options_logs_unavailable", "Không thể đọc log lỗi."), true);
       return;
     }
 
     const logs = await globalThis.TB_LOGGER.getLogs();
     if (logs.length === 0) {
-      setStatus("Không có log lỗi để xuất.");
+      setStatus(om("options_no_logs", "Không có log lỗi để xuất."));
       return;
     }
 
@@ -131,20 +471,20 @@ document.addEventListener("DOMContentLoaded", () => {
     link.download = `b2r-error-logs-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    setStatus("Đã xuất file log lỗi.");
+    setStatus(om("options_logs_exported", "Đã xuất file log lỗi."));
   }
 
   async function handleClearLogs() {
     if (!globalThis.TB_LOGGER?.clearLogs) {
-      setStatus("Không thể xóa log lỗi.", true);
+      setStatus(om("options_logs_unavailable", "Không thể xóa log lỗi."), true);
       return;
     }
 
-    const confirmed = confirm("Xóa toàn bộ lịch sử log lỗi?");
+    const confirmed = confirm(om("options_confirm_clear_logs", "Xóa toàn bộ lịch sử log lỗi?"));
     if (!confirmed) return;
 
     await globalThis.TB_LOGGER.clearLogs();
-    setStatus("Đã xóa lịch sử log lỗi.");
+    setStatus(om("options_logs_deleted", "Đã xóa lịch sử log lỗi."));
   }
 
   async function handleManualUpdateCheck() {
@@ -154,8 +494,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const originalText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = "⏳ Đang kiểm tra...";
-    statusDiv.innerHTML = "<p style='margin: 0; color: #64748b;'>Đang kết nối đến server...</p>";
+    btn.textContent = `⏳ ${om("options_checking_server", "Đang kiểm tra...")}`;
+    statusDiv.innerHTML = `<p style='margin: 0; color: #64748b;'>${om("options_checking_server", "Đang kết nối đến server...")}</p>`;
 
     try {
       const manifest = chrome.runtime.getManifest();
@@ -172,16 +512,16 @@ document.addEventListener("DOMContentLoaded", () => {
       if (isNewer) {
         statusDiv.innerHTML = `
           <p style="margin: 0; color: #f59e0b; font-weight: 600;">
-            🚀 Có phiên bản mới: <span style="color: #d97706">v${latestVersion}</span>
+            ${om("options_new_version", "🚀 Có phiên bản mới:")} <span style="color: #d97706">v${latestVersion}</span>
           </p>
           <p style="margin: 4px 0 0; font-size: 13px; color: #6b7280;">
-            Phiên bản hiện tại: v${currentVersion}. Vui lòng tải bản mới để có trải nghiệm tốt nhất.
+            ${om("options_current_version_label", "Phiên bản hiện tại:")} v${currentVersion}.
           </p>
         `;
       } else {
         statusDiv.innerHTML = `
           <p style="margin: 0; color: #10b981; font-weight: 600;">
-            ✅ Bạn đang sử dụng phiên bản mới nhất (v${currentVersion})
+            ✅ ${om("options_current_version", "Bạn đang sử dụng phiên bản mới nhất")} (v${currentVersion})
           </p>
         `;
       }
@@ -189,7 +529,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("[OPTIONS] Update check failed:", error);
       statusDiv.innerHTML = `
         <p style="margin: 0; color: #ef4444; font-weight: 600;">
-          ❌ Lỗi kiểm tra: ${error.message}
+          ❌ ${om("options_update_failed", "Lỗi kiểm tra:")} ${error.message}
         </p>
       `;
     } finally {
@@ -568,24 +908,26 @@ document.addEventListener("DOMContentLoaded", () => {
       const modelsBlock = document.createElement("div");
       modelsBlock.style.margin = "0 0 12px";
       modelsBlock.innerHTML = `
-        <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">Models (click chọn/bỏ, dùng round-robin)</p>
+        <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">${om("options_models_help", "Models (click chọn/bỏ, dùng round-robin)")}</p>
         <div id="${scope}${capitalize(provider)}ModelsList" class="provider-models-list" style="display: flex; flex-wrap: wrap; gap: 6px"></div>
-        <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">Đã chọn: <span id="${scope}${capitalize(provider)}SelectedModelCount">0</span></p>
+        <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">${om("options_selected", "Đã chọn:")} <span id="${scope}${capitalize(provider)}SelectedModelCount">0</span></p>
       `;
       configEl.prepend(modelsBlock);
 
       const keysBlock = document.createElement("div");
       keysBlock.style.margin = "8px 0 0";
       keysBlock.innerHTML = `
-        <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">Keys (nh&#7853;p r&#7891;i L&#432;u, Enter &#273;&#7875; th&#234;m nhanh, click &#273;&#7875; x&#243;a)</p>
+        <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">${om("options_keys_help", "Keys (nhập rồi Lưu, Enter để thêm nhanh, bấm để xóa)")}</p>
         <div id="${scope}${capitalize(provider)}KeysList" class="provider-keys-list" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px"></div>
-        <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">Đã thêm: <span id="${scope}${capitalize(provider)}SelectedKeyCount">0</span>/10</p>
+        <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">${om("options_added", "Đã thêm:")} <span id="${scope}${capitalize(provider)}SelectedKeyCount">0</span>/10</p>
       `;
       configEl.appendChild(keysBlock);
 
       if (keyInput) {
-        keyInput.placeholder =
-          "Nh\u1eadp key r\u1ed3i L\u01b0u ho\u1eb7c Enter \u0111\u1ec3 th\u00eam nhanh";
+        keyInput.placeholder = om(
+          "options_key_quick_add",
+          "Nhập key rồi Lưu hoặc Enter để thêm nhanh"
+        );
         keyInput.addEventListener("keydown", (event) =>
           handleProviderKeyInput(event, scope, provider)
         );
@@ -609,10 +951,10 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       if (syncBtn) {
         syncBtn.disabled = true;
-        syncBtn.textContent = "⌛ Đang tải...";
+        syncBtn.textContent = `⌛ ${om("options_loading", "Đang tải...")}`;
       }
-      defaultProjectSelect.innerHTML = '<option value="">Đang tải...</option>';
-      reportProjectSelect.innerHTML = '<option value="">Đang tải...</option>';
+      defaultProjectSelect.innerHTML = `<option value="">${om("options_loading", "Đang tải...")}</option>`;
+      reportProjectSelect.innerHTML = `<option value="">${om("options_loading", "Đang tải...")}</option>`;
       const redmineDomain =
         document.getElementById("redmineDomain").value.trim() || TB.REDMINE_DOMAIN;
       const projects = await sendBackgroundRequest({
@@ -624,12 +966,12 @@ document.addEventListener("DOMContentLoaded", () => {
       cacheTimestamp = now;
       renderProjectOptions(projects, selectedId, selectedReportId);
     } catch (_e) {
-      defaultProjectSelect.innerHTML = '<option value="">Lỗi tải (Kiểm tra Key)</option>';
-      reportProjectSelect.innerHTML = '<option value="">Lỗi tải (Kiểm tra Key)</option>';
+      defaultProjectSelect.innerHTML = `<option value="">${om("options_load_error", "Lỗi tải (Kiểm tra Key)")}</option>`;
+      reportProjectSelect.innerHTML = `<option value="">${om("options_load_error", "Lỗi tải (Kiểm tra Key)")}</option>`;
     } finally {
       if (syncBtn) {
         syncBtn.disabled = false;
-        syncBtn.textContent = "🔄 Đồng bộ Project";
+        syncBtn.textContent = om("options_sync_projects", "🔄 Đồng bộ Project");
       }
     }
   }
@@ -637,8 +979,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderProjectOptions(projects, selectedId, selectedReportId) {
     const defaultSelect = document.getElementById("defaultProjectId");
     const reportSelect = document.getElementById("reportProjectId");
-    defaultSelect.innerHTML = '<option value="">-- Chọn project --</option>';
-    reportSelect.innerHTML = '<option value="">-- Chọn project --</option>';
+    defaultSelect.innerHTML = `<option value="">${om("options_choose_project", "-- Chọn project --")}</option>`;
+    reportSelect.innerHTML = `<option value="">${om("options_choose_project", "-- Chọn project --")}</option>`;
     projects.forEach((p) => {
       const opt = new Option(p.name, p.id);
       defaultSelect.add(opt);
@@ -699,11 +1041,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const primary = primaryProviderSelect.value;
     const currentFallback = fallbackProviderSelect.value;
     const options = [
-      { value: "none", label: "Không dùng dự phòng" },
-      { value: "gemini", label: "Google Gemini AI Studio" },
-      { value: "groq", label: "Groq Cloud" },
-      { value: "cerebras", label: "Cerebras" },
-      { value: "openrouter", label: "OpenRouter" },
+      { value: "none", label: om("options_no_fallback", "Không dùng dự phòng") },
+      { value: "gemini", label: om("options_gemini_fallback", "Google Gemini AI Studio") },
+      { value: "groq", label: om("options_groq_fallback", "Groq Cloud") },
+      { value: "cerebras", label: om("options_cerebras_fallback", "Cerebras") },
+      { value: "openrouter", label: om("options_openrouter_fallback", "OpenRouter") },
     ].filter((opt) => opt.value === "none" || opt.value !== primary);
 
     fallbackProviderSelect.innerHTML = "";
