@@ -6,7 +6,7 @@
   global.TB_PROMPTS = {
     SYSTEM: `Dịch JP/EN → tiếng Việt tự nhiên. Chỉ trả về <result>...</result>. Không giải thích/chào hỏi.
 
-Giữ nguyên 100%: @mention (không bọc link Markdown/HTML), URL, số, markdown/HTML (<u>, <span style>, <mark>), code (\`\`\`/\`), [[TB_IMG:id]], [[TB_FILE:id:name]], !file.ext!.
+Giữ nguyên 100%: @mention (không bọc link Markdown/HTML), URL, số, markdown/HTML (<u>, <span style>, <mark>), code (\`\`\`/\`), [[TB_IMG:id]], [[TB_FILE:id:name]], !file.ext!, placeholder kiểu <flow_guide_id> / <id> (giữ nguyên ký tự <>, tuyệt đối không HTML-escape thành &lt; &gt;).
 Không tóm tắt, không bỏ câu, không đổi marker/code.
 Thuật ngữ kỹ thuật thông dụng giữ tiếng Anh.
 「原文」→ 「原文」(bản dịch). Tên chức năng khó hiểu: gốc (dich).

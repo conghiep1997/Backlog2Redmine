@@ -468,12 +468,27 @@ function extractBacklogContent(element) {
         return;
       }
 
-      // Horizontal rules: <hr> -> ---
+      // Horizontal rules: <hr> → ---
       if (tag === "hr") {
         if (!result.endsWith("\n")) {
           result += "\n";
         }
         result += "---\n\n";
+        return;
+      }
+
+      // Unknown/custom tags (e.g. browser parsed literal <flow_guide_id> as an element):
+      // reconstruct as text so placeholders survive extraction.
+      if (!isKnownHtmlTag(tag)) {
+        if (!node.childNodes || node.childNodes.length === 0) {
+          result += `<${tag}>`;
+          return;
+        }
+        result += `<${tag}>`;
+        for (const child of node.childNodes) {
+          walk(child, options);
+        }
+        result += `</${tag}>`;
         return;
       }
 
@@ -541,8 +556,89 @@ function findDirectCheckbox(listItem) {
  * @param {string} markdown
  * @returns {string}
  */
-function escapeHtmlText(value) {
-  return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const KNOWN_HTML_TAGS = new Set([
+  "a",
+  "b",
+  "blockquote",
+  "br",
+  "code",
+  "del",
+  "div",
+  "em",
+  "font",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "hr",
+  "i",
+  "img",
+  "input",
+  "ins",
+  "li",
+  "mark",
+  "ol",
+  "p",
+  "pre",
+  "s",
+  "span",
+  "strike",
+  "strong",
+  "table",
+  "tbody",
+  "td",
+  "th",
+  "thead",
+  "tr",
+  "u",
+  "ul",
+]);
+
+function isKnownHtmlTag(tag) {
+  return KNOWN_HTML_TAGS.has(String(tag || "").toLowerCase());
+}
+
+/**
+ * Only neutralize </pre> / </code> breakouts. Do not entity-escape all <>,
+ * or Redmine will escape again and show literal &lt; on the issue page.
+ */
+function escapeFragileCodeHtml(value) {
+  return String(value)
+    .replace(/<\/pre/gi, "&lt;/pre")
+    .replace(/<\/code/gi, "&lt;/code");
+}
+
+/**
+ * Escape leftover <...> that are not allowlisted HTML so Redmine Textile
+ * does not strip/mangle placeholders like <flow_guide_id>.
+ * Preserve Markdown/Textile blockquote markers (`>` at line start).
+ */
+function escapeNonAllowlistedAngleBrackets(text) {
+  const protections = [];
+  const protect = (chunk) => {
+    const token = `§§TBHTML${protections.length}§§`;
+    protections.push(chunk);
+    return token;
+  };
+
+  let result = String(text ?? "");
+  // Keep blockquote markers (Markdown `>` / Redmine-compatible)
+  result = result.replace(/^([ \t]*>+[ \t]?)/gm, (m) => protect(m));
+  // Keep entire pre/code blocks (body may contain &lt; breakout guards)
+  result = result.replace(/<pre\b[^>]*>[\s\S]*?<\/pre>/gi, (m) => protect(m));
+  result = result.replace(/<code\b[^>]*>[\s\S]*?<\/code>/gi, (m) => protect(m));
+  result = result.replace(
+    /<\/?(?:u|ins|mark|span|notextile)(\s[^>]*)?>/gi,
+    (m) => protect(m)
+  );
+  result = result.replace(/</g, "&#60;").replace(/>/g, "&#62;");
+
+  for (let i = protections.length - 1; i >= 0; i--) {
+    result = result.split(`§§TBHTML${i}§§`).join(protections[i]);
+  }
+  return result;
 }
 
 function markdownToTextile(markdown) {
@@ -557,7 +653,13 @@ function markdownToTextile(markdown) {
     return token;
   };
 
-  let text = String(markdown);
+  // Undo over-escaped entities (AI / paste) before Textile conversion.
+  let text =
+    typeof decodeHtmlEntitiesOutsideCode === "function"
+      ? decodeHtmlEntitiesOutsideCode(markdown)
+      : typeof decodeHtmlText === "function"
+        ? decodeHtmlText(markdown)
+        : String(markdown);
 
   // Protect Textile attachments / markers that must stay untouched
   text = text.replace(/!([^!\s\n]+)!/g, (m) => protect(m));
@@ -567,13 +669,13 @@ function markdownToTextile(markdown) {
 
   // Fenced code blocks → <pre> (widely rendered by Redmine Textile)
   text = text.replace(/```([^\n`]*)\n([\s\S]*?)```/g, (_m, _lang, code) => {
-    const body = escapeHtmlText(String(code).replace(/^\n+|\n+$/g, ""));
+    const body = escapeFragileCodeHtml(String(code).replace(/^\n+|\n+$/g, ""));
     return protect(`<pre>\n${body}\n</pre>`);
   });
 
   // Inline code → <code> (avoids clashing with @mentions in Textile)
   text = text.replace(/`([^`\n]+)`/g, (_m, code) =>
-    protect(`<code>${escapeHtmlText(code)}</code>`)
+    protect(`<code>${escapeFragileCodeHtml(code)}</code>`)
   );
 
   // Images ![alt](src) → !src! before link pass (avoid matching [alt](src) inside images)
@@ -634,7 +736,7 @@ function markdownToTextile(markdown) {
     text = text.split(`§§TBPROT${i}§§`).join(protections[i]);
   }
 
-  return text.replace(/\n{3,}/g, "\n\n").trim();
+  return escapeNonAllowlistedAngleBrackets(text).replace(/\n{3,}/g, "\n\n").trim();
 }
 
 if (typeof globalThis !== "undefined") {

@@ -1,5 +1,23 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.16] - 2026-09-21
+
+> Giữ nguyên placeholder kiểu `<flow_guide_id>` khi dịch/sync note sang Redmine (không còn hiện `&lt;…&gt;`).
+
+### Fixed
+- AI HTML-escape `<>` (vd. `<flow_guide_id>` → `&lt;…&gt;`) được decode trước khi gửi Redmine; code fence/inline giữ nguyên entity.
+- Textile không còn double-escape: dùng `&#60;/&#62;` cho placeholder ngoài allowlist; trong `<pre>/<code>` chỉ chặn breakout `</pre>` / `</code>`.
+- Extract Backlog giữ custom tag kiểu `<flow_guide_id>` (browser parse thành element lạ) thay vì nuốt mất.
+
+### Improved
+- Prompt: giữ nguyên placeholder `<id>` / `<flow_guide_id>`, không HTML-escape thành `&lt;` `&gt;`.
+- Helper `decodeHtmlEntitiesOutsideCode`; ESLint globals bổ sung `decodeHtmlEntitiesOutsideCode`, `buildRedmineUploadUrl`, `normalizeBacklogOrigin`.
+- Unit test cho decode angle brackets, Textile placeholder, và extract custom tag.
+
+### Docs
+- Cập nhật `CHANGELOG.md` cho bản 1.8.16.
+
+
 ## [1.8.15] - 2026-09-20
 
 ### Added

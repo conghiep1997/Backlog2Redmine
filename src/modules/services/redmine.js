@@ -1,4 +1,4 @@
-/* global downloadBacklogFile, TB_LOGGER, markdownToTextile, buildRedmineUploadUrl */
+/* global downloadBacklogFile, TB_LOGGER, markdownToTextile */
 /**
  * Redmine API Service for Backlog2Redmine Extension.
  * Handles operations with Redmine API: finding issues, sending notes, and uploading files.

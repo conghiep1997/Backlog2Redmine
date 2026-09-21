@@ -836,6 +836,13 @@ function normalizeTranslationOutput(rawText) {
     cleaned = rawText.trim();
   }
 
+  // AI đôi khi HTML-escape <> (vd. <flow_guide_id> → &lt;...&gt;); decode trước khi gửi Redmine.
+  if (typeof decodeHtmlEntitiesOutsideCode === "function") {
+    cleaned = decodeHtmlEntitiesOutsideCode(cleaned);
+  } else if (typeof decodeHtmlText === "function") {
+    cleaned = decodeHtmlText(cleaned);
+  }
+
   return cleaned;
 }
 
