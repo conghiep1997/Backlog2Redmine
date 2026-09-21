@@ -78,6 +78,80 @@
         color: var(--muted);
       }
 
+      /* Keep the most frequently used preferences visible at the top. */
+      .hero > label {
+        display: inline-block;
+        margin-top: 18px;
+        margin-right: 8px;
+        padding: 0;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .hero > select {
+        min-height: 40px;
+        margin: 8px 8px 12px 0 !important;
+        padding: 8px 10px;
+        color: var(--text);
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font: inherit;
+      }
+
+      :root[data-theme="dark"] details[style*="background"] {
+        background: #1e293b !important;
+      }
+
+      :root[data-theme="dark"] details[style*="background"] summary,
+      :root[data-theme="dark"] details[style*="background"] label,
+      :root[data-theme="dark"] details[style*="background"] p,
+      :root[data-theme="dark"] details[style*="background"] code {
+        color: var(--text) !important;
+      }
+
+      :root[data-theme="dark"] details details,
+      :root[data-theme="dark"] textarea,
+      :root[data-theme="dark"] select[style*="background"] {
+        background: #111827 !important;
+      }
+
+      :root[data-theme="dark"] a {
+        color: #93c5fd !important;
+      }
+
+      @media (max-width: 620px) {
+        .hero > label,
+        .hero > select {
+          margin-right: 0 !important;
+        }
+      }
+
+      details {
+        transition: border-color 160ms ease, box-shadow 160ms ease;
+      }
+
+      details[open] {
+        box-shadow: 0 6px 18px rgba(31, 41, 55, 0.06);
+      }
+
+      details summary:focus-visible,
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible,
+      textarea:focus-visible,
+      a:focus-visible {
+        outline: 3px solid rgba(37, 99, 235, 0.35);
+        outline-offset: 2px;
+      }
+
+      .provider-key-help {
+        margin: 0 0 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
       .card {
         background: var(--panel);
         border: 1px solid rgba(215, 221, 231, 0.85);
@@ -465,6 +539,7 @@
                     href="https://redmine.splus-software.com/my/account"
                     target="_blank"
                     style="color: var(--primary)"
+                    data-i18n="options_personal_account"
                     >Tài khoản cá nhân</a
                   >
                   (Bấm vào "Hiện" tại mục "Mã truy cập API").
@@ -638,6 +713,10 @@
 
               <!-- Gemini Keys & Models (shown when gemini selected) -->
               <div id="primaryGeminiConfig" style="display: none">
+                <p class="provider-key-help">
+                  <span data-i18n="options_gemini_key_prefix">Get a Gemini API key from</span>
+                  <a href="https://aistudio.google.com/app/apikey" target="_blank" data-i18n="options_gemini_console">Google AI Studio</a>.
+                </p>
                 <div style="margin-bottom: 12px">
                   <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">
                     Models (click chọn/bỏ)
@@ -681,7 +760,7 @@
                 <input id="groqApiKey" type="password" placeholder="Nhập Groq API key" />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑 Lấy tại:
-                  <a href="https://console.groq.com/keys" target="_blank">Groq Console</a>.
+                  <a href="https://console.groq.com/keys" target="_blank" data-i18n="options_groq_console">Groq Console</a>.
                 </p>
               </div>
 
@@ -690,7 +769,7 @@
                 <input id="cerebrasApiKey" type="password" placeholder="Nhập Cerebras API key" />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑 Lấy tại:
-                  <a href="https://cloud.cerebras.ai/" target="_blank">Cerebras Cloud</a>.
+                  <a href="https://cloud.cerebras.ai/" target="_blank" data-i18n="options_cerebras_console">Cerebras Cloud</a>.
                 </p>
               </div>
 
@@ -797,6 +876,10 @@
               </div>
 
               <!-- Fallback Groq -->
+              <div id="fallbackGeminiHelp" class="provider-key-help" style="display: none">
+                <span data-i18n="options_gemini_key_prefix">Get a Gemini API key from</span>
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" data-i18n="options_gemini_console">Google AI Studio</a>.
+              </div>
               <div id="fallbackGroqConfig" class="field" style="margin-bottom: 0; display: none">
                 <input
                   id="fallbackGroqApiKey"
@@ -951,8 +1034,8 @@
           <div id="bugReportStatus" class="status" aria-live="polite"></div>
         </section>
 
-        <!-- Log Management Section -->
-        <div style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px">
+        <!-- Error logs remain available to bug reports but are hidden from the settings UI. -->
+        <div class="error-log-management" hidden>
           <h3 style="margin: 0 0 12px; font-size: 16px">Quản lý Lỗi (Logs)</h3>
           <p style="margin: 0 0 16px; color: var(--muted); font-size: 14px">
             Nếu gặp sự cố, bạn có thể xuất file log lỗi để gửi cho đội phát triển.

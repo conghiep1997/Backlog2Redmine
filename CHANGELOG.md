@@ -1,5 +1,24 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.16] - 2026-09-21
+### Added
+- Include the latest error logs in downloaded, copied, and GitHub bug reports.
+
+### Fixed
+- Changed the extension default locale to English.
+- Improved the Options page Language and Theme controls with clearer borders and placement.
+- Improved dark-mode contrast across settings sections and form controls.
+- Localized the Redmine personal account link.
+- Fixed screenshot preview handling and added an error state when an image cannot be previewed.
+
+### Docs
+- Documented the Options page, screenshot preview, localization, and error-log report improvements.
+
+- **✨ Added**:
+- **🔧 Fixed**:
+- **📝 Docs**:
+
+
 ## [1.8.15] - 2026-09-20
 
 ### Added

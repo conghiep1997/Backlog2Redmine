@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function localizeOptions() {
     const { languagePreference } = await chrome.storage.local.get("languagePreference");
-    const language = languagePreference || "vi";
+    const language = languagePreference || "en";
     try {
       const response = await fetch(`../_locales/${language}/messages.json`);
       if (!response.ok) return;
@@ -65,6 +65,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       "#redmineDomain + p": "options_redmine_domain",
       "label[for='redmineDomain']": "options_redmine_domain",
       "label[for='redmineApiKey']": "options_redmine_api_key",
+      "#redmineApiKey ~ p a": "options_personal_account",
       "label[for='reportProjectId']": "options_report_project",
       "label[for='backlogDomain']": "options_backlog_domain",
       "label[for='backlogApiKey']": "options_backlog_api_key",
@@ -195,6 +196,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         element.textContent = om(key, element.textContent);
       }
     });
+    const providerLinkLabels = {
+      "#primaryGroqConfig a, #fallbackGroqConfig a": "options_groq_get_key",
+      "#primaryCerebrasConfig a, #fallbackCerebrasConfig a": "options_cerebras_get_key",
+      "#primaryOpenrouterConfig a, #fallbackOpenrouterConfig a": "options_openrouter_get_key",
+    };
+    Object.entries(providerLinkLabels).forEach(([selector, key]) => {
+      document.querySelectorAll(selector).forEach((link) => {
+        link.textContent = om(key, link.textContent);
+      });
+    });
     const successHelp = document
       .getElementById("showRedmineSuccessModal")
       ?.parentElement?.querySelector("p");
@@ -291,7 +302,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   chrome.storage.local.get(["languagePreference", "themePreference"], (settings) => {
     const storedLanguage = settings.languagePreference;
     const storedTheme = settings.themePreference;
-    languagePreference.value = storedLanguage || "vi";
+    languagePreference.value = storedLanguage || "en";
     themePreference.value = storedTheme || "system";
     applyTheme(themePreference.value);
   });
@@ -387,11 +398,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   function setupBugReport() {
     const fileInput = document.getElementById("bugScreenshot");
     const preview = document.getElementById("bugScreenshotPreview");
+    let previewUrl = null;
+    preview?.addEventListener("error", () => {
+      preview.hidden = true;
+      setBugReportStatus(om("options_screenshot_preview_failed", "Unable to preview this image."), true);
+    });
     fileInput?.addEventListener("change", () => {
       const file = fileInput.files?.[0];
       if (!file) {
         preview.hidden = true;
         preview.removeAttribute("src");
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        previewUrl = null;
         return;
       }
       if (file.size > 5 * 1024 * 1024) {
@@ -399,8 +417,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         setBugReportStatus("Ảnh vượt quá giới hạn 5 MB.", true);
         return;
       }
-      preview.src = URL.createObjectURL(file);
-      preview.hidden = false;
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = URL.createObjectURL(file);
+      preview.hidden = true;
+      preview.onload = () => {
+        preview.hidden = false;
+      };
+      preview.src = previewUrl;
     });
     document.getElementById("downloadBugReportBtn")?.addEventListener("click", downloadBugReport);
     document.getElementById("copyBugReportBtn")?.addEventListener("click", copyBugReport);
@@ -1048,6 +1071,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     Object.entries(sections).forEach(([key, el]) => {
       if (el) el.style.display = provider === key ? "block" : "none";
     });
+    const geminiHelp = document.getElementById("fallbackGeminiHelp");
+    if (geminiHelp) geminiHelp.style.display = provider === "gemini" ? "block" : "none";
   }
 
   function getDefaultModel(provider) {
