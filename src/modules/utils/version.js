@@ -3,8 +3,7 @@
  */
 (function (global) {
   const API_URL = "https://dev-tool-platform-api.onrender.com/api";
-  const GITHUB_LATEST_RELEASE_URL =
-    "https://api.github.com/repos/conghiep1997/b2r/releases/latest";
+  const GITHUB_LATEST_RELEASE_URL = "https://api.github.com/repos/conghiep1997/b2r/releases/latest";
   const VERSION_PATTERN = /^\d+(?:\.\d+)*$/;
 
   function isValid(version) {
