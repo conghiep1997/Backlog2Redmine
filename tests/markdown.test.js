@@ -64,12 +64,21 @@ function querySelector(root, selector) {
 }
 
 function createExtractor() {
+  const helpersSource = fs.readFileSync(
+    path.join(__dirname, "..", "src", "modules", "utils", "helpers.js"),
+    "utf8"
+  );
   const context = vm.createContext({
     Node: { TEXT_NODE, ELEMENT_NODE },
     globalThis: {},
     window: { location: { origin: "https://example.backlog.com" } },
     URL,
+    URLSearchParams,
+    console,
+    setTimeout,
+    clearTimeout,
   });
+  vm.runInContext(helpersSource, context);
   vm.runInContext(
     `${source}\nthis.extractBacklogContent = extractBacklogContent;\nthis.markdownToTextile = markdownToTextile;\nthis.resolveBacklogHref = resolveBacklogHref;`,
     context
@@ -203,7 +212,7 @@ test("markdownToTextile preserves markdown blockquote markers", () => {
 test("markdownToTextile escapes closing pre/code tags inside fences", () => {
   const { markdownToTextile } = createExtractor();
   const textile = markdownToTextile("```\n</pre>hack\n```");
-  assert.match(textile, /<pre>\n&lt;\/pre&gt;hack\n<\/pre>/);
+  assert.match(textile, /<pre>\n&lt;\/pre(?:&#62;|>)hack\n<\/pre>/);
   assert.equal((textile.match(/<\/pre>/gi) || []).length, 1);
 });
 
@@ -212,7 +221,24 @@ test("markdownToTextile keeps single-asterisk Textile bold intact", () => {
   assert.equal(markdownToTextile("*already* and **md**"), "*already* and *md*");
 });
 
-test("markdownToTextile escapes html special chars in inline code", () => {
+test("markdownToTextile keeps angle brackets visible for Redmine without double-escape", () => {
   const { markdownToTextile } = createExtractor();
-  assert.equal(markdownToTextile("`a<b>&c`"), "<code>a&lt;b&gt;&amp;c</code>");
+  assert.equal(
+    markdownToTextile("flow_guide/display/<flow_guide_id>"),
+    "flow_guide/display/&#60;flow_guide_id&#62;"
+  );
+  assert.equal(
+    markdownToTextile("flow_guide/display/&lt;flow_guide_id&gt;"),
+    "flow_guide/display/&#60;flow_guide_id&#62;"
+  );
+  assert.equal(markdownToTextile("`a<b>&c`"), "<code>a<b>&c</code>");
+});
+
+test("extractBacklogContent preserves placeholder-like custom tags", () => {
+  const { extractBacklogContent } = createExtractor();
+  const root = createElement("p", {}, [
+    createTextNode("flow_guide/display/"),
+    createElement("flow_guide_id", {}, []),
+  ]);
+  assert.equal(extractBacklogContent(root), "flow_guide/display/<flow_guide_id>");
 });

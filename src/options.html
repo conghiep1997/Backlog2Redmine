@@ -129,7 +129,9 @@
       }
 
       details {
-        transition: border-color 160ms ease, box-shadow 160ms ease;
+        transition:
+          border-color 160ms ease,
+          box-shadow 160ms ease;
       }
 
       details[open] {
@@ -715,7 +717,12 @@
               <div id="primaryGeminiConfig" style="display: none">
                 <p class="provider-key-help">
                   <span data-i18n="options_gemini_key_prefix">Get a Gemini API key from</span>
-                  <a href="https://aistudio.google.com/app/apikey" target="_blank" data-i18n="options_gemini_console">Google AI Studio</a>.
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    data-i18n="options_gemini_console"
+                    >Google AI Studio</a
+                  >.
                 </p>
                 <div style="margin-bottom: 12px">
                   <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">
@@ -760,7 +767,12 @@
                 <input id="groqApiKey" type="password" placeholder="Nhập Groq API key" />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑 Lấy tại:
-                  <a href="https://console.groq.com/keys" target="_blank" data-i18n="options_groq_console">Groq Console</a>.
+                  <a
+                    href="https://console.groq.com/keys"
+                    target="_blank"
+                    data-i18n="options_groq_console"
+                    >Groq Console</a
+                  >.
                 </p>
               </div>
 
@@ -769,7 +781,12 @@
                 <input id="cerebrasApiKey" type="password" placeholder="Nhập Cerebras API key" />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑 Lấy tại:
-                  <a href="https://cloud.cerebras.ai/" target="_blank" data-i18n="options_cerebras_console">Cerebras Cloud</a>.
+                  <a
+                    href="https://cloud.cerebras.ai/"
+                    target="_blank"
+                    data-i18n="options_cerebras_console"
+                    >Cerebras Cloud</a
+                  >.
                 </p>
               </div>
 
@@ -878,7 +895,12 @@
               <!-- Fallback Groq -->
               <div id="fallbackGeminiHelp" class="provider-key-help" style="display: none">
                 <span data-i18n="options_gemini_key_prefix">Get a Gemini API key from</span>
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" data-i18n="options_gemini_console">Google AI Studio</a>.
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  data-i18n="options_gemini_console"
+                  >Google AI Studio</a
+                >.
               </div>
               <div id="fallbackGroqConfig" class="field" style="margin-bottom: 0; display: none">
                 <input

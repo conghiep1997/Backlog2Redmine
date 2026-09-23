@@ -53,6 +53,29 @@ function decodeHtmlText(value) {
 }
 
 /**
+ * Decode &lt;/&gt;/&amp; outside fenced/inline code so AI or copy-paste
+ * HTML escaping does not become visible entities on Redmine (double-escape).
+ */
+function decodeHtmlEntitiesOutsideCode(value) {
+  const protections = [];
+  const protect = (chunk) => {
+    const token = `§§TBENT${protections.length}§§`;
+    protections.push(chunk);
+    return token;
+  };
+
+  let text = String(value ?? "");
+  text = text.replace(/```[\s\S]*?```/g, (m) => protect(m));
+  text = text.replace(/`[^`\n]+`/g, (m) => protect(m));
+  text = decodeHtmlText(text);
+
+  for (let i = protections.length - 1; i >= 0; i--) {
+    text = text.split(`§§TBENT${i}§§`).join(protections[i]);
+  }
+  return text;
+}
+
+/**
  * Strips HTML tags from a string.
  */
 function stripHtml(value) {

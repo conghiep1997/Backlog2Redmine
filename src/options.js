@@ -401,7 +401,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     let previewUrl = null;
     preview?.addEventListener("error", () => {
       preview.hidden = true;
-      setBugReportStatus(om("options_screenshot_preview_failed", "Unable to preview this image."), true);
+      setBugReportStatus(
+        om("options_screenshot_preview_failed", "Unable to preview this image."),
+        true
+      );
     });
     fileInput?.addEventListener("change", () => {
       const file = fileInput.files?.[0];

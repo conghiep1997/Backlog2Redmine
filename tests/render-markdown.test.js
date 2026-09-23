@@ -73,6 +73,10 @@ test("renders fenced code without applying inline markdown", () => {
 });
 
 function createRedminePreview() {
+  const helpersSource = fs.readFileSync(
+    path.join(__dirname, "..", "src", "modules", "utils", "helpers.js"),
+    "utf8"
+  );
   const markdownSource = fs.readFileSync(
     path.join(__dirname, "..", "src", "modules", "utils", "markdown.js"),
     "utf8"
@@ -80,8 +84,14 @@ function createRedminePreview() {
   const context = vm.createContext({
     window: {},
     globalThis: {},
+    URL,
+    URLSearchParams,
+    console,
+    setTimeout,
+    clearTimeout,
   });
   context.globalThis = context;
+  vm.runInContext(helpersSource, context);
   vm.runInContext(markdownSource, context);
   vm.runInContext(source, context);
   return context.window.renderRedmineNotePreview;
@@ -120,7 +130,8 @@ test("Redmine preview shows Textile collapse and attachments", () => {
 test("Redmine preview escapes unsafe content in collapse titles", () => {
   const renderRedmineNotePreview = createRedminePreview();
   const html = renderRedmineNotePreview("{{collapse(<script>x</script>)\n\nbody\n}}");
-  assert.match(html, /&lt;script&gt;x&lt;\/script&gt;/);
+  // Textile uses &#60;/&#62; for non-allowlisted tags; preview HTML-escapes `&` → &amp;#60;
+  assert.match(html, /(?:&lt;script&gt;|&amp;#60;script&amp;#62;)/);
   assert.doesNotMatch(html, /<script>x<\/script>/);
 });
 

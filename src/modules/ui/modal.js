@@ -938,7 +938,33 @@ function openBacklogModal({
     return mentions;
   }
 
+  // Redmine displays a user's full name in a mention, while Backlog resolves
+  // mentions by the project's userId. Normalize known names before posting so
+  // Backlog can render the mention as a profile link and notify the user.
+  function normalizeBacklogMentions(text) {
+    let normalized = String(text || "");
+    const users = backlogUsers
+      .filter((user) => user?.userId && user?.name)
+      .sort((a, b) => String(b.name).length - String(a.name).length);
+
+    users.forEach((user) => {
+      const userId = String(user.userId).trim();
+      const name = String(user.name).trim();
+      if (!userId || !name || name.toLowerCase() === userId.toLowerCase()) return;
+      const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      normalized = normalized.replace(
+        new RegExp(`(^|\\s)@${escapedName}(?=\\s|$|[.,!?])`, "gi"),
+        `$1@${userId}`
+      );
+    });
+    return normalized;
+  }
+
   function updateAutoNotify() {
+    const normalizedText = normalizeBacklogMentions(previewTextarea.value);
+    if (normalizedText !== previewTextarea.value) {
+      previewTextarea.value = normalizedText;
+    }
     autoNotifyUserIds = [];
     const mentions = findMentionsInText(previewTextarea.value);
 

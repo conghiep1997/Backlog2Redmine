@@ -10,7 +10,19 @@ const source = fs.readFileSync(
 );
 
 function createNormalizer() {
-  const context = vm.createContext({ console, globalThis: {} });
+  const helpersSource = fs.readFileSync(
+    path.join(__dirname, "..", "src", "modules", "utils", "helpers.js"),
+    "utf8"
+  );
+  const context = vm.createContext({
+    console,
+    globalThis: {},
+    URL,
+    URLSearchParams,
+    setTimeout,
+    clearTimeout,
+  });
+  vm.runInContext(helpersSource, context);
   vm.runInContext(
     `${source}\nthis.normalizeTranslationOutput = normalizeTranslationOutput;`,
     context
@@ -37,4 +49,16 @@ test("normalizeTranslationOutput removes prompt boundary markers in the middle o
   const raw = ["Dòng đầu", "[BẮT ĐẦU]", "Dòng giữa", "[KẾT THÚC]", "Dòng cuối"].join("\n");
 
   assert.equal(normalizeTranslationOutput(raw), "Dòng đầu\nDòng giữa\nDòng cuối");
+});
+
+test("normalizeTranslationOutput decodes HTML-escaped angle brackets outside code", () => {
+  const normalizeTranslationOutput = createNormalizer();
+  assert.equal(
+    normalizeTranslationOutput("flow_guide/display/&lt;flow_guide_id&gt;"),
+    "flow_guide/display/<flow_guide_id>"
+  );
+  assert.equal(
+    normalizeTranslationOutput("keep `&lt;code&gt;` literal"),
+    "keep `&lt;code&gt;` literal"
+  );
 });

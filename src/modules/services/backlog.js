@@ -3,8 +3,6 @@
  * Handles operations with Backlog API: sending comments, fetching issue info.
  */
 
-/* global normalizeBacklogOrigin */
-
 async function getBacklogUsers(projectKeyOrIssueKey = null) {
   const settings = await getSettings();
   if (!settings.backlogApiKey) {

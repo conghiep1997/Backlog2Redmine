@@ -1,6 +1,7 @@
 # Changelog - Backlog2Redmine
 
 ## [1.8.16] - 2026-09-21
+
 ### Added
 - Include the latest error logs in downloaded, copied, and GitHub bug reports.
 
@@ -10,14 +11,19 @@
 - Improved dark-mode contrast across settings sections and form controls.
 - Localized the Redmine personal account link.
 - Fixed screenshot preview handling and added an error state when an image cannot be previewed.
+- Giữ nguyên placeholder kiểu `<flow_guide_id>` khi dịch/sync note sang Redmine.
+- AI HTML-escape `<>` được decode trước khi gửi Redmine; code fence/inline giữ nguyên entity.
+- Textile không còn double-escape placeholder ngoài allowlist.
+- Extract Backlog giữ custom tag kiểu `<flow_guide_id>` thay vì nuốt mất.
+
+### Improved
+- Prompt giữ nguyên placeholder `<id>` / `<flow_guide_id>`.
+- Bổ sung helper `decodeHtmlEntitiesOutsideCode`, `buildRedmineUploadUrl`, và `normalizeBacklogOrigin`.
+- Thêm unit test cho decode angle brackets, Textile placeholder, và extract custom tag.
 
 ### Docs
 - Documented the Options page, screenshot preview, localization, and error-log report improvements.
-
-- **✨ Added**:
-- **🔧 Fixed**:
-- **📝 Docs**:
-
+- Cập nhật `CHANGELOG.md` cho bản 1.8.16.
 
 ## [1.8.15] - 2026-09-20
 
