@@ -41,4 +41,4 @@ Users can remove saved settings, API keys, logs, and bug-report data by using th
 
 This policy may be updated when the extension's data practices change. For questions or privacy concerns, please open an issue at:
 
-https://github.com/conghiep1997/Backlog2Redmine/issues
+https://github.com/conghiep1997/b2r/issues

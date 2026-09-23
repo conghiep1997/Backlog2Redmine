@@ -478,7 +478,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function openGithubIssue() {
     const report = await buildBugReport();
-    const url = `https://github.com/conghiep1997/Backlog2Redmine/issues/new?title=${encodeURIComponent(report.title)}&body=${encodeURIComponent(formatBugReport(report) + "\n\nĐính kèm ảnh đã tải xuống nếu có.")}`;
+    const url = `https://github.com/conghiep1997/b2r/issues/new?title=${encodeURIComponent(report.title)}&body=${encodeURIComponent(formatBugReport(report) + "\n\nĐính kèm ảnh đã tải xuống nếu có.")}`;
     chrome.tabs.create({ url });
   }
 

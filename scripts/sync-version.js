@@ -19,7 +19,7 @@ const BACKEND_URL = process.env.BACKEND_URL || "https://dev-tool-platform-backen
 // For GitHub Releases: https://github.com/{org}/{repo}/releases/download/v{version}/{asset}
 // For direct hosting: customize as needed
 const GITHUB_OWNER = process.env.GITHUB_OWNER || "Hipppo";
-const GITHUB_REPO = process.env.GITHUB_REPO || "Backlog2Redmine";
+const GITHUB_REPO = process.env.GITHUB_REPO || "b2r";
 const USE_GITHUB_RELEASES = process.env.USE_GITHUB_RELEASES || "true";
 
 async function syncVersion() {

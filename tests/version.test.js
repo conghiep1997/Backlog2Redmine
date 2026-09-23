@@ -45,13 +45,13 @@ test("fetches latest version from GitHub releases when backend routes are unavai
         tag_name: "v1.8.10",
         name: "Backlog2Redmine v1.8.10",
         body: "Release notes",
-        html_url: "https://github.com/conghiep1997/Backlog2Redmine/releases/tag/v1.8.10",
+        html_url: "https://github.com/conghiep1997/b2r/releases/tag/v1.8.10",
         published_at: "2026-07-07T00:00:00.000Z",
         assets: [
           {
             name: "Backlog2Redmine-v1.8.10.zip",
             browser_download_url:
-              "https://github.com/conghiep1997/Backlog2Redmine/releases/download/v1.8.10/Backlog2Redmine-v1.8.10.zip",
+              "https://github.com/conghiep1997/b2r/releases/download/v1.8.10/Backlog2Redmine-v1.8.10.zip",
           },
         ],
       }),
@@ -63,7 +63,7 @@ test("fetches latest version from GitHub releases when backend routes are unavai
   assert.deepEqual(calls, [
     "https://dev-tool-platform-api.onrender.com/api/versions/latest",
     "https://dev-tool-platform-api.onrender.com/api/versions",
-    "https://api.github.com/repos/conghiep1997/Backlog2Redmine/releases/latest",
+    "https://api.github.com/repos/conghiep1997/b2r/releases/latest",
   ]);
   assert.equal(latest.version_number, "1.8.10");
   assert.match(latest.download_url, /Backlog2Redmine-v1\.8\.10\.zip$/);

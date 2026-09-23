@@ -101,7 +101,7 @@ async function createVersion(versionData) {
     is_latest: false, // Will be set to true for the latest version
     release_date: new Date(versionData.release_date).toISOString(),
     changelog: versionData.changelog,
-    download_url: `https://github.com/conghiep1997/Backlog2Redmine/releases/download/v${versionData.version_number}/Backlog2Redmine-v${versionData.version_number}.zip`,
+    download_url: `https://github.com/conghiep1997/b2r/releases/download/v${versionData.version_number}/Backlog2Redmine-v${versionData.version_number}.zip`,
   };
 
   const response = await fetch(`${BACKEND_URL}/api/versions`, {
@@ -155,7 +155,7 @@ async function seedVersions() {
         is_latest: isLatest,
         release_date: new Date(version.release_date).toISOString(),
         changelog: version.changelog,
-        download_url: `https://github.com/conghiep1997/Backlog2Redmine/releases/download/v${version.version_number}/Backlog2Redmine-v${version.version_number}.zip`,
+        download_url: `https://github.com/conghiep1997/b2r/releases/download/v${version.version_number}/Backlog2Redmine-v${version.version_number}.zip`,
       };
 
       const response = await fetch(`${BACKEND_URL}/api/versions`, {

@@ -36,10 +36,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/conghiep1997/Backlog2Redmine.git"
+    "url": "git+https://github.com/conghiep1997/b2r.git"
   },
   "bugs": {
-    "url": "https://github.com/conghiep1997/Backlog2Redmine/issues"
+    "url": "https://github.com/conghiep1997/b2r/issues"
   },
-  "homepage": "https://github.com/conghiep1997/Backlog2Redmine#readme"
+  "homepage": "https://github.com/conghiep1997/b2r#readme"
 }
