@@ -96,9 +96,14 @@
       ) {
         throw new TypeError("Invalid sync activity entry.");
       }
-      for (const [field, limit] of [["detail", 10000], ["url", 2000]]) {
-        if (entry[field] !== undefined &&
-          (typeof entry[field] !== "string" || entry[field].length > limit)) {
+      for (const [field, limit] of [
+        ["detail", 10000],
+        ["url", 2000],
+      ]) {
+        if (
+          entry[field] !== undefined &&
+          (typeof entry[field] !== "string" || entry[field].length > limit)
+        ) {
           throw new TypeError(`Invalid sync activity ${field}.`);
         }
       }

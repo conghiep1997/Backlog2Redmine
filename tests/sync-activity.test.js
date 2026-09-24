@@ -30,7 +30,11 @@ function backgroundHarness(initial = {}) {
         getURL: (resource) => `chrome-extension://test-extension/${resource}`,
         onInstalled: event,
         onStartup: event,
-        onMessage: { addListener(callback) { listener = callback; } },
+        onMessage: {
+          addListener(callback) {
+            listener = callback;
+          },
+        },
       },
       storage: {
         onChanged: event,
@@ -48,7 +52,9 @@ function backgroundHarness(initial = {}) {
             await new Promise((resolve) => setImmediate(resolve));
             Object.assign(state, structuredClone(items));
           },
-          async remove(key) { delete state[key]; },
+          async remove(key) {
+            delete state[key];
+          },
         },
       },
     },
@@ -67,7 +73,9 @@ function backgroundHarness(initial = {}) {
     dispatch: (message, from = sender()) =>
       new Promise((resolve) => listener(message, from, resolve)),
     state: () => state,
-    failNextWrite: () => { failNextWrite = true; },
+    failNextWrite: () => {
+      failNextWrite = true;
+    },
   };
 }
 
@@ -75,7 +83,10 @@ test("concurrent activity messages from different tabs retain every entry", asyn
   const harness = backgroundHarness();
   const results = await Promise.all(
     Array.from({ length: 30 }, (_, index) =>
-      harness.dispatch({ type: "RECORD_SYNC_ACTIVITY", entry: entry(`DEMO-${index}`) }, sender(index))
+      harness.dispatch(
+        { type: "RECORD_SYNC_ACTIVITY", entry: entry(`DEMO-${index}`) },
+        sender(index)
+      )
     )
   );
   assert.ok(results.every((result) => result.ok));
@@ -87,13 +98,20 @@ test("clearing activity is ordered between pending writes", async () => {
   const harness = backgroundHarness();
   const results = await Promise.all([
     harness.dispatch({ type: "RECORD_SYNC_ACTIVITY", entry: entry("BEFORE") }),
-    harness.dispatch({ type: "CLEAR_SYNC_ACTIVITY" }, {
-      id: "test-extension", url: "chrome-extension://test-extension/src/options.html",
-    }),
+    harness.dispatch(
+      { type: "CLEAR_SYNC_ACTIVITY" },
+      {
+        id: "test-extension",
+        url: "chrome-extension://test-extension/src/options.html",
+      }
+    ),
     harness.dispatch({ type: "RECORD_SYNC_ACTIVITY", entry: entry("AFTER") }),
   ]);
   assert.ok(results.every((result) => result.ok));
-  assert.deepEqual(harness.state().syncActivity.map((item) => item.issue), ["AFTER"]);
+  assert.deepEqual(
+    harness.state().syncActivity.map((item) => item.issue),
+    ["AFTER"]
+  );
 });
 
 test("a failed activity write does not poison the queue", async () => {
@@ -105,20 +123,26 @@ test("a failed activity write does not poison the queue", async () => {
   ]);
   assert.equal(failed.ok, false);
   assert.equal(recovered.ok, true);
-  assert.deepEqual(harness.state().syncActivity.map((item) => item.issue), ["RECOVERED"]);
+  assert.deepEqual(
+    harness.state().syncActivity.map((item) => item.issue),
+    ["RECOVERED"]
+  );
 });
 
 test("activity keeps 50 entries and redacts credentials in details and URLs", async () => {
   const harness = backgroundHarness({
     syncActivity: Array.from({ length: 50 }, (_, index) => entry(`OLD-${index}`)),
   });
-  await harness.dispatch({ type: "RECORD_SYNC_ACTIVITY", entry: {
-    ...entry("NEW"),
-    ok: false,
-    partial: true,
-    detail: "Request ?apiKey=demo-secret failed: Bearer demo-token",
-    url: "https://demo.backlog.com/view/DEMO-1?token=demo-secret",
-  } });
+  await harness.dispatch({
+    type: "RECORD_SYNC_ACTIVITY",
+    entry: {
+      ...entry("NEW"),
+      ok: false,
+      partial: true,
+      detail: "Request ?apiKey=demo-secret failed: Bearer demo-token",
+      url: "https://demo.backlog.com/view/DEMO-1?token=demo-secret",
+    },
+  });
   const activity = harness.state().syncActivity;
   assert.equal(activity.length, 50);
   assert.equal(activity[0].partial, true);
@@ -130,22 +154,41 @@ test("activity keeps 50 entries and redacts credentials in details and URLs", as
 
 test("activity router rejects malformed messages, foreign senders, and content-script clearing", async () => {
   const harness = backgroundHarness();
-  for (const invalid of [undefined, { ...entry("X"), count: -1 },
-    { ...entry("X"), ok: "true" }, { ...entry("X"), partial: "true" },
-    { ...entry("X"), url: "javascript:alert(1)" }, { ...entry("X"), detail: {} }]) {
-    assert.equal((await harness.dispatch({ type: "RECORD_SYNC_ACTIVITY", entry: invalid })).ok, false);
+  for (const invalid of [
+    undefined,
+    { ...entry("X"), count: -1 },
+    { ...entry("X"), ok: "true" },
+    { ...entry("X"), partial: "true" },
+    { ...entry("X"), url: "javascript:alert(1)" },
+    { ...entry("X"), detail: {} },
+  ]) {
+    assert.equal(
+      (await harness.dispatch({ type: "RECORD_SYNC_ACTIVITY", entry: invalid })).ok,
+      false
+    );
   }
-  assert.equal((await harness.dispatch(
-    { type: "RECORD_SYNC_ACTIVITY", entry: entry("X") }, { ...sender(), id: "foreign" }
-  )).ok, false);
+  assert.equal(
+    (
+      await harness.dispatch(
+        { type: "RECORD_SYNC_ACTIVITY", entry: entry("X") },
+        { ...sender(), id: "foreign" }
+      )
+    ).ok,
+    false
+  );
   assert.equal((await harness.dispatch({ type: "CLEAR_SYNC_ACTIVITY" })).ok, false);
   assert.equal(harness.state().syncActivity, undefined);
 });
 
 test("activity client tolerates rejected and disconnected background messages", async () => {
   const harness = backgroundHarness();
-  harness.context.chrome.runtime.sendMessage = async () => ({ ok: false, error: "Storage unavailable" });
+  harness.context.chrome.runtime.sendMessage = async () => ({
+    ok: false,
+    error: "Storage unavailable",
+  });
   assert.equal(await harness.context.recordSyncActivity(entry("X")), false);
-  harness.context.chrome.runtime.sendMessage = async () => { throw new Error("Disconnected"); };
+  harness.context.chrome.runtime.sendMessage = async () => {
+    throw new Error("Disconnected");
+  };
   assert.equal(await harness.context.recordSyncActivity(entry("X")), false);
 });

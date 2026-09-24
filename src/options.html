@@ -648,7 +648,10 @@
                   readonly
                   style="background: #f3f4f6; color: #6b7280; cursor: not-allowed"
                 />
-                <p data-i18n="options_redmine_help" style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                <p
+                  data-i18n="options_redmine_help"
+                  style="margin-top: 6px; font-size: 12px; color: var(--muted)"
+                >
                   💡 Redmine Domain được cấu hình sẵn.
                 </p>
               </div>
@@ -695,7 +698,9 @@
                     background: white;
                   "
                 >
-                  <option value="" data-i18n="options_save_api_first">-- Trước tiên cần lưu API Key --</option>
+                  <option value="" data-i18n="options_save_api_first">
+                    -- Trước tiên cần lưu API Key --
+                  </option>
                 </select>
               </div>
 
@@ -716,9 +721,14 @@
                     background: white;
                   "
                 >
-                  <option value="" data-i18n="options_save_api_first">-- Cần lưu API Key trước --</option>
+                  <option value="" data-i18n="options_save_api_first">
+                    -- Cần lưu API Key trước --
+                  </option>
                 </select>
-                <p data-i18n="options_report_help" style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                <p
+                  data-i18n="options_report_help"
+                  style="margin-top: 6px; font-size: 12px; color: var(--muted)"
+                >
                   💡 Project chứa các issue Report (dùng cho chức năng "Log Time Tháng").
                 </p>
               </div>
@@ -733,7 +743,11 @@
                   margin-top: 8px;
                 "
               >
-                <summary style="padding: 12px 0; font-weight: 600; cursor: pointer; color: #1d4ed8"><span data-i18n="options_custom_fields_section">Cấu hình Custom Fields (JSON Mapping)</span></summary>
+                <summary style="padding: 12px 0; font-weight: 600; cursor: pointer; color: #1d4ed8">
+                  <span data-i18n="options_custom_fields_section"
+                    >Cấu hình Custom Fields (JSON Mapping)</span
+                  >
+                </summary>
                 <div class="field" style="padding-bottom: 16px">
                   <textarea
                     id="manualFields"
@@ -751,7 +765,10 @@
                       resize: none;
                     "
                   ></textarea>
-                  <p data-i18n="options_custom_fields_help" style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                  <p
+                    data-i18n="options_custom_fields_help"
+                    style="margin-top: 6px; font-size: 12px; color: var(--muted)"
+                  >
                     💡 Nhập mã ID của các trường bắt buộc. Ví dụ:
                     <code
                       >{ "Severity": 46, "Reproduction Rate": 0, "Role": 11, "QC Activity": 8, "Q&A
@@ -776,12 +793,22 @@
               display: block;
             "
           >
-            <summary style="padding: 4px 0; font-weight: 600; color: #b45309; cursor: pointer"><span data-i18n="options_backlog_section">📝 Cấu hình Backlog</span></summary>
+            <summary style="padding: 4px 0; font-weight: 600; color: #b45309; cursor: pointer">
+              <span data-i18n="options_backlog_section">📝 Cấu hình Backlog</span>
+            </summary>
             <div style="padding-top: 12px">
               <div class="field" style="margin-bottom: 0">
                 <label for="backlogDomain" data-i18n="options_backlog_domain">Backlog Domain</label>
-                <input id="backlogDomain" type="url" placeholder="https://shift7.backlog.com" data-i18n-placeholder="options_backlog_domain_placeholder" />
-                <p data-i18n="options_backlog_domain_help" style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                <input
+                  id="backlogDomain"
+                  type="url"
+                  placeholder="https://shift7.backlog.com"
+                  data-i18n-placeholder="options_backlog_domain_placeholder"
+                />
+                <p
+                  data-i18n="options_backlog_domain_help"
+                  style="margin-top: 6px; font-size: 12px; color: var(--muted)"
+                >
                   💡 Mặc định: https://shift7.backlog.com
                 </p>
               </div>
@@ -791,7 +818,12 @@
                 >
                 <input id="backlogApiKey" type="text" placeholder="Nhập Backlog API key" />
                 <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
-                  <span data-i18n="options_backlog_help_prefix">🔑 Lấy tại:</span> <strong data-i18n="options_backlog_account_api">Tài khoản > API</strong> <span data-i18n="options_backlog_help_suffix">trong Backlog của bạn. Cần thiết để gửi nội dung ngược lại từ Redmine sang Backlog.</span>
+                  <span data-i18n="options_backlog_help_prefix">🔑 Lấy tại:</span>
+                  <strong data-i18n="options_backlog_account_api">Tài khoản > API</strong>
+                  <span data-i18n="options_backlog_help_suffix"
+                    >trong Backlog của bạn. Cần thiết để gửi nội dung ngược lại từ Redmine sang
+                    Backlog.</span
+                  >
                 </p>
               </div>
             </div>
@@ -809,7 +841,9 @@
               margin-bottom: 16px;
             "
           >
-            <summary style="padding: 4px 0; font-weight: 600; color: #065f46; cursor: pointer"><span data-i18n="options_primary_ai_section">🤖 Cấu hình AI Chính (Primary)</span></summary>
+            <summary style="padding: 4px 0; font-weight: 600; color: #065f46; cursor: pointer">
+              <span data-i18n="options_primary_ai_section">🤖 Cấu hình AI Chính (Primary)</span>
+            </summary>
             <div class="grid" style="padding-top: 12px; gap: 12px">
               <div class="field" style="margin-bottom: 0">
                 <label for="primaryProvider" data-i18n="options_provider">Nhà cung cấp</label>
@@ -849,12 +883,15 @@
                   </p>
                   <div id="geminiModelsList" style="display: flex; flex-wrap: wrap; gap: 6px"></div>
                   <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">
-                    <span data-i18n="options_selected">Đã chọn:</span> <span id="selectedModelCount">0</span>
+                    <span data-i18n="options_selected">Đã chọn:</span>
+                    <span id="selectedModelCount">0</span>
                   </p>
                 </div>
                 <div>
                   <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">
-                     <span data-i18n="options_keys_help">Keys (nhập rồi Lưu, Enter để thêm nhanh, click để xóa)</span>
+                    <span data-i18n="options_keys_help"
+                      >Keys (nhập rồi Lưu, Enter để thêm nhanh, click để xóa)</span
+                    >
                   </p>
                   <div
                     id="geminiKeysList"
@@ -862,7 +899,8 @@
                   ></div>
                   <input
                     id="geminiApiKeys"
-                    placeholder="Enter a key, then Save or press Enter to add quickly" data-i18n-placeholder="options_key_quick_add"
+                    placeholder="Enter a key, then Save or press Enter to add quickly"
+                    data-i18n-placeholder="options_key_quick_add"
                     style="
                       width: 100%;
                       height: 36px;
@@ -875,14 +913,20 @@
                     "
                   />
                   <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">
-                    <span data-i18n="options_added">Đã thêm:</span> <span id="selectedKeyCount">0</span>/10
+                    <span data-i18n="options_added">Đã thêm:</span>
+                    <span id="selectedKeyCount">0</span>/10
                   </p>
                 </div>
               </div>
 
               <!-- Groq (shown when groq selected) -->
               <div id="primaryGroqConfig" class="field" style="margin-bottom: 0; display: none">
-                <input id="groqApiKey" type="password" placeholder="Enter API key" data-i18n-placeholder="options_groq_key_placeholder" />
+                <input
+                  id="groqApiKey"
+                  type="password"
+                  placeholder="Enter API key"
+                  data-i18n-placeholder="options_groq_key_placeholder"
+                />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑 Lấy tại:
                   <a
@@ -896,7 +940,12 @@
 
               <!-- Cerebras (shown when cerebras selected) -->
               <div id="primaryCerebrasConfig" class="field" style="margin-bottom: 0; display: none">
-                <input id="cerebrasApiKey" type="password" placeholder="Enter API key" data-i18n-placeholder="options_cerebras_key_placeholder" />
+                <input
+                  id="cerebrasApiKey"
+                  type="password"
+                  placeholder="Enter API key"
+                  data-i18n-placeholder="options_cerebras_key_placeholder"
+                />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑 Lấy tại:
                   <a
@@ -917,7 +966,8 @@
                 <input
                   id="openrouterApiKey"
                   type="password"
-                  placeholder="Enter API key" data-i18n-placeholder="options_openrouter_key_placeholder"
+                  placeholder="Enter API key"
+                  data-i18n-placeholder="options_openrouter_key_placeholder"
                 />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑 Lấy tại:
@@ -939,7 +989,11 @@
               margin-bottom: 16px;
             "
           >
-            <summary style="padding: 4px 0; font-weight: 600; color: #5b21b6; cursor: pointer"><span data-i18n="options_fallback_ai_section">🔄 Cấu hình AI Dự phòng (Fallback)</span></summary>
+            <summary style="padding: 4px 0; font-weight: 600; color: #5b21b6; cursor: pointer">
+              <span data-i18n="options_fallback_ai_section"
+                >🔄 Cấu hình AI Dự phòng (Fallback)</span
+              >
+            </summary>
             <div class="grid" style="padding-top: 12px; gap: 12px">
               <div class="field" style="margin-bottom: 0">
                 <label for="fallbackProvider" data-i18n="options_fallback_provider"
@@ -990,7 +1044,8 @@
                   ></div>
                   <input
                     id="fallbackGeminiApiKeys"
-                    placeholder="Enter a key, then Save or press Enter to add quickly" data-i18n-placeholder="options_key_quick_add"
+                    placeholder="Enter a key, then Save or press Enter to add quickly"
+                    data-i18n-placeholder="options_key_quick_add"
                     style="
                       width: 100%;
                       height: 36px;
@@ -1022,7 +1077,8 @@
                 <input
                   id="fallbackGroqApiKey"
                   type="password"
-                  placeholder="Enter API key" data-i18n-placeholder="options_groq_key_placeholder"
+                  placeholder="Enter API key"
+                  data-i18n-placeholder="options_groq_key_placeholder"
                 />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑
@@ -1041,7 +1097,8 @@
                 <input
                   id="fallbackCerebrasApiKey"
                   type="password"
-                  placeholder="Enter API key" data-i18n-placeholder="options_cerebras_key_placeholder"
+                  placeholder="Enter API key"
+                  data-i18n-placeholder="options_cerebras_key_placeholder"
                 />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑
@@ -1060,7 +1117,8 @@
                 <input
                   id="fallbackOpenrouterApiKey"
                   type="password"
-                  placeholder="Enter API key" data-i18n-placeholder="options_openrouter_key_placeholder"
+                  placeholder="Enter API key"
+                  data-i18n-placeholder="options_openrouter_key_placeholder"
                 />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑 <a href="https://openrouter.ai/keys" target="_blank">Lấy key tại OpenRouter</a>
@@ -1104,11 +1162,22 @@
 
         <section class="note secondary-section" aria-labelledby="syncHistoryTitle">
           <details>
-            <summary id="syncHistoryTitle" data-i18n="options_sync_history_title">Recent sync activity</summary>
+            <summary id="syncHistoryTitle" data-i18n="options_sync_history_title">
+              Recent sync activity
+            </summary>
             <div class="secondary-section-content">
               <ol id="syncActivityList" aria-live="polite"></ol>
-              <p id="syncActivityEmpty" data-i18n="options_sync_history_empty">No sync activity yet.</p>
-              <button id="clearSyncActivityBtn" type="button" class="secondary" data-i18n="options_sync_history_clear">Clear activity</button>
+              <p id="syncActivityEmpty" data-i18n="options_sync_history_empty">
+                No sync activity yet.
+              </p>
+              <button
+                id="clearSyncActivityBtn"
+                type="button"
+                class="secondary"
+                data-i18n="options_sync_history_clear"
+              >
+                Clear activity
+              </button>
             </div>
           </details>
         </section>
@@ -1119,69 +1188,94 @@
           style="margin-top: 24px; background: #fff7ed; border-color: #fb923c"
         >
           <details class="secondary-section">
-            <summary class="secondary-section-summary" data-i18n="options_bug_title">🐞 Báo lỗi</summary>
+            <summary class="secondary-section-summary" data-i18n="options_bug_title">
+              🐞 Báo lỗi
+            </summary>
             <div class="secondary-section-content">
-          <p style="margin: 0 0 16px; color: var(--muted); font-size: 14px">
-            Tạo báo cáo có cấu trúc kèm ảnh chụp và thông tin môi trường. Dữ liệu chỉ được tải xuống
-            hoặc mở trong GitHub khi bạn xác nhận.
-          </p>
-          <div class="field">
-            <label for="bugTitle" data-i18n="options_bug_subject">Tiêu đề lỗi</label>
-            <input
-              id="bugTitle"
-              type="text"
-              maxlength="120"
-              placeholder="Ví dụ: Không gửi được comment sang Redmine"
-            />
-          </div>
-          <div class="field">
-            <label for="bugDescription" data-i18n="options_bug_description_label">Mô tả lỗi</label>
-            <textarea
-              id="bugDescription"
-              rows="4"
-              maxlength="4000"
-              placeholder="Điều gì đã xảy ra?"
-            ></textarea>
-          </div>
-          <div class="field">
-            <label for="bugSteps" data-i18n="options_bug_steps">Các bước tái hiện</label>
-            <textarea
-              id="bugSteps"
-              rows="3"
-              maxlength="2000"
-              placeholder="1. ...\n2. ..."
-            ></textarea>
-          </div>
-          <div class="field">
-            <label for="bugPageUrl" data-i18n="options_bug_url">URL trang xảy ra lỗi (không bắt buộc)</label>
-            <input id="bugPageUrl" type="url" placeholder="https://..." data-i18n-placeholder="options_bug_url_placeholder" />
-          </div>
-          <div class="field">
-            <label for="bugScreenshot" data-i18n="options_screenshot">Ảnh chụp màn hình</label>
-            <input id="bugScreenshot" type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="bugScreenshotHelp" />
-            <p id="bugScreenshotHelp" data-i18n="options_screenshot_help" style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">PNG, JPEG, or WebP; maximum 5 MB.</p>
-            <img
-              id="bugScreenshotPreview"
-              alt="Xem trước ảnh lỗi" data-i18n-alt="options_screenshot_preview_alt"
-              hidden
-              style="
-                display: block;
-                max-width: 100%;
-                max-height: 240px;
-                margin-top: 10px;
-                border-radius: 8px;
-                border: 1px solid var(--border);
-              "
-            />
-          </div>
-          <div class="actions">
-            <button id="downloadBugReportBtn" type="button" class="secondary">
-              📥 Tải báo cáo
-            </button>
-            <button id="copyBugReportBtn" type="button" class="secondary">📋 Sao chép</button>
-            <button id="openGithubIssueBtn" type="button" class="primary">Mở GitHub Issue</button>
-          </div>
-          <div id="bugReportStatus" class="status" aria-live="polite"></div>
+              <p style="margin: 0 0 16px; color: var(--muted); font-size: 14px">
+                Tạo báo cáo có cấu trúc kèm ảnh chụp và thông tin môi trường. Dữ liệu chỉ được tải
+                xuống hoặc mở trong GitHub khi bạn xác nhận.
+              </p>
+              <div class="field">
+                <label for="bugTitle" data-i18n="options_bug_subject">Tiêu đề lỗi</label>
+                <input
+                  id="bugTitle"
+                  type="text"
+                  maxlength="120"
+                  placeholder="Ví dụ: Không gửi được comment sang Redmine"
+                />
+              </div>
+              <div class="field">
+                <label for="bugDescription" data-i18n="options_bug_description_label"
+                  >Mô tả lỗi</label
+                >
+                <textarea
+                  id="bugDescription"
+                  rows="4"
+                  maxlength="4000"
+                  placeholder="Điều gì đã xảy ra?"
+                ></textarea>
+              </div>
+              <div class="field">
+                <label for="bugSteps" data-i18n="options_bug_steps">Các bước tái hiện</label>
+                <textarea
+                  id="bugSteps"
+                  rows="3"
+                  maxlength="2000"
+                  placeholder="1. ...\n2. ..."
+                ></textarea>
+              </div>
+              <div class="field">
+                <label for="bugPageUrl" data-i18n="options_bug_url"
+                  >URL trang xảy ra lỗi (không bắt buộc)</label
+                >
+                <input
+                  id="bugPageUrl"
+                  type="url"
+                  placeholder="https://..."
+                  data-i18n-placeholder="options_bug_url_placeholder"
+                />
+              </div>
+              <div class="field">
+                <label for="bugScreenshot" data-i18n="options_screenshot">Ảnh chụp màn hình</label>
+                <input
+                  id="bugScreenshot"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  aria-describedby="bugScreenshotHelp"
+                />
+                <p
+                  id="bugScreenshotHelp"
+                  data-i18n="options_screenshot_help"
+                  style="margin: 4px 0 0; font-size: 11px; color: var(--muted)"
+                >
+                  PNG, JPEG, or WebP; maximum 5 MB.
+                </p>
+                <img
+                  id="bugScreenshotPreview"
+                  alt="Xem trước ảnh lỗi"
+                  data-i18n-alt="options_screenshot_preview_alt"
+                  hidden
+                  style="
+                    display: block;
+                    max-width: 100%;
+                    max-height: 240px;
+                    margin-top: 10px;
+                    border-radius: 8px;
+                    border: 1px solid var(--border);
+                  "
+                />
+              </div>
+              <div class="actions">
+                <button id="downloadBugReportBtn" type="button" class="secondary">
+                  📥 Tải báo cáo
+                </button>
+                <button id="copyBugReportBtn" type="button" class="secondary">📋 Sao chép</button>
+                <button id="openGithubIssueBtn" type="button" class="primary">
+                  Mở GitHub Issue
+                </button>
+              </div>
+              <div id="bugReportStatus" class="status" aria-live="polite"></div>
             </div>
           </details>
         </section>
@@ -1204,17 +1298,24 @@
           style="margin-top: 24px; background: #f0f9ff; border-color: #0ea5e9"
         >
           <details class="secondary-section">
-            <summary class="secondary-section-summary update-section-summary" data-i18n="options_update_title">🔔 Cập nhật Extension</summary>
+            <summary
+              class="secondary-section-summary update-section-summary"
+              data-i18n="options_update_title"
+            >
+              🔔 Cập nhật Extension
+            </summary>
             <div class="secondary-section-content">
-          <div id="updateStatus" style="margin-bottom: 12px">
-            <p style="margin: 0; color: #64748b">Đang kiểm tra phiên bản...</p>
-          </div>
-          <div class="actions">
-            <button type="button" id="checkUpdateBtn" class="secondary">
-              🔍 Kiểm tra cập nhật
-            </button>
-            <button type="button" id="goToDashboardBtn" class="secondary">📦 Trang Download</button>
-          </div>
+              <div id="updateStatus" style="margin-bottom: 12px">
+                <p style="margin: 0; color: #64748b">Đang kiểm tra phiên bản...</p>
+              </div>
+              <div class="actions">
+                <button type="button" id="checkUpdateBtn" class="secondary">
+                  🔍 Kiểm tra cập nhật
+                </button>
+                <button type="button" id="goToDashboardBtn" class="secondary">
+                  📦 Trang Download
+                </button>
+              </div>
             </div>
           </details>
         </div>

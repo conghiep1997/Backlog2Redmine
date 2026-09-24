@@ -13,6 +13,9 @@ Guidance for Backlog2Redmine build, version sync, zip packaging, GitHub release 
 - Keep `manifest.json` and `package.json` versions synchronized.
 - Treat `dist/` and `Backlog2Redmine-v*.zip` as generated outputs.
 - Preserve CI steps that install dependencies, lint, check version sync, build, zip, and release.
+- Before handing off any build-related change, run the complete `npm run build` pipeline; it checks version sync, ESLint, Prettier formatting, and the extension build.
+- If `npm run build` fails, identify the failing stage from its output, fix the underlying issue (including every file reported by `format:check`), then rerun the full build and confirm it passes. Do not bypass or remove a failing check to make the build appear successful.
+- When applying Prettier to fix build formatting failures, format only the reported files and review `git diff` to catch unrelated changes.
 - Do not commit or hardcode `BACKEND_URL`, `BACKEND_API_KEY`, GitHub tokens, OAuth client secrets, or release credentials.
 - Use Node-compatible CommonJS style in existing scripts unless refactoring the script set intentionally.
 - Keep package output paths compatible with Chrome's "Load unpacked" flow from `dist/`.
@@ -20,6 +23,7 @@ Guidance for Backlog2Redmine build, version sync, zip packaging, GitHub release 
 # validation checklist
 - `npm run check:version-sync` passes after version or manifest edits.
 - `npm run lint` remains valid for source changes.
+- `npm run format:check` passes; if it fails, format the reported files and rerun the check.
 - `npm run build` produces the expected extension structure in `dist/`.
 - `npm run build:zip` names artifacts consistently with the version.
 - CI env/secret references remain secret-backed, not literal values.
