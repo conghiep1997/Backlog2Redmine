@@ -3,13 +3,14 @@
  * Loads modules and coordinates message handling between content scripts and external APIs.
  */
 
-/* global TB_LOGGER, getBacklogIssueInfo, getBacklogUsers, testModelAvailability */
+/* global TB_LOGGER, TB_SYNC_ACTIVITY, getBacklogIssueInfo, getBacklogUsers, testModelAvailability */
 
 importScripts(
   "modules/utils/version.js",
   "modules/utils/settings-view.js",
   "modules/utils/message-validation.js",
   "modules/utils/request-deduper.js",
+  "modules/utils/sync-activity.js",
   "modules/utils/redmine-domain.js",
   "modules/constants/models.js",
   "modules/constants/icons.js",
@@ -192,6 +193,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return TB_SETTINGS_VIEW.forReport(settings);
     },
     LOG_ERROR: ({ log }) => TB_LOGGER?.saveLogToStorage(log),
+    RECORD_SYNC_ACTIVITY: ({ entry }) => TB_SYNC_ACTIVITY.record(entry),
+    CLEAR_SYNC_ACTIVITY: async () => {
+      assertOptionsSender(sender);
+      await TB_SYNC_ACTIVITY.clear();
+    },
     GET_DEFAULT_PROJECT_SUMMARY: async () => {
       const allowedUrls = [
         chrome.runtime.getURL("src/popup.html"),

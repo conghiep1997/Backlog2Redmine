@@ -1,9 +1,12 @@
 # Changelog - Backlog2Redmine
 
 ## [1.8.17] - 2026-09-24
-- **✨ Added**:
-- **🔧 Fixed**:
-- **📝 Docs**:
+
+- **Added**: First-run onboarding, sync activity history, preview-only dry run, and clearer AI retry/provider status. Expanded automated coverage for Popup, Options, Backlog, and Redmine flows.
+- **Fixed**: Record failed and partially completed syncs; avoid reposting completed comments on a same-target retry in the same modal; keep successful sends successful when activity storage fails. Require a trusted HTTPS Backlog workspace before sending an API key. Scope AI status to the requesting tab/frame, and tie project caching and connection verification to the current settings.
+- **Localization**: Localized remaining Redmine progress and Options UI text; kept English and Vietnamese message catalogs aligned.
+- **Docs**: Refreshed seven English demo screenshots under `output/playwright/` using illustrative data, without real credentials.
+- **Verification**: Build, lint, formatting, 56 unit tests, and 9 mocked-browser E2E tests passed. Live Backlog/Redmine accounts were not exercised.
 
 
 ## [1.8.16] - 2026-09-21

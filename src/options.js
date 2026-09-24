@@ -399,8 +399,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     ?.addEventListener("click", handleBacklogConnectionTest);
   document.getElementById("testPrimaryAiBtn")?.addEventListener("click", handlePrimaryAiTest);
   document.getElementById("clearSyncActivityBtn")?.addEventListener("click", async () => {
-    await chrome.storage.local.remove("syncActivity");
-    document.getElementById("syncActivityList").replaceChildren();
+    try {
+      await sendBackgroundRequest({ type: "CLEAR_SYNC_ACTIVITY" });
+    } catch (error) {
+      setStatus(error.message, true);
+    }
   });
   document.querySelectorAll("#onboardingCard a[href^='#']").forEach((link) => {
     link.addEventListener("click", () => {

@@ -124,10 +124,13 @@ async function main() {
 
     const options = await pageFor("src/options.html", { languagePreference: "en", themePreference: "light" }, { width: 1280, height: 800 });
     await options.locator("#onboardingCard").waitFor();
+    await options.locator("#redmineDomain").evaluate((input) => {
+      input.value = "https://redmine.example.invalid";
+    });
     await options.screenshot({ path: path.join(__dirname, "02-options-onboarding-en.png") });
     await options.evaluate(() => chrome.storage.local.set({ syncActivity: [
       { timestamp: new Date().toISOString(), operation: "translate", issue: "DEMO-42", count: 2, ok: true, url: "https://redmine.example.invalid/issues/142" },
-      { timestamp: new Date(Date.now() - 3600000).toISOString(), operation: "migration", issue: "DEMO-41", count: 3, ok: false, detail: "1 comment could not be posted.", url: "https://redmine.example.invalid/issues/141" },
+      { timestamp: new Date(Date.now() - 3600000).toISOString(), operation: "translate", issue: "DEMO-41", count: 1, partial: true, ok: false, detail: "1 comment could not be posted.", url: "https://redmine.example.invalid/issues/141" },
     ] }));
     await options.locator("#syncActivityList li").first().waitFor();
     await options.evaluate(() => window.scrollTo(0, document.getElementById("syncHistoryTitle").getBoundingClientRect().top + window.scrollY - 210));

@@ -141,6 +141,17 @@ async function openPage(pathname) {
         openOptionsPage() {},
         sendMessage(message, callback) {
           window.__mockRequests.push(message);
+          if (["RECORD_SYNC_ACTIVITY", "CLEAR_SYNC_ACTIVITY"].includes(message?.type)) {
+            const operation = message.type === "RECORD_SYNC_ACTIVITY"
+              ? globalThis.TB_SYNC_ACTIVITY.record(message.entry)
+              : globalThis.TB_SYNC_ACTIVITY.clear();
+            const response = operation.then(
+              () => ({ ok: true }),
+              (error) => ({ ok: false, error: error.message })
+            );
+            if (callback) response.then(callback);
+            return response;
+          }
           let response = { ok: false, error: "No mocked response." };
           if (message?.type === "TEST_BACKLOG_CONNECTION") {
             response = { ok: true, data: { userName: "Demo User" } };
@@ -173,12 +184,22 @@ async function openPage(pathname) {
             };
           } else if (message?.type === "TRANSLATE_COMMENT_FULL") {
             response = { ok: true, data: { translatedText: "Second translated comment" } };
+          } else if (message?.type === "TRANSLATE_TEXT_SIMPLE") {
+            response = { ok: true, data: { translatedText: "Translated title" } };
+          } else if (message?.type === "CREATE_REDMINE_ISSUE") {
+            response = { ok: true, data: {
+              redmineUrl: "https://redmine.example.invalid/issues/456",
+              migratedCommentCount: 1,
+              failedCommentCount: 1,
+              failedComments: [{ index: 2, message: "Demo send failure" }],
+            } };
           } else if (message?.type === "SEND_TO_REDMINE") {
             window.__mockSendCount++;
             response =
-              window.__mockFailSecondSend && window.__mockSendCount === 2
+              (window.__mockFailSecondSend && window.__mockSendCount === 2) ||
+              (window.__mockFailSendNumbers || []).includes(window.__mockSendCount)
                 ? { ok: false, error: "Demo send failure" }
-                : { ok: true, data: { redmineUrl: "https://redmine.example.invalid/issues/123" } };
+                : { ok: true, data: { redmineUrl: `https://redmine.example.invalid/issues/${message.redmineIssueId}` } };
           } else if (message?.type === "EXTRACT_JAPANESE_CONTENT") {
             response = { ok: true, data: { previewText: "Extracted demo content" } };
           } else if (message?.type === "GET_BACKLOG_ISSUE_INFO") {
@@ -203,6 +224,7 @@ async function openPage(pathname) {
     };
   });
   await page.goto(`${baseUrl}/${pathname}`);
+  await page.addScriptTag({ url: `${baseUrl}/src/modules/utils/sync-activity.js` });
   return page;
 }
 

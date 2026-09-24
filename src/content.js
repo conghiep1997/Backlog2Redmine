@@ -246,8 +246,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
       commentUrl: getCommentUrl(commentItem),
     });
 
-    const completedNotes = [];
-    let lastSendResult = null;
+    const progressByIssue = new Map();
     openConfirmModal({
       redmineIssueId: result.data.redmineIssueId,
       issueTitle: result.data.issueTitle,
@@ -257,6 +256,12 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
       backlogIssueType,
       onCancel: () => setButtonLoading(button, false),
       onConfirm: async ({ redmineIssueId, notesList }) => {
+        const targetId = String(redmineIssueId).trim();
+        if (!progressByIssue.has(targetId)) {
+          progressByIssue.set(targetId, { completedNotes: [], lastSendResult: null });
+        }
+        const progress = progressByIssue.get(targetId);
+        const { completedNotes } = progress;
         try {
           for (const [index, notes] of notesList.entries()) {
             if (completedNotes[index] === notes) continue;
@@ -267,7 +272,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
               backlogIssueKey: issueKey,
             });
             completedNotes[index] = notes;
-            lastSendResult = sendRes.data;
+            progress.lastSendResult = sendRes.data;
           }
         } catch (error) {
           const sentCount = completedNotes.filter(Boolean).length;
@@ -278,7 +283,7 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
             partial: sentCount > 0,
             ok: false,
             detail: error?.error || error?.message || "Unknown error",
-            url: lastSendResult?.redmineUrl || window.location.href,
+            url: progress.lastSendResult?.redmineUrl || window.location.href,
           });
           if (sentCount > 0) {
             throw new Error(
@@ -295,10 +300,10 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
           issue: issueKey,
           count: notesList.length,
           ok: true,
-          url: lastSendResult.redmineUrl,
+          url: progress.lastSendResult.redmineUrl,
         });
         await openSuccessModal({
-          redmineUrl: lastSendResult.redmineUrl,
+          redmineUrl: progress.lastSendResult.redmineUrl,
           commentCount: notesList.length,
           onClose: () => setButtonLoading(button, false),
         });
@@ -474,6 +479,7 @@ async function handleIssueMigration(button) {
           operation: "migration",
           issue: issueKey,
           count: (result.data?.migratedCommentCount || 0) + 1,
+          partial: failedCommentCount > 0,
           ok: failedCommentCount === 0,
           detail: failedComments[0]?.message
             ? `${failedCommentCount} of ${translatedComments?.length || 0} comments failed: ${failedComments[0].message}`

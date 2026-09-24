@@ -21,6 +21,7 @@
     userInfo: 1000,
   });
   const ALLOWED_TYPES = new Set([
+    "CLEAR_SYNC_ACTIVITY",
     "CREATE_REDMINE_ISSUE",
     "EXTRACT_JAPANESE_CONTENT",
     "FETCH_REDMINE_METADATA",
@@ -34,6 +35,7 @@
     "LOOKUP_AND_TRANSLATE_COMMENT",
     "OPEN_OPTIONS_PAGE",
     "REDMINE_AUTHORIZED_FETCH",
+    "RECORD_SYNC_ACTIVITY",
     "SEND_TO_BACKLOG",
     "SEND_TO_REDMINE",
     "TEST_MODEL_WITH_KEY",
@@ -78,6 +80,30 @@
     for (const field of REQUIRED_FIELDS[message.type] || []) {
       if (!message[field]) {
         throw new TypeError(`Message field '${field}' is required.`);
+      }
+    }
+    if (message.type === "RECORD_SYNC_ACTIVITY") {
+      const entry = message.entry;
+      if (
+        !entry ||
+        !["translate", "migration", "reverse-sync"].includes(entry.operation) ||
+        typeof entry.issue !== "string" ||
+        entry.issue.length > 100 ||
+        !Number.isSafeInteger(entry.count) ||
+        entry.count < 0 ||
+        typeof entry.ok !== "boolean" ||
+        (entry.partial !== undefined && typeof entry.partial !== "boolean")
+      ) {
+        throw new TypeError("Invalid sync activity entry.");
+      }
+      for (const [field, limit] of [["detail", 10000], ["url", 2000]]) {
+        if (entry[field] !== undefined &&
+          (typeof entry[field] !== "string" || entry[field].length > limit)) {
+          throw new TypeError(`Invalid sync activity ${field}.`);
+        }
+      }
+      if (entry.url && !/^https?:\/\//i.test(entry.url)) {
+        throw new TypeError("Invalid sync activity URL.");
       }
     }
   }
