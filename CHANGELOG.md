@@ -3,8 +3,13 @@
 ## [1.8.17] - 2026-09-24
 
 - **Added**: First-run onboarding, sync activity history, preview-only dry run, and clearer AI retry/provider status. Expanded automated coverage for Popup, Options, Backlog, and Redmine flows.
+- **Monthly Log Time**: Add a popup shortcut to the Redmine monthly log. Show the tasks, planned hours, and existing entries before logging; require a fresh preview and block unsafe replacement when data has changed.
+- **Improved Gemini rotation**: Reserve a model/key slot before each request so concurrent translations start on different slots. Cool down a Gemini key across selected models after a rate-limit response, while keeping model-specific failures scoped to their model/key pair; honor `Retry-After` when provided.
+- **Gemini configuration**: Test every configured Gemini key for a selected model and show which key positions fail. Continue to load older settings containing a single Gemini key.
+- **Models**: Add Gemini 3.5 Flash Lite, remove Gemini 2.0 models from the selection list, and use the default model when saved selections contain only retired models.
+- **Popup**: Restore the localized Monthly Log Time button label and place it above the Redmine and Backlog quick links for clearer navigation.
 - **Fixed**: Record failed and partially completed syncs; avoid reposting completed comments on a same-target retry in the same modal; keep successful sends successful when activity storage fails. Require a trusted HTTPS Backlog workspace before sending an API key. Scope AI status to the requesting tab/frame, and tie project caching and connection verification to the current settings.
-- **Localization**: Localized remaining Redmine progress and Options UI text; kept English and Vietnamese message catalogs aligned.
+- **Localization and UI**: Localize remaining Redmine progress and Options text, including dynamic labels, placeholders, alt text, and accessibility labels. Clarify form guidance and monthly log feedback; keep English and Vietnamese message catalogs aligned.
 - **Docs**: Refreshed seven English demo screenshots under `output/playwright/` using illustrative data, without real credentials.
 - **Verification**: Build, lint, formatting, 56 unit tests, and 9 mocked-browser E2E tests passed. Live Backlog/Redmine accounts were not exercised.
 

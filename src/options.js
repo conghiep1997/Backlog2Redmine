@@ -889,6 +889,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           console.error("[OPTIONS] Error decrypting geminiApiKeys:", e);
           renderGeminiKeysButtons([]);
         }
+      } else if (items.geminiApiKey) {
+        const legacyKey = await decryptData(items.geminiApiKey);
+        renderGeminiKeysButtons(legacyKey ? [legacyKey] : []);
       }
     });
   }
@@ -1034,21 +1037,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     const models = getSelectedModelsForProvider("primary", provider);
     const apiKey =
       provider === "gemini" ? getFirstGeminiKey() : getProviderKeys("primary", provider)[0];
+    const modelId = models[0] || getDefaultModel(provider);
     button.disabled = true;
     try {
       if (!apiKey) throw new Error(om("options_keys_help", "Add an API key first."));
-      const result = await sendBackgroundRequest({
-        type: "TEST_MODEL_WITH_KEY",
-        provider,
-        modelId: models[0] || getDefaultModel(provider),
-        apiKey,
-      });
+      const result =
+        provider === "gemini"
+          ? await testGeminiKeysForModel(modelId)
+          : await sendBackgroundRequest({
+              type: "TEST_MODEL_WITH_KEY",
+              provider,
+              modelId,
+              apiKey,
+            });
       if (!result.ok) throw new Error(result.message || "Model test failed.");
       await chrome.storage.local.set({
         aiConnectionVerified: await verificationFingerprint([
           provider,
-          models[0] || getDefaultModel(provider),
-          apiKey,
+          modelId,
+          provider === "gemini" ? getGeminiKeys() : apiKey,
         ]),
       });
       document.getElementById("onboardingStatus").textContent = result.message;
@@ -1081,6 +1088,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       "primaryProvider",
       "primaryModel",
       "geminiApiKey",
+      "geminiApiKeys",
       "groqApiKey",
       "cerebrasApiKey",
       "openrouterApiKey",
@@ -1100,7 +1108,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     const backlogFingerprint = backlogKey
       ? await verificationFingerprint([items.backlogDomain || TB.BACKLOG_DOMAIN, backlogKey])
       : "";
-    const aiFingerprint = aiKey ? await verificationFingerprint([provider, model, aiKey]) : "";
+    const geminiKeys =
+      provider === "gemini"
+        ? items.geminiApiKeys
+          ? await decryptStoredList(items.geminiApiKeys)
+          : aiKey
+            ? [aiKey]
+            : []
+        : [];
+    const aiFingerprint =
+      provider === "gemini"
+        ? geminiKeys.length
+          ? await verificationFingerprint([provider, model, geminiKeys])
+          : ""
+        : aiKey
+          ? await verificationFingerprint([provider, model, aiKey])
+          : "";
     const states = {
       onboardingRedmineStatus: Boolean(
         items.defaultProjectId &&
@@ -1510,23 +1533,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function handleTestSingleModel(modelId, modelLabel, btn) {
-    const apiKey = getFirstGeminiKey();
-    if (!apiKey) return setStatus(om("options_enter_gemini_key"), true);
+    getFirstGeminiKey();
+    if (getGeminiKeys().length === 0) return setStatus(om("options_enter_gemini_key"), true);
     const icon = btn.querySelector(".test-icon");
     icon.textContent = "⏳";
     icon.style.animation = "spin 1s linear infinite";
     setStatus(`${om("options_testing_model")}: ${modelLabel}...`);
     try {
-      const result = await sendBackgroundRequest({
-        type: "TEST_MODEL_WITH_KEY",
-        provider: TB.PROVIDERS.GEMINI,
-        modelId,
-        apiKey,
-      });
+      const result = await testGeminiKeysForModel(modelId);
       if (result.ok) {
         icon.textContent = "✅";
         icon.style.animation = "";
-        setStatus(`✅ ${om("options_model_ok")}: ${modelLabel}`);
+        setStatus(`✅ ${modelLabel}: ${result.message}`);
       } else {
         icon.textContent = "❌";
         icon.style.animation = "";
@@ -1537,6 +1555,36 @@ document.addEventListener("DOMContentLoaded", async () => {
       icon.style.animation = "";
       setStatus(`❌ ${om("options_model_test_failed")}: ${e.message}`, true);
     }
+  }
+
+  async function testGeminiKeysForModel(modelId) {
+    const keys = getGeminiKeys();
+    const failedIndices = [];
+    for (const [index, apiKey] of keys.entries()) {
+      try {
+        const result = await sendBackgroundRequest({
+          type: "TEST_MODEL_WITH_KEY",
+          provider: TB.PROVIDERS.GEMINI,
+          modelId,
+          apiKey,
+        });
+        if (!result.ok) failedIndices.push(index + 1);
+      } catch (_error) {
+        failedIndices.push(index + 1);
+      }
+    }
+    return failedIndices.length
+      ? {
+          ok: false,
+          message: om("options_gemini_keys_test_failed")
+            .replace("$count$", String(failedIndices.length))
+            .replace("$total$", String(keys.length))
+            .replace("$indexes$", failedIndices.join(", ")),
+        }
+      : {
+          ok: true,
+          message: om("options_gemini_keys_test_ok").replace("$count$", String(keys.length)),
+        };
   }
 
   function renderGeminiKeysButtons(keys = []) {

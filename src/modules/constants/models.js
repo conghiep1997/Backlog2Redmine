@@ -13,20 +13,16 @@
       label: "Gemini 3.5 Flash (best quality/speed balance)",
     },
     {
+      value: "gemini-3.5-flash-lite",
+      label: "Gemini 3.5 Flash Lite (fast, low-cost translation)",
+    },
+    {
       value: "gemini-2.5-flash-lite",
       label: "Gemini 2.5 Flash Lite (stable high-throughput fallback)",
     },
     {
       value: "gemini-2.5-flash",
       label: "Gemini 2.5 Flash (strong translation quality)",
-    },
-    {
-      value: "gemini-2.0-flash-lite",
-      label: "Gemini 2.0 Flash Lite (legacy high-throughput fallback)",
-    },
-    {
-      value: "gemini-2.0-flash",
-      label: "Gemini 2.0 Flash (legacy fast fallback)",
     },
     {
       value: "gemini-2.5-pro",

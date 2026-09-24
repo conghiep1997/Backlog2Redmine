@@ -2,13 +2,16 @@
  * AI Translation Service using Gemini and Cerebras.
  */
 
-// Global state for round-robin index. This persists for the service worker's lifetime.
+// Reserve each request's starting slot before awaiting the provider response.
 let lastUsedGeminiIndex = 0;
 const geminiCooldownUntilByCombination = new Map();
+const geminiCooldownUntilByKey = new Map();
 const lastUsedProviderIndexByProvider = {};
 const providerCooldownUntilByCombination = new Map();
 const GEMINI_RATE_LIMIT_COOLDOWN_MS = 60 * 1000;
 const GEMINI_OVERLOAD_COOLDOWN_MS = 30 * 1000;
+const GEMINI_UNAVAILABLE_COOLDOWN_MS = 5 * 60 * 1000;
+const RETIRED_GEMINI_MODELS = new Set(["gemini-2.0-flash", "gemini-2.0-flash-lite"]);
 const AI_TRANSLATION_TIMEOUT_MS = 15 * 1000;
 
 function emitAIStatus(status, onStatus) {
@@ -257,25 +260,35 @@ async function callAIsByProvider(provider, model, settings, text, url, promptFn,
   }
 
   if (provider === TB.PROVIDERS.GEMINI) {
-    // Use settings models if available, otherwise use all official models, otherwise fallback to the passed model
-    let models = [];
+    let selectedModels = [];
     if (provider === settings.fallbackProvider && settings.fallbackGeminiModels?.length > 0) {
-      models = settings.fallbackGeminiModels;
+      selectedModels = settings.fallbackGeminiModels;
     } else if (settings.geminiModels?.length > 0) {
-      models = settings.geminiModels;
-    } else if (TB.GEMINI_MODELS?.length > 0) {
-      models = TB.GEMINI_MODELS.map((m) => m.value);
-    } else {
-      models = [model];
+      selectedModels = settings.geminiModels;
+    }
+    const models = [...new Set(selectedModels.map((item) => item.trim()).filter(Boolean))].filter(
+      (item) => !RETIRED_GEMINI_MODELS.has(item)
+    );
+    if (models.length === 0) {
+      models.push(
+        RETIRED_GEMINI_MODELS.has(model)
+          ? TB.DEFAULT_PRIMARY_MODEL
+          : model || TB.DEFAULT_PRIMARY_MODEL
+      );
     }
 
-    const apiKeys = (
-      provider === settings.fallbackProvider && settings.fallbackGeminiApiKeys?.length > 0
-        ? settings.fallbackGeminiApiKeys
-        : settings.geminiApiKeys?.length > 0
-          ? settings.geminiApiKeys
-          : [settings.geminiApiKey]
-    ).filter(Boolean);
+    const apiKeys = [
+      ...new Set(
+        (provider === settings.fallbackProvider && settings.fallbackGeminiApiKeys?.length > 0
+          ? settings.fallbackGeminiApiKeys
+          : settings.geminiApiKeys?.length > 0
+            ? settings.geminiApiKeys
+            : [settings.geminiApiKey]
+        )
+          .map((key) => key?.trim())
+          .filter(Boolean)
+      ),
+    ];
 
     // Create a flat list of all [model, key] combinations
     const combinations = [];
@@ -293,13 +306,17 @@ async function callAIsByProvider(provider, model, settings, text, url, promptFn,
     let skippedCooldowns = 0;
     let nextCooldownReadyAt = Infinity;
     const startIndex = lastUsedGeminiIndex % combinations.length;
+    lastUsedGeminiIndex = (startIndex + 1) % combinations.length;
 
     // Iterate through combinations in a round-robin fashion for failover
     for (let i = 0; i < combinations.length; i++) {
       const currentIndex = (startIndex + i) % combinations.length;
       const { model: currentModel, key: currentKey } = combinations[currentIndex];
       const combinationId = getGeminiCombinationId(currentModel, currentKey);
-      const cooldownUntil = geminiCooldownUntilByCombination.get(combinationId) || 0;
+      const cooldownUntil = Math.max(
+        geminiCooldownUntilByCombination.get(combinationId) || 0,
+        geminiCooldownUntilByKey.get(currentKey) || 0
+      );
 
       if (cooldownUntil > Date.now()) {
         skippedCooldowns++;
@@ -312,6 +329,7 @@ async function callAIsByProvider(provider, model, settings, text, url, promptFn,
         continue;
       }
       geminiCooldownUntilByCombination.delete(combinationId);
+      geminiCooldownUntilByKey.delete(currentKey);
 
       try {
         console.log(
@@ -321,19 +339,24 @@ async function callAIsByProvider(provider, model, settings, text, url, promptFn,
         );
         const result = await callGeminiAPI(currentKey, text, currentModel, promptFn, url);
 
-        // Success! Update the index for the next call and return.
-        lastUsedGeminiIndex = (currentIndex + 1) % combinations.length;
         return result;
       } catch (error) {
         const isRetryable = isRetryableProviderError(error);
+        const canTryAnotherCombination = isRetryable || isGeminiCombinationUnavailable(error);
 
-        if (!isRetryable) {
-          // For non-retryable errors, fail immediately.
+        if (!canTryAnotherCombination) {
           throw error;
         }
         lastError = error;
-        const cooldownMs = getGeminiCooldownDuration(error);
-        geminiCooldownUntilByCombination.set(combinationId, Date.now() + cooldownMs);
+        const cooldownMs = isRetryable
+          ? getGeminiCooldownDuration(error)
+          : GEMINI_UNAVAILABLE_COOLDOWN_MS;
+        const retryAt = Date.now() + cooldownMs;
+        if (isGeminiKeyUnavailable(error) || isGeminiKeyRateLimited(error)) {
+          geminiCooldownUntilByKey.set(currentKey, retryAt);
+        } else {
+          geminiCooldownUntilByCombination.set(combinationId, retryAt);
+        }
         emitAIStatus(
           {
             phase: "retry",
@@ -489,6 +512,8 @@ function callProviderAPI(provider, apiKey, text, model, promptFn, url) {
 function isRetryableProviderError(error) {
   const message = (error?.message || "").toLowerCase();
   return (
+    error?.status === 429 ||
+    error?.status === 503 ||
     message.includes("429") ||
     message.includes("rate limit") ||
     message.includes("503") ||
@@ -500,12 +525,28 @@ function isRetryableProviderError(error) {
   );
 }
 
-function getGeminiCooldownDuration(error) {
+function isGeminiKeyUnavailable(error) {
   const message = (error?.message || "").toLowerCase();
-  if (message.includes("429") || message.includes("rate limit")) {
-    return GEMINI_RATE_LIMIT_COOLDOWN_MS;
-  }
-  return GEMINI_OVERLOAD_COOLDOWN_MS;
+  return (
+    error?.status === 401 ||
+    (error?.status === 400 && /api.?key.*(invalid|expired|not valid)/i.test(message))
+  );
+}
+
+function isGeminiCombinationUnavailable(error) {
+  return isGeminiKeyUnavailable(error) || error?.status === 403 || error?.status === 404;
+}
+
+function isGeminiKeyRateLimited(error) {
+  const message = (error?.message || "").toLowerCase();
+  return error?.status === 429 || message.includes("429") || message.includes("rate limit");
+}
+
+function getGeminiCooldownDuration(error) {
+  const baseDuration = isGeminiKeyRateLimited(error)
+    ? GEMINI_RATE_LIMIT_COOLDOWN_MS
+    : GEMINI_OVERLOAD_COOLDOWN_MS;
+  return Math.max(baseDuration, error?.retryAfterMs || 0);
 }
 
 function getGeminiCombinationId(model, apiKey) {
@@ -615,7 +656,17 @@ async function callGeminiAPI(
 
   if (!response.ok) {
     const errorMsg = await readErrorMessage(response);
-    throw new Error(`Gemini (${model}): ${sanitizeErrorMessage(errorMsg, response.status)}`);
+    const error = new Error(
+      `Gemini (${model}): ${sanitizeErrorMessage(errorMsg, response.status)}`
+    );
+    error.status = response.status;
+    const retryAfter = response.headers?.get("Retry-After");
+    if (retryAfter) {
+      const seconds = Number(retryAfter);
+      const delay = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(retryAfter) - Date.now();
+      if (Number.isFinite(delay) && delay > 0) error.retryAfterMs = delay;
+    }
+    throw error;
   }
 
   const data = await safeReadJson(response);
