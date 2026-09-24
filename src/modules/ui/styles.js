@@ -476,7 +476,7 @@ function injectStyles() {
       display: grid;
       grid-template-columns: minmax(260px, 0.9fr) minmax(380px, 1.1fr);
       gap: 14px;
-      min-height: 360px;
+      min-height: 300px;
     }
     .tb-monthly-log-panel {
       min-width: 0;
@@ -544,7 +544,7 @@ function injectStyles() {
       border-left-color: #ef4444;
     }
     .tb-monthly-log-table-wrap {
-      height: 330px;
+      max-height: 52vh;
       overflow: auto;
     }
     .tb-monthly-log-table {
@@ -569,6 +569,16 @@ function injectStyles() {
     }
     .tb-monthly-log-table td:nth-child(2) {
       word-break: break-word;
+    }
+    .tb-monthly-log-table td:nth-child(3) {
+      white-space: pre-line;
+    }
+    .tb-monthly-log-row-warning td {
+      color: #9a3412;
+      background: #fff7ed;
+    }
+    .tb-monthly-log-table tbody tr:nth-child(even):not(.tb-monthly-log-row-warning) {
+      background: #f8fafc;
     }
     .tb-monthly-log-footer {
       display: flex;
@@ -619,6 +629,9 @@ function injectStyles() {
       }
       .tb-monthly-log-grid {
         grid-template-columns: 1fr;
+      }
+      .tb-monthly-log-footer > button {
+        flex: 1 1 42%;
       }
     }
   `;

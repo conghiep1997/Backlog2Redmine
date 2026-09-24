@@ -154,6 +154,14 @@ function setupActions() {
   document
     .getElementById("openRedmine")
     .addEventListener("click", () => openTab("https://redmine.splus-software.com"));
+  document.getElementById("openMonthlyLog").addEventListener("click", async () => {
+    const settings = await chrome.storage.local.get(["redmineDomain", "reportProjectId"]);
+    if (!settings.reportProjectId) {
+      await chrome.tabs.create({ url: chrome.runtime.getURL("src/options.html#reportProjectId") });
+      return;
+    }
+    openTab(settings.redmineDomain || "https://redmine.splus-software.com");
+  });
   document.getElementById("openBacklog").addEventListener("click", async () => {
     const { backlogDomain } = await chrome.storage.local.get("backlogDomain");
     openTab(backlogDomain || "https://backlog.com");

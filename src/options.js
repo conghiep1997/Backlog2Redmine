@@ -50,125 +50,41 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.title = om("options_document_title", document.title);
     const heroSubtitle = document.querySelector(".hero > p");
     if (heroSubtitle) heroSubtitle.textContent = om("options_subtitle", heroSubtitle.textContent);
-    const sectionKeys = [
-      "options_redmine_section",
-      "options_custom_fields_section",
-      "options_backlog_section",
-      "options_primary_ai_section",
-      "options_fallback_ai_section",
-      "options_ui_section",
-    ];
-    document.querySelectorAll("#optionsForm details > summary").forEach((summary, index) => {
-      const key = sectionKeys[index];
-      if (key) summary.textContent = om(key, summary.textContent);
-    });
-    const textBySelector = {
-      "#redmineDomain + p": "options_redmine_domain",
-      "label[for='redmineDomain']": "options_redmine_domain",
-      "label[for='redmineApiKey']": "options_redmine_api_key",
-      "#redmineApiKey ~ p a": "options_personal_account",
-      "label[for='reportProjectId']": "options_report_project",
-      "label[for='backlogDomain']": "options_backlog_domain",
-      "label[for='backlogApiKey']": "options_backlog_api_key",
-      "label[for='primaryProvider']": "options_provider",
-      "label[for='fallbackProvider']": "options_fallback_provider",
-      "label[for='bugTitle']": "options_bug_subject",
-      "label[for='bugDescription']": "options_bug_description_label",
-      "label[for='bugSteps']": "options_bug_steps",
-      "label[for='bugPageUrl']": "options_bug_url",
-      "label[for='bugScreenshot']": "options_screenshot",
-      "#bugTitle": "options_unused",
-      "label[for='showRedmineSuccessModal']": "options_success_modal",
-      "#redmineDomain ~ p": "options_redmine_help",
-      "#manualFields + p": "options_custom_fields_help",
-      "#backlogDomain + p": "options_backlog_help",
-    };
-    Object.entries(textBySelector).forEach(([selector, key]) => {
-      const element = document.querySelector(selector);
-      if (element && key !== "options_unused") element.textContent = om(key, element.textContent);
-    });
-
     const placeholders = {
       redmineApiKey: "options_api_key_placeholder",
       backlogApiKey: "options_backlog_key_placeholder",
-      groqApiKey: "options_api_key_placeholder",
-      cerebrasApiKey: "options_api_key_placeholder",
-      openrouterApiKey: "options_api_key_placeholder",
-      fallbackGroqApiKey: "options_api_key_placeholder",
-      fallbackCerebrasApiKey: "options_api_key_placeholder",
-      fallbackOpenrouterApiKey: "options_api_key_placeholder",
-      geminiApiKeys: "options_key_quick_add",
-      fallbackGeminiApiKeys: "options_key_quick_add",
       bugTitle: "options_bug_subject_placeholder",
       bugDescription: "options_bug_description_placeholder",
       bugSteps: "options_bug_steps_placeholder",
+      bugPageUrl: "options_bug_url_placeholder",
+      backlogDomain: "options_backlog_domain_placeholder",
     };
     Object.entries(placeholders).forEach(([id, key]) => {
       const element = document.getElementById(id);
       if (element) element.placeholder = om(key, element.placeholder);
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+      element.placeholder = om(element.dataset.i18nPlaceholder, element.placeholder);
+    });
+    document.querySelectorAll("[data-i18n-alt]").forEach((element) => {
+      element.alt = om(element.dataset.i18nAlt, element.alt);
+    });
+    document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => {
+      element.setAttribute(
+        "aria-label",
+        om(element.dataset.i18nAriaLabel, element.getAttribute("aria-label"))
+      );
     });
     const redmineHelp = document.querySelector("#redmineApiKey")?.parentElement?.querySelector("p");
     setFirstTextNode(redmineHelp, "options_api_account_help", "🔑 Get the API key from:");
     if (redmineHelp?.lastChild?.nodeType === Node.TEXT_NODE) {
       redmineHelp.lastChild.nodeValue = ` ${om("options_redmine_account_hint", "(See your API access key.)")}`;
     }
-    const backlogHelp = document.querySelector("#backlogApiKey")?.parentElement?.querySelector("p");
-    setFirstTextNode(
-      backlogHelp,
-      "options_backlog_help",
-      "🔑 Get it from Account > API in your Backlog."
-    );
     setFirstTextNode(
       document.querySelector("#defaultProjectId")?.parentElement?.querySelector("label"),
       "options_default_project",
       "Project mặc định (Dùng cho Migrate)"
     );
-    if (backlogHelp?.lastChild?.nodeType === Node.TEXT_NODE) {
-      backlogHelp.lastChild.nodeValue = ` ${om("options_backlog_suffix", "Required to send comments and sync data.")}`;
-    }
-    const reportHelp = document
-      .querySelector("#reportProjectId")
-      ?.parentElement?.querySelector("p");
-    if (reportHelp) reportHelp.textContent = om("options_report_help", reportHelp.textContent);
-    const customFieldsHelp = document
-      .querySelector("#manualFields")
-      ?.parentElement?.querySelector("p");
-    if (customFieldsHelp) {
-      customFieldsHelp.textContent = om("options_custom_fields_help", customFieldsHelp.textContent);
-    }
-
-    const staticTextBySelector = {
-      "#primaryGeminiConfig p:nth-of-type(1)": "options_models_help",
-      "#primaryGeminiConfig p:nth-of-type(2)": "options_selected",
-      "#primaryGeminiConfig p:nth-of-type(3)": "options_keys_help",
-      "#primaryGeminiConfig p:nth-of-type(4)": "options_added",
-      "#fallbackGeminiConfig p:nth-of-type(1)": "options_models_help",
-      "#fallbackGeminiConfig p:nth-of-type(2)": "options_selected",
-      "#fallbackGeminiConfig p:nth-of-type(3)": "options_keys_help",
-      "#fallbackGeminiConfig p:nth-of-type(4)": "options_added",
-    };
-    Object.entries(staticTextBySelector).forEach(([selector, key]) => {
-      const element = document.querySelector(selector);
-      if (element) setFirstTextNode(element, key, element.textContent.trim());
-    });
-
-    document
-      .querySelectorAll(
-        "#primaryGroqConfig p, #primaryCerebrasConfig p, #primaryOpenrouterConfig p, #fallbackGroqConfig p, #fallbackCerebrasConfig p, #fallbackOpenrouterConfig p"
-      )
-      .forEach((help) => {
-        setFirstTextNode(help, "options_get_key_from", "🔑 Get it from:");
-        if (
-          help.closest("#primaryOpenrouterConfig, #fallbackOpenrouterConfig") &&
-          help.lastChild?.nodeType === Node.TEXT_NODE
-        ) {
-          help.lastChild.nodeValue = om(
-            "options_openrouter_suffix",
-            " 💡 Many free models (suffix :free)."
-          );
-        }
-      });
-
     ["defaultProjectId", "reportProjectId"].forEach((id) => {
       const element = document.getElementById(id);
       const option = element?.querySelector("option[value='']");
@@ -242,13 +158,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       ?.querySelector("h3");
     if (logHeading) {
       logHeading.textContent = om("options_logs_title", logHeading.textContent);
-    }
-    const updateHeading = document
-      .getElementById("checkUpdateBtn")
-      ?.closest(".card")
-      ?.querySelector("h3");
-    if (updateHeading) {
-      updateHeading.textContent = om("options_update_title", updateHeading.textContent);
     }
     const updateStatus = document.querySelector("#updateStatus p");
     if (updateStatus) {
@@ -385,6 +294,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   initProviderMultiControls();
   loadOptions();
+
+  if (location.hash === "#reportProjectId") {
+    requestAnimationFrame(() => {
+      const reportProject = document.getElementById("reportProjectId");
+      reportProject?.scrollIntoView({ behavior: "smooth", block: "center" });
+      reportProject?.focus({ preventScroll: true });
+    });
+  }
 
   primaryProviderSelect.addEventListener("change", () =>
     handleProviderChange(primaryProviderSelect)
@@ -987,18 +904,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       const modelsBlock = document.createElement("div");
       modelsBlock.style.margin = "0 0 12px";
       modelsBlock.innerHTML = `
-        <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">${om("options_models_help", "Models (click chọn/bỏ, dùng round-robin)")}</p>
+        <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">${om("options_models_help", "Models (click to select/deselect, uses round-robin)")}</p>
         <div id="${scope}${capitalize(provider)}ModelsList" class="provider-models-list" style="display: flex; flex-wrap: wrap; gap: 6px"></div>
-        <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">${om("options_selected", "Đã chọn:")} <span id="${scope}${capitalize(provider)}SelectedModelCount">0</span></p>
+        <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">${om("options_selected", "Selected:")} <span id="${scope}${capitalize(provider)}SelectedModelCount">0</span></p>
       `;
       configEl.prepend(modelsBlock);
 
       const keysBlock = document.createElement("div");
       keysBlock.style.margin = "8px 0 0";
       keysBlock.innerHTML = `
-        <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">${om("options_keys_help", "Keys (nhập rồi Lưu, Enter để thêm nhanh, bấm để xóa)")}</p>
+        <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">${om("options_keys_help", "Keys (enter then Save, press Enter to add quickly, click to remove)")}</p>
         <div id="${scope}${capitalize(provider)}KeysList" class="provider-keys-list" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px"></div>
-        <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">${om("options_added", "Đã thêm:")} <span id="${scope}${capitalize(provider)}SelectedKeyCount">0</span>/10</p>
+        <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">${om("options_added", "Added:")} <span id="${scope}${capitalize(provider)}SelectedKeyCount">0</span>/10</p>
       `;
       configEl.appendChild(keysBlock);
 

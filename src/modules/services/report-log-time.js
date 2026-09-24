@@ -22,10 +22,18 @@
  * @param {string} reportIssueId The ID of the issue with the "Report" tracker.
  * @param {boolean} [isBatchOperation=false] - If true, suppresses alerts and returns log details.
  * @param {string|null} [spentOn=null] - Date to log time for in YYYY-MM-DD format.
+ * @param {boolean} [previewOnly=false] - Read task and time-entry data without writing.
+ * @param {object|null} [expectedPreview=null] - Preview to verify before a monthly write.
  * @returns {Promise<object|void>} A promise that resolves with log details if in batch mode, otherwise void.
  * @throws {Error} Throws an error if any step fails, with a user-friendly message.
  */
-async function logTimeFromReport(reportIssueId, isBatchOperation = false, spentOn = null) {
+async function logTimeFromReport(
+  reportIssueId,
+  isBatchOperation = false,
+  spentOn = null,
+  previewOnly = false,
+  expectedPreview = null
+) {
   try {
     const settings = await getSettings();
     const { redmineDomain, hasRedmineApiKey } = settings;
@@ -48,12 +56,70 @@ async function logTimeFromReport(reportIssueId, isBatchOperation = false, spentO
     }
 
     const taskIds = extractTaskIdsForUser(description, userLogin);
+    if (
+      expectedPreview &&
+      (String(expectedPreview.userId) !== String(currentUser.id) ||
+        expectedPreview.date !== effectiveSpentOn ||
+        JSON.stringify(expectedPreview.tasks.map((task) => String(task.id))) !==
+          JSON.stringify(taskIds))
+    ) {
+      throw new Error(globalThis.TB_GET_MESSAGE("report_preview_stale"));
+    }
 
     if (taskIds.length === 0) {
+      if (previewOnly) {
+        return {
+          date: effectiveSpentOn,
+          reportIssueId: String(reportIssueId),
+          tasks: [],
+          existingDailyHours: 0,
+          willReplaceDailyEntries: false,
+          dayAlreadyFull: false,
+        };
+      }
       if (!isBatchOperation) {
         throw new Error(`No task IDs found for user '${userLogin}'.`);
       }
       return createLogResult([], [], [], []); // Return empty result in batch mode for days off etc.
+    }
+
+    const taskIssueDetails = previewOnly
+      ? await Promise.all(
+          taskIds.map((taskId) => getIssueDetails(redmineDomain, redmineApiKey, taskId))
+        )
+      : [];
+    const tasks = taskIds.map((taskId, index) => ({
+      id: taskId,
+      subject: taskIssueDetails[index]?.subject || "",
+    }));
+
+    if (previewOnly) {
+      const existingEntries = effectiveSpentOn
+        ? await findTimeEntries(redmineDomain, redmineApiKey, {
+            spent_on: effectiveSpentOn,
+            user_id: currentUser.id,
+            limit: 100,
+          })
+        : [];
+      const existingDailyHours = sumTimeEntryHours(existingEntries);
+      const sameIssueSet = isSameIssueSet(existingEntries, taskIds);
+      const hoursByTask = distributeHours(8, taskIds.length);
+      return {
+        date: effectiveSpentOn,
+        reportIssueId: String(reportIssueId),
+        tasks: tasks.map((task, index) => ({
+          ...task,
+          hours: hoursByTask[index],
+          alreadyLogged: existingEntries.some(
+            (entry) => String(getTimeEntryIssueId(entry)) === String(task.id)
+          ),
+        })),
+        userId: String(currentUser.id),
+        existingEntriesSnapshot: snapshotTimeEntries(existingEntries),
+        existingDailyHours,
+        willReplaceDailyEntries: existingDailyHours >= 8 && !sameIssueSet,
+        dayAlreadyFull: existingDailyHours >= 8 && sameIssueSet,
+      };
     }
 
     // 6. Calculate hours and log time for each task
@@ -80,6 +146,22 @@ async function logTimeFromReport(reportIssueId, isBatchOperation = false, spentO
         limit: 100,
       });
       const existingDailyHours = sumTimeEntryHours(existingDailyEntries);
+
+      if (
+        expectedPreview &&
+        expectedPreview.existingEntriesSnapshot !== snapshotTimeEntries(existingDailyEntries)
+      ) {
+        throw new Error(globalThis.TB_GET_MESSAGE("report_preview_stale"));
+      }
+
+      // Monthly confirmation must never replace entries that were outside the approved preview.
+      if (
+        expectedPreview &&
+        existingDailyHours >= totalHours &&
+        !isSameIssueSet(existingDailyEntries, taskIds)
+      ) {
+        throw new Error(globalThis.TB_GET_MESSAGE("report_preview_stale"));
+      }
 
       if (existingDailyHours >= totalHours) {
         if (isSameIssueSet(existingDailyEntries, taskIds)) {
@@ -617,6 +699,21 @@ function isIssueAuthor(taskIssue, currentUser) {
 
 function sumTimeEntryHours(entries) {
   return entries.reduce((total, entry) => total + Number(entry.hours || 0), 0);
+}
+
+function snapshotTimeEntries(entries) {
+  return JSON.stringify(
+    entries
+      .map((entry) => ({
+        id: String(entry.id),
+        issueId: getTimeEntryIssueId(entry),
+        userId: String(entry.user?.id ?? entry.user_id ?? ""),
+        hours: String(entry.hours),
+        activityId: String(entry.activity?.id ?? entry.activity_id ?? ""),
+        updatedOn: entry.updated_on || "",
+      }))
+      .sort((a, b) => a.id.localeCompare(b.id))
+  );
 }
 
 function createLogResult(taskIds, loggedTaskIds, skippedTaskIds, failedTasks, meta = {}) {

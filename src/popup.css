@@ -298,6 +298,17 @@ h2 {
   line-height: 1.2;
   text-align: center;
 }
+.link-button-featured {
+  color: var(--primary);
+  border-color: #b8ccf8;
+  background: #f2f6ff;
+  font-weight: 700;
+}
+:root[data-theme="dark"] .link-button-featured {
+  color: #bfdbfe;
+  border-color: #36517d;
+  background: #1e293b;
+}
 .button:focus-visible,
 .link-button:focus-visible,
 .close-button:focus-visible,

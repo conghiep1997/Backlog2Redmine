@@ -104,14 +104,141 @@ async function logTimeForMonth() {
   const currentMonthLabel = `${new Date().getMonth() + 1}/${new Date().getFullYear()}`;
   openMonthlyLogModal({
     monthLabel: currentMonthLabel,
+    onPreview: async (modalInstance) => {
+      const {
+        previewButton,
+        startButton,
+        deleteButton,
+        closeButton,
+        progressList,
+        resultBody,
+        statusText,
+        copyButton,
+      } = modalInstance;
+      previewButton.disabled = true;
+      startButton.disabled = true;
+      startButton.textContent = reportMessage("report_confirm_logging");
+      deleteButton.disabled = true;
+      closeButton.disabled = true;
+      previewButton.textContent = reportMessage("report_scanning");
+      resultBody.replaceChildren();
+      progressList.replaceChildren();
+      copyButton.disabled = true;
+      modalInstance.previewIssues = [];
+      modalInstance.hasUnsafeReplacement = false;
+
+      const updateProgress = (message, type = "info") => {
+        const item = document.createElement("div");
+        item.className = `tb-monthly-log-progress-item tb-monthly-log-progress-item--${type}`;
+        item.textContent = message;
+        progressList.appendChild(item);
+      };
+
+      try {
+        statusText.textContent = reportMessage("report_scanning");
+        updateProgress(reportMessage("report_searching"));
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const trackers = await getTrackers(redmineDomain, redmineApiKey);
+        const reportTracker = trackers.find((tracker) => tracker.name.toLowerCase() === "report");
+        if (!reportTracker) throw new Error(reportMessage("report_missing_tracker"));
+
+        const issues = await findMonthlyReportIssues(redmineDomain, redmineApiKey, {
+          projectId: reportProjectId,
+          trackerId: reportTracker.id,
+          year,
+          month,
+          updateProgress,
+        });
+        const previews = [];
+        for (const issue of issues) {
+          const date = extractJapaneseReportDate(issue.subject);
+          if (!date) continue;
+          try {
+            const preview = await logTimeFromReport(issue.id, true, date, true);
+            previews.push({ ...preview, reportSubject: issue.subject });
+          } catch (error) {
+            previews.push({
+              date,
+              reportIssueId: String(issue.id),
+              reportSubject: issue.subject,
+              tasks: [],
+              error: error.message,
+            });
+          }
+        }
+
+        modalInstance.previewIssues = previews;
+        modalInstance.hasUnsafeReplacement = previews.some(
+          (preview) => preview.willReplaceDailyEntries
+        );
+        for (const preview of previews) {
+          const row = document.createElement("tr");
+          row.className = preview.willReplaceDailyEntries ? "tb-monthly-log-row-warning" : "";
+          const dateCell = document.createElement("td");
+          const reportCell = document.createElement("td");
+          const taskCell = document.createElement("td");
+          const hoursCell = document.createElement("td");
+          const statusCell = document.createElement("td");
+          dateCell.textContent = preview.date;
+          reportCell.textContent = `#${preview.reportIssueId} ${preview.reportSubject}`;
+          taskCell.textContent = preview.error
+            ? "—"
+            : preview.tasks.map((task) => `#${task.id} ${task.subject}`).join("\n");
+          hoursCell.textContent = preview.tasks.map((task) => `${task.hours}h`).join(" + ");
+          statusCell.textContent = preview.error
+            ? reportMessage("report_preview_failed", { error: preview.error })
+            : preview.willReplaceDailyEntries
+              ? reportMessage("report_preview_replace_warning", {
+                  hours: preview.existingDailyHours,
+                })
+              : preview.dayAlreadyFull
+                ? reportMessage("report_day_full", { hours: preview.existingDailyHours })
+                : preview.tasks.some((task) => task.alreadyLogged)
+                  ? reportMessage("report_preview_duplicate")
+                  : reportMessage("report_preview_ready");
+          row.append(dateCell, reportCell, taskCell, hoursCell, statusCell);
+          resultBody.appendChild(row);
+        }
+
+        if (previews.length === 0) {
+          statusText.textContent = reportMessage("report_not_found");
+          updateProgress(reportMessage("report_no_matching_issue"), "skip");
+        } else {
+          statusText.textContent = reportMessage("report_preview_complete", {
+            count: previews.length,
+          });
+          const blocked = previews.some(
+            (preview) => preview.willReplaceDailyEntries || preview.error
+          );
+          startButton.disabled = blocked;
+          updateProgress(
+            blocked
+              ? reportMessage("report_preview_review_warning")
+              : reportMessage("report_preview_confirm_hint"),
+            blocked ? "skip" : "success"
+          );
+        }
+      } catch (error) {
+        statusText.textContent = reportMessage("report_error");
+        updateProgress(reportMessage("report_fatal_error", { error: error.message }), "error");
+      } finally {
+        previewButton.disabled = false;
+        previewButton.textContent = reportMessage("report_check_tasks");
+        deleteButton.disabled = false;
+        closeButton.disabled = false;
+      }
+    },
     onDelete: async (modalInstance) => {
       if (!confirm(reportMessage("report_confirm_delete"))) {
         return;
       }
 
-      const { startButton, deleteButton, closeButton, progressList, statusText, stats } =
+      const { startButton, previewButton, deleteButton, closeButton, progressList, statusText } =
         modalInstance;
       startButton.disabled = true;
+      previewButton.disabled = true;
       deleteButton.disabled = true;
       closeButton.disabled = true;
       statusText.textContent = reportMessage("report_deleting");
@@ -130,25 +257,33 @@ async function logTimeForMonth() {
           redmineApiKey,
           updateProgress
         );
-        stats.logged.textContent = "0";
-        stats.skipped.textContent = String(deletedCount);
         statusText.textContent = reportMessage("report_deleted");
         updateProgress(reportMessage("report_deleted_count", { count: deletedCount }), "success");
       } catch (error) {
         statusText.textContent = reportMessage("report_delete_failed");
         updateProgress(`${reportMessage("report_delete_error")}: ${error.message}`, "error");
       } finally {
-        startButton.disabled = false;
+        modalInstance.previewIssues = [];
+        modalInstance.hasUnsafeReplacement = false;
+        startButton.disabled = true;
+        previewButton.disabled = false;
         deleteButton.disabled = false;
         closeButton.disabled = false;
       }
     },
     onStart: async (modalInstance) => {
-      const { startButton, closeButton, progressList, resultBody, copyButton, statusText, stats } =
+      if (modalInstance.hasUnsafeReplacement) {
+        alert(reportMessage("report_preview_review_warning"));
+        return;
+      }
+      const { startButton, closeButton, progressList, resultBody, copyButton, statusText } =
         modalInstance;
       startButton.disabled = true;
-      startButton.textContent = reportMessage("report_processing");
+      modalInstance.previewButton.disabled = true;
+      modalInstance.deleteButton.disabled = true;
       closeButton.disabled = true;
+      resultBody.replaceChildren();
+      copyButton.disabled = true;
 
       const updateProgress = (message, type = "info") => {
         const item = document.createElement("div");
@@ -158,87 +293,77 @@ async function logTimeForMonth() {
         progressList.scrollTop = progressList.scrollHeight;
       };
 
-      const setStat = (key, value) => {
-        stats[key].textContent = String(value);
-      };
-
       const renderResultRow = (result) => {
         const row = document.createElement("tr");
         const dateCell = document.createElement("td");
+        const reportCell = document.createElement("td");
         const tasksCell = document.createElement("td");
+        const hoursCell = document.createElement("td");
         const statusCell = document.createElement("td");
 
         dateCell.textContent = result.date;
+        reportCell.textContent = result.report || "";
         tasksCell.textContent = result.tasks;
+        hoursCell.textContent = result.hours || "";
         statusCell.textContent = result.status;
 
-        row.append(dateCell, tasksCell, statusCell);
+        row.append(dateCell, reportCell, tasksCell, hoursCell, statusCell);
         resultBody.appendChild(row);
       };
 
       try {
-        statusText.textContent = reportMessage("report_scanning");
-        updateProgress(reportMessage("report_searching"));
+        statusText.textContent = reportMessage("report_starting_logging");
         const now = new Date();
         const year = now.getFullYear();
         const month = now.getMonth() + 1;
         const copyRowsByDate = createMonthlyCopyRows(year, month);
-
-        const trackers = await getTrackers(redmineDomain, redmineApiKey);
-        const reportTracker = trackers.find((t) => t.name.toLowerCase() === "report");
-        if (!reportTracker) {
-          throw new Error(reportMessage("report_missing_tracker"));
-        }
-
-        const issues = await findMonthlyReportIssues(redmineDomain, redmineApiKey, {
-          projectId: reportProjectId,
-          trackerId: reportTracker.id,
-          year,
-          month,
-          updateProgress,
-        });
+        const issues = modalInstance.previewIssues || [];
 
         if (issues.length === 0) {
           statusText.textContent = reportMessage("report_not_found");
           updateProgress(reportMessage("report_no_matching_issue"));
-          startButton.textContent = reportMessage("report_done");
+          startButton.disabled = true;
           closeButton.disabled = false;
           return;
         }
 
-        setStat("reports", issues.length);
-        statusText.textContent = `${reportMessage("report_found")} ${issues.length} ${reportMessage("report_logging_now")}`;
+        statusText.textContent = reportMessage("report_logging_now");
         updateProgress(reportMessage("report_found_issues", { count: issues.length }));
 
         const resultsForSheet = [];
-        let loggedCount = 0;
-        let skippedCount = 0;
-        let failedCount = 0;
-
+        let failedReportCount = 0;
         for (const issue of issues) {
-          let dateLabel = `issue #${issue.id}`;
+          if (issue.error || issue.willReplaceDailyEntries || issue.dayAlreadyFull) {
+            continue;
+          }
+          if (issue.tasks.length === 0) {
+            updateProgress(`${issue.date}: ${reportMessage("report_no_tasks")}`, "skip");
+            continue;
+          }
+          const dateLabel = issue.date || `issue #${issue.reportIssueId}`;
           try {
-            const reportDate = extractJapaneseReportDate(issue.subject);
-            if (!reportDate) {
-              throw new Error(`Cannot determine spent_on date from subject: ${issue.subject}`);
-            }
-            dateLabel = reportDate;
-
             updateProgress(dateLabel, "date");
-            const logResult = await logTimeFromReport(issue.id, true, dateLabel);
+            const logResult = await logTimeFromReport(
+              issue.reportIssueId,
+              true,
+              dateLabel,
+              false,
+              issue
+            );
 
             if (logResult.taskIds.length > 0) {
+              const taskById = new Map((issue.tasks || []).map((task) => [String(task.id), task]));
               const status = getLogResultStatusText(logResult);
               resultsForSheet.push({
                 date: dateLabel,
-                tasks: logResult.taskIds.map((t) => `#${t}`).join(","),
+                report: `#${issue.reportIssueId} ${issue.reportSubject}`,
+                tasks: logResult.taskIds
+                  .map((taskId) => `#${taskId} ${taskById.get(String(taskId))?.subject || ""}`)
+                  .join("\n"),
+                hours: issue.tasks.map((task) => `${task.hours}h`).join(" + "),
                 status,
               });
               copyRowsByDate.set(dateLabel, logResult.taskIds.map((t) => `#${t}`).join(","));
-              loggedCount += logResult.loggedTaskIds.length;
-              skippedCount += logResult.skippedTaskIds.length;
-              setStat("logged", loggedCount);
-              setStat("skipped", skippedCount);
               renderResultRow(resultsForSheet[resultsForSheet.length - 1]);
               if (logResult.dayUpserted) {
                 updateProgress(
@@ -265,20 +390,17 @@ async function logTimeForMonth() {
               updateProgress(reportMessage("report_no_tasks"), "skip");
             }
           } catch (error) {
+            failedReportCount += 1;
             const partialResult = error.logResult;
             if (partialResult?.taskIds?.length > 0) {
               resultsForSheet.push({
                 date: dateLabel,
+                report: `#${issue.reportIssueId} ${issue.reportSubject}`,
                 tasks: partialResult.taskIds.map((t) => `#${t}`).join(","),
+                hours: issue.tasks.map((task) => `${task.hours}h`).join(" + "),
                 status: `Partial: logged ${partialResult.loggedTaskIds.length}, failed ${partialResult.failedTasks.length}`,
               });
               copyRowsByDate.set(dateLabel, partialResult.taskIds.map((t) => `#${t}`).join(","));
-              loggedCount += partialResult.loggedTaskIds.length;
-              skippedCount += partialResult.skippedTaskIds.length;
-              failedCount += partialResult.failedTasks.length;
-              setStat("logged", loggedCount);
-              setStat("skipped", skippedCount);
-              setStat("failed", failedCount);
               renderResultRow(resultsForSheet[resultsForSheet.length - 1]);
               updateProgress(
                 reportMessage("report_partial_error", {
@@ -290,8 +412,6 @@ async function logTimeForMonth() {
                 "error"
               );
             } else {
-              failedCount += 1;
-              setStat("failed", failedCount);
               updateProgress(
                 reportMessage("report_error_detail", { error: error.message }),
                 "error"
@@ -300,8 +420,14 @@ async function logTimeForMonth() {
           }
         }
 
-        statusText.textContent = reportMessage("report_complete");
-        updateProgress(reportMessage("report_complete_timesheet"));
+        statusText.textContent = failedReportCount
+          ? reportMessage("report_logging_partial", { count: failedReportCount })
+          : resultsForSheet.length
+            ? reportMessage("report_logging_complete")
+            : reportMessage("report_no_tasks");
+        if (resultsForSheet.length) {
+          updateProgress(reportMessage("report_complete_timesheet"));
+        }
 
         copyButton.disabled = resultsForSheet.length === 0;
         copyButton.onclick = () => {
@@ -317,13 +443,18 @@ async function logTimeForMonth() {
             });
         };
 
-        startButton.textContent = reportMessage("report_done");
+        startButton.disabled = true;
+        startButton.textContent = reportMessage("report_logged_button");
         closeButton.disabled = false;
       } catch (error) {
         statusText.textContent = reportMessage("report_error");
         updateProgress(reportMessage("report_fatal_error", { error: error.message }));
-        startButton.textContent = reportMessage("report_error_short");
+        startButton.disabled = true;
         closeButton.disabled = false;
+      } finally {
+        startButton.textContent = reportMessage("report_logged_button");
+        modalInstance.previewButton.disabled = false;
+        modalInstance.deleteButton.disabled = false;
       }
     },
   });
@@ -419,37 +550,31 @@ function isSafeMonthlyDeleteEntry(entry, currentUser, spentOn) {
   );
 }
 
-function openMonthlyLogModal({ monthLabel, onStart, onDelete }) {
+function openMonthlyLogModal({ monthLabel, onPreview, onStart, onDelete }) {
   const overlay = document.createElement("div");
   overlay.className = "tb-monthly-log-overlay";
   overlay.innerHTML = `
     <section class="tb-monthly-log-dialog" role="dialog" aria-modal="true" aria-labelledby="tb-monthly-log-title">
       <header class="tb-monthly-log-header">
         <div>
-          <p class="tb-monthly-log-kicker">${reportMessage("report_spent_time")}</p>
+        <p class="tb-monthly-log-kicker">${reportMessage("report_spent_time")}</p>
           <h2 id="tb-monthly-log-title">${reportMessage("report_log_time_month")} ${monthLabel}</h2>
           <p id="tb-monthly-log-status" class="tb-monthly-log-status">${reportMessage("report_ready_to_scan")}</p>
         </div>
         <button type="button" class="tb-monthly-log-close" aria-label="${reportMessage("modal_close_aria")}">&times;</button>
       </header>
       <div class="tb-monthly-log-body">
-        <div class="tb-monthly-log-stats">
-          <div><span id="tb-monthly-stat-reports">0</span><small>${reportMessage("report_reports")}</small></div>
-          <div><span id="tb-monthly-stat-logged">0</span><small>${reportMessage("report_logged")}</small></div>
-          <div><span id="tb-monthly-stat-skipped">0</span><small>${reportMessage("report_skipped")}</small></div>
-          <div><span id="tb-monthly-stat-failed">0</span><small>${reportMessage("report_failed")}</small></div>
-        </div>
         <div class="tb-monthly-log-grid">
           <section class="tb-monthly-log-panel">
             <div class="tb-monthly-log-panel-title">${reportMessage("report_progress")}</div>
             <div id="tb-monthly-log-progress" class="tb-monthly-log-progress"></div>
           </section>
           <section class="tb-monthly-log-panel">
-            <div class="tb-monthly-log-panel-title">${reportMessage("report_timesheet_output")}</div>
+            <div class="tb-monthly-log-panel-title">${reportMessage("report_preview_title")}</div>
             <div class="tb-monthly-log-table-wrap">
               <table id="timesheet-results-table" class="tb-monthly-log-table">
                 <thead>
-                  <tr><th>${reportMessage("report_date")}</th><th>${reportMessage("report_tasks")}</th><th>${reportMessage("report_status")}</th></tr>
+                  <tr><th>${reportMessage("report_date")}</th><th>${reportMessage("report_issue")}</th><th>${reportMessage("report_tasks")}</th><th>${reportMessage("report_hours")}</th><th>${reportMessage("report_status")}</th></tr>
                 </thead>
                 <tbody id="tb-monthly-log-results"></tbody>
               </table>
@@ -460,7 +585,8 @@ function openMonthlyLogModal({ monthLabel, onStart, onDelete }) {
       <footer class="tb-monthly-log-footer">
         <button type="button" id="tb-monthly-log-delete" class="tb-btn tb-btn-danger">${reportMessage("report_delete_spent_time")}</button>
         <button type="button" id="tb-monthly-log-copy" class="tb-btn tb-btn-secondary" disabled>${reportMessage("report_copy_table")}</button>
-        <button type="button" id="tb-monthly-log-start" class="tb-btn tb-btn-primary">${reportMessage("report_start_logging")}</button>
+        <button type="button" id="tb-monthly-log-preview" class="tb-btn tb-btn-secondary">${reportMessage("report_check_tasks")}</button>
+        <button type="button" id="tb-monthly-log-start" class="tb-btn tb-btn-primary" disabled>${reportMessage("report_confirm_logging")}</button>
       </footer>
     </section>
   `;
@@ -469,9 +595,11 @@ function openMonthlyLogModal({ monthLabel, onStart, onDelete }) {
   document.body.classList.add("tb-modal-open");
 
   const closeButton = overlay.querySelector(".tb-monthly-log-close");
+  const previewButton = overlay.querySelector("#tb-monthly-log-preview");
   const startButton = overlay.querySelector("#tb-monthly-log-start");
   const modalInstance = {
     overlay,
+    previewButton,
     startButton,
     closeButton,
     deleteButton: overlay.querySelector("#tb-monthly-log-delete"),
@@ -480,12 +608,6 @@ function openMonthlyLogModal({ monthLabel, onStart, onDelete }) {
     progressList: overlay.querySelector("#tb-monthly-log-progress"),
     resultBody: overlay.querySelector("#tb-monthly-log-results"),
     table: overlay.querySelector("#timesheet-results-table"),
-    stats: {
-      reports: overlay.querySelector("#tb-monthly-stat-reports"),
-      logged: overlay.querySelector("#tb-monthly-stat-logged"),
-      skipped: overlay.querySelector("#tb-monthly-stat-skipped"),
-      failed: overlay.querySelector("#tb-monthly-stat-failed"),
-    },
   };
 
   const close = () => {
@@ -496,6 +618,7 @@ function openMonthlyLogModal({ monthLabel, onStart, onDelete }) {
   overlay.onclick = (event) => {
     if (event.target === overlay && !closeButton.disabled) close();
   };
+  previewButton.onclick = () => onPreview(modalInstance);
   startButton.onclick = () => onStart(modalInstance);
   modalInstance.deleteButton.onclick = () => onDelete(modalInstance);
 

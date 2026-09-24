@@ -170,11 +170,29 @@
         color: var(--text);
       }
 
-      :root[data-theme="dark"] .bug-report-card h3 {
+      :root[data-theme="dark"] .bug-report-card .secondary-section-summary {
         color: var(--warning-text) !important;
       }
 
-      :root[data-theme="dark"] .update-card h3 {
+      .secondary-section > details,
+      .secondary-section details {
+        padding: 12px 14px;
+      }
+
+      .secondary-section-summary {
+        cursor: pointer;
+        font-weight: 600;
+        color: #9a3412;
+      }
+
+      .update-section-summary {
+        color: #0369a1;
+      }
+
+      .secondary-section-content {
+        padding-top: 12px;
+      }
+      :root[data-theme="dark"] .update-card .update-section-summary {
         color: #7dd3fc !important;
       }
 
@@ -212,7 +230,7 @@
         background: #1e293b;
       }
 
-      :root[data-theme="dark"] details summary {
+      :root[data-theme="dark"] details summary:not(.secondary-section-summary) {
         color: var(--text) !important;
       }
 
@@ -630,7 +648,7 @@
                   readonly
                   style="background: #f3f4f6; color: #6b7280; cursor: not-allowed"
                 />
-                <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                <p data-i18n="options_redmine_help" style="margin-top: 6px; font-size: 12px; color: var(--muted)">
                   💡 Redmine Domain được cấu hình sẵn.
                 </p>
               </div>
@@ -677,7 +695,7 @@
                     background: white;
                   "
                 >
-                  <option value="">-- Trước tiên cần lưu API Key --</option>
+                  <option value="" data-i18n="options_save_api_first">-- Trước tiên cần lưu API Key --</option>
                 </select>
               </div>
 
@@ -698,9 +716,9 @@
                     background: white;
                   "
                 >
-                  <option value="">-- Cần lưu API Key trước --</option>
+                  <option value="" data-i18n="options_save_api_first">-- Cần lưu API Key trước --</option>
                 </select>
-                <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                <p data-i18n="options_report_help" style="margin-top: 6px; font-size: 12px; color: var(--muted)">
                   💡 Project chứa các issue Report (dùng cho chức năng "Log Time Tháng").
                 </p>
               </div>
@@ -715,9 +733,7 @@
                   margin-top: 8px;
                 "
               >
-                <summary style="padding: 12px 0; font-weight: 600; cursor: pointer; color: #1d4ed8">
-                  Cấu hình Custom Fields (JSON Mapping)
-                </summary>
+                <summary style="padding: 12px 0; font-weight: 600; cursor: pointer; color: #1d4ed8"><span data-i18n="options_custom_fields_section">Cấu hình Custom Fields (JSON Mapping)</span></summary>
                 <div class="field" style="padding-bottom: 16px">
                   <textarea
                     id="manualFields"
@@ -735,7 +751,7 @@
                       resize: none;
                     "
                   ></textarea>
-                  <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                  <p data-i18n="options_custom_fields_help" style="margin-top: 6px; font-size: 12px; color: var(--muted)">
                     💡 Nhập mã ID của các trường bắt buộc. Ví dụ:
                     <code
                       >{ "Severity": 46, "Reproduction Rate": 0, "Role": 11, "QC Activity": 8, "Q&A
@@ -750,6 +766,7 @@
           <!-- Nhóm cấu hình Backlog -->
           <details
             id="backlogSettings"
+            open
             style="
               padding: 16px;
               background: #fef3c7;
@@ -759,14 +776,12 @@
               display: block;
             "
           >
-            <summary style="padding: 4px 0; font-weight: 600; color: #b45309; cursor: pointer">
-              📝 Cấu hình Backlog (Thu gọn) - Click để mở rộng
-            </summary>
+            <summary style="padding: 4px 0; font-weight: 600; color: #b45309; cursor: pointer"><span data-i18n="options_backlog_section">📝 Cấu hình Backlog</span></summary>
             <div style="padding-top: 12px">
               <div class="field" style="margin-bottom: 0">
                 <label for="backlogDomain" data-i18n="options_backlog_domain">Backlog Domain</label>
-                <input id="backlogDomain" type="url" placeholder="https://shift7.backlog.com" />
-                <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
+                <input id="backlogDomain" type="url" placeholder="https://shift7.backlog.com" data-i18n-placeholder="options_backlog_domain_placeholder" />
+                <p data-i18n="options_backlog_domain_help" style="margin-top: 6px; font-size: 12px; color: var(--muted)">
                   💡 Mặc định: https://shift7.backlog.com
                 </p>
               </div>
@@ -776,8 +791,7 @@
                 >
                 <input id="backlogApiKey" type="text" placeholder="Nhập Backlog API key" />
                 <p style="margin-top: 6px; font-size: 12px; color: var(--muted)">
-                  🔑 Lấy tại: <strong>Tài khoản > API</strong> trong Backlog của bạn. Cần thiết để
-                  gửi nội dung ngược lại từ Redmine sang Backlog.
+                  <span data-i18n="options_backlog_help_prefix">🔑 Lấy tại:</span> <strong data-i18n="options_backlog_account_api">Tài khoản > API</strong> <span data-i18n="options_backlog_help_suffix">trong Backlog của bạn. Cần thiết để gửi nội dung ngược lại từ Redmine sang Backlog.</span>
                 </p>
               </div>
             </div>
@@ -795,9 +809,7 @@
               margin-bottom: 16px;
             "
           >
-            <summary style="padding: 4px 0; font-weight: 600; color: #065f46; cursor: pointer">
-              🤖 Cấu hình AI Chính (Primary)
-            </summary>
+            <summary style="padding: 4px 0; font-weight: 600; color: #065f46; cursor: pointer"><span data-i18n="options_primary_ai_section">🤖 Cấu hình AI Chính (Primary)</span></summary>
             <div class="grid" style="padding-top: 12px; gap: 12px">
               <div class="field" style="margin-bottom: 0">
                 <label for="primaryProvider" data-i18n="options_provider">Nhà cung cấp</label>
@@ -833,17 +845,16 @@
                 </p>
                 <div style="margin-bottom: 12px">
                   <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">
-                    Models (click chọn/bỏ)
+                    <span data-i18n="options_models_help">Models (click chọn/bỏ)</span>
                   </p>
                   <div id="geminiModelsList" style="display: flex; flex-wrap: wrap; gap: 6px"></div>
                   <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">
-                    Đã chọn: <span id="selectedModelCount">0</span>
+                    <span data-i18n="options_selected">Đã chọn:</span> <span id="selectedModelCount">0</span>
                   </p>
                 </div>
                 <div>
                   <p style="margin: 0 0 6px; font-size: 11px; color: #166534; font-weight: 500">
-                    Keys (nh&#7853;p r&#7891;i L&#432;u, Enter &#273;&#7875; th&#234;m nhanh, click
-                    &#273;&#7875; x&#243;a)
+                     <span data-i18n="options_keys_help">Keys (nhập rồi Lưu, Enter để thêm nhanh, click để xóa)</span>
                   </p>
                   <div
                     id="geminiKeysList"
@@ -851,7 +862,7 @@
                   ></div>
                   <input
                     id="geminiApiKeys"
-                    placeholder="Nh&#7853;p key r&#7891;i L&#432;u ho&#7863;c Enter &#273;&#7875; th&#234;m nhanh"
+                    placeholder="Enter a key, then Save or press Enter to add quickly" data-i18n-placeholder="options_key_quick_add"
                     style="
                       width: 100%;
                       height: 36px;
@@ -864,14 +875,14 @@
                     "
                   />
                   <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">
-                    Đã thêm: <span id="selectedKeyCount">0</span>/10
+                    <span data-i18n="options_added">Đã thêm:</span> <span id="selectedKeyCount">0</span>/10
                   </p>
                 </div>
               </div>
 
               <!-- Groq (shown when groq selected) -->
               <div id="primaryGroqConfig" class="field" style="margin-bottom: 0; display: none">
-                <input id="groqApiKey" type="password" placeholder="Nhập Groq API key" />
+                <input id="groqApiKey" type="password" placeholder="Enter API key" data-i18n-placeholder="options_groq_key_placeholder" />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑 Lấy tại:
                   <a
@@ -885,7 +896,7 @@
 
               <!-- Cerebras (shown when cerebras selected) -->
               <div id="primaryCerebrasConfig" class="field" style="margin-bottom: 0; display: none">
-                <input id="cerebrasApiKey" type="password" placeholder="Nhập Cerebras API key" />
+                <input id="cerebrasApiKey" type="password" placeholder="Enter API key" data-i18n-placeholder="options_cerebras_key_placeholder" />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑 Lấy tại:
                   <a
@@ -906,7 +917,7 @@
                 <input
                   id="openrouterApiKey"
                   type="password"
-                  placeholder="Nhập OpenRouter API key"
+                  placeholder="Enter API key" data-i18n-placeholder="options_openrouter_key_placeholder"
                 />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑 Lấy tại:
@@ -919,7 +930,7 @@
 
           <!-- Fallback AI Configuration -->
           <details
-            open
+            id="fallbackAiSettings"
             style="
               padding: 16px;
               background: #ede9fe;
@@ -928,9 +939,7 @@
               margin-bottom: 16px;
             "
           >
-            <summary style="padding: 4px 0; font-weight: 600; color: #5b21b6; cursor: pointer">
-              🔄 Cấu hình AI Dự phòng (Fallback)
-            </summary>
+            <summary style="padding: 4px 0; font-weight: 600; color: #5b21b6; cursor: pointer"><span data-i18n="options_fallback_ai_section">🔄 Cấu hình AI Dự phòng (Fallback)</span></summary>
             <div class="grid" style="padding-top: 12px; gap: 12px">
               <div class="field" style="margin-bottom: 0">
                 <label for="fallbackProvider" data-i18n="options_fallback_provider"
@@ -981,7 +990,7 @@
                   ></div>
                   <input
                     id="fallbackGeminiApiKeys"
-                    placeholder="Nh&#7853;p key r&#7891;i L&#432;u ho&#7863;c Enter &#273;&#7875; th&#234;m nhanh"
+                    placeholder="Enter a key, then Save or press Enter to add quickly" data-i18n-placeholder="options_key_quick_add"
                     style="
                       width: 100%;
                       height: 36px;
@@ -1013,7 +1022,7 @@
                 <input
                   id="fallbackGroqApiKey"
                   type="password"
-                  placeholder="Nhập Groq API key dự phòng"
+                  placeholder="Enter API key" data-i18n-placeholder="options_groq_key_placeholder"
                 />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑
@@ -1032,7 +1041,7 @@
                 <input
                   id="fallbackCerebrasApiKey"
                   type="password"
-                  placeholder="Nhập Cerebras API key dự phòng"
+                  placeholder="Enter API key" data-i18n-placeholder="options_cerebras_key_placeholder"
                 />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑
@@ -1051,7 +1060,7 @@
                 <input
                   id="fallbackOpenrouterApiKey"
                   type="password"
-                  placeholder="Nhập OpenRouter API key dự phòng"
+                  placeholder="Enter API key" data-i18n-placeholder="options_openrouter_key_placeholder"
                 />
                 <p style="margin-top: 6px; font-size: 11px; color: var(--muted)">
                   🔑 <a href="https://openrouter.ai/keys" target="_blank">Lấy key tại OpenRouter</a>
@@ -1061,7 +1070,7 @@
           </details>
 
           <details
-            open
+            id="uiSettings"
             style="
               padding: 16px;
               background: #f8fafc;
@@ -1093,18 +1102,15 @@
           </div>
         </form>
 
-        <section class="note" aria-labelledby="syncHistoryTitle">
-          <h2 id="syncHistoryTitle" data-i18n="options_sync_history_title">Recent sync activity</h2>
-          <ol id="syncActivityList" aria-live="polite"></ol>
-          <p id="syncActivityEmpty" data-i18n="options_sync_history_empty">No sync activity yet.</p>
-          <button
-            id="clearSyncActivityBtn"
-            type="button"
-            class="secondary"
-            data-i18n="options_sync_history_clear"
-          >
-            Clear activity
-          </button>
+        <section class="note secondary-section" aria-labelledby="syncHistoryTitle">
+          <details>
+            <summary id="syncHistoryTitle" data-i18n="options_sync_history_title">Recent sync activity</summary>
+            <div class="secondary-section-content">
+              <ol id="syncActivityList" aria-live="polite"></ol>
+              <p id="syncActivityEmpty" data-i18n="options_sync_history_empty">No sync activity yet.</p>
+              <button id="clearSyncActivityBtn" type="button" class="secondary" data-i18n="options_sync_history_clear">Clear activity</button>
+            </div>
+          </details>
         </section>
 
         <!-- Bug Report Section -->
@@ -1112,18 +1118,15 @@
           class="card bug-report-card"
           style="margin-top: 24px; background: #fff7ed; border-color: #fb923c"
         >
-          <h3
-            style="margin: 0 0 8px; font-size: 16px; color: #9a3412"
-            data-i18n="options_bug_title"
-          >
-            🐞 Báo lỗi
-          </h3>
+          <details class="secondary-section">
+            <summary class="secondary-section-summary" data-i18n="options_bug_title">🐞 Báo lỗi</summary>
+            <div class="secondary-section-content">
           <p style="margin: 0 0 16px; color: var(--muted); font-size: 14px">
             Tạo báo cáo có cấu trúc kèm ảnh chụp và thông tin môi trường. Dữ liệu chỉ được tải xuống
             hoặc mở trong GitHub khi bạn xác nhận.
           </p>
           <div class="field">
-            <label for="bugTitle">Tiêu đề lỗi</label>
+            <label for="bugTitle" data-i18n="options_bug_subject">Tiêu đề lỗi</label>
             <input
               id="bugTitle"
               type="text"
@@ -1132,7 +1135,7 @@
             />
           </div>
           <div class="field">
-            <label for="bugDescription">Mô tả lỗi</label>
+            <label for="bugDescription" data-i18n="options_bug_description_label">Mô tả lỗi</label>
             <textarea
               id="bugDescription"
               rows="4"
@@ -1141,7 +1144,7 @@
             ></textarea>
           </div>
           <div class="field">
-            <label for="bugSteps">Các bước tái hiện</label>
+            <label for="bugSteps" data-i18n="options_bug_steps">Các bước tái hiện</label>
             <textarea
               id="bugSteps"
               rows="3"
@@ -1150,15 +1153,16 @@
             ></textarea>
           </div>
           <div class="field">
-            <label for="bugPageUrl">URL trang xảy ra lỗi (không bắt buộc)</label>
-            <input id="bugPageUrl" type="url" placeholder="https://..." />
+            <label for="bugPageUrl" data-i18n="options_bug_url">URL trang xảy ra lỗi (không bắt buộc)</label>
+            <input id="bugPageUrl" type="url" placeholder="https://..." data-i18n-placeholder="options_bug_url_placeholder" />
           </div>
           <div class="field">
-            <label for="bugScreenshot">Ảnh chụp màn hình (PNG/JPEG, tối đa 5 MB)</label>
-            <input id="bugScreenshot" type="file" accept="image/png,image/jpeg,image/webp" />
+            <label for="bugScreenshot" data-i18n="options_screenshot">Ảnh chụp màn hình</label>
+            <input id="bugScreenshot" type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="bugScreenshotHelp" />
+            <p id="bugScreenshotHelp" data-i18n="options_screenshot_help" style="margin: 4px 0 0; font-size: 11px; color: var(--muted)">PNG, JPEG, or WebP; maximum 5 MB.</p>
             <img
               id="bugScreenshotPreview"
-              alt="Xem trước ảnh lỗi"
+              alt="Xem trước ảnh lỗi" data-i18n-alt="options_screenshot_preview_alt"
               hidden
               style="
                 display: block;
@@ -1178,6 +1182,8 @@
             <button id="openGithubIssueBtn" type="button" class="primary">Mở GitHub Issue</button>
           </div>
           <div id="bugReportStatus" class="status" aria-live="polite"></div>
+            </div>
+          </details>
         </section>
 
         <!-- Error logs remain available to bug reports but are hidden from the settings UI. -->
@@ -1197,7 +1203,9 @@
           class="card update-card"
           style="margin-top: 24px; background: #f0f9ff; border-color: #0ea5e9"
         >
-          <h3 style="margin: 0 0 12px; font-size: 16px; color: #0369a1">🔔 Cập nhật Extension</h3>
+          <details class="secondary-section">
+            <summary class="secondary-section-summary update-section-summary" data-i18n="options_update_title">🔔 Cập nhật Extension</summary>
+            <div class="secondary-section-content">
           <div id="updateStatus" style="margin-bottom: 12px">
             <p style="margin: 0; color: #64748b">Đang kiểm tra phiên bản...</p>
           </div>
@@ -1207,6 +1215,8 @@
             </button>
             <button type="button" id="goToDashboardBtn" class="secondary">📦 Trang Download</button>
           </div>
+            </div>
+          </details>
         </div>
 
         <div id="supportNote" class="note">
