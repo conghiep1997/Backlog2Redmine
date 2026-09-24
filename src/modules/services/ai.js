@@ -11,6 +11,14 @@ const GEMINI_RATE_LIMIT_COOLDOWN_MS = 60 * 1000;
 const GEMINI_OVERLOAD_COOLDOWN_MS = 30 * 1000;
 const AI_TRANSLATION_TIMEOUT_MS = 15 * 1000;
 
+function emitAIStatus(status, onStatus) {
+  try {
+    onStatus?.(status);
+  } catch (_error) {
+    // Status feedback must not interrupt translation.
+  }
+}
+
 /**
  * Fetches the list of available models from a provider.
  * @param {string} provider - The AI provider (e.g., 'gemini', 'groq').
@@ -154,46 +162,67 @@ async function testModelAvailability(provider, modelId, settings) {
  * @param {function} promptFn - Prompt builder function
  * @returns {Promise<string>} Translated text
  */
-async function translateText(commentText, settings, commentUrl = null, promptFn = TB.PROMPTS.USER) {
+async function translateText(
+  commentText,
+  settings,
+  commentUrl = null,
+  promptFn = TB.PROMPTS.USER,
+  onStatus
+) {
   const primaryProvider = settings.primaryProvider || TB.DEFAULT_PRIMARY_PROVIDER;
   const primaryModel = settings.primaryModel || TB.DEFAULT_PRIMARY_MODEL;
   const fallbackProvider = settings.fallbackProvider || TB.DEFAULT_FALLBACK_PROVIDER;
   const fallbackModel = settings.fallbackModel || TB.DEFAULT_FALLBACK_MODEL;
+  emitAIStatus({ phase: "start", provider: primaryProvider, model: primaryModel }, onStatus);
 
   try {
-    // Attempt Primary Translation
-    return await callAIsByProvider(
+    const translated = await callAIsByProvider(
       primaryProvider,
       primaryModel,
       settings,
       commentText,
       commentUrl,
-      promptFn
+      promptFn,
+      onStatus
     );
+    emitAIStatus({ phase: "success", provider: primaryProvider, model: primaryModel }, onStatus);
+    return translated;
   } catch (error) {
     // Fallback on rate limit and temporary provider overloads such as Gemini 503 high demand.
     const isRetryableProviderFailure = isRetryableProviderError(error);
     const hasFallback = fallbackProvider && fallbackProvider !== TB.PROVIDERS.NONE;
 
     if (isRetryableProviderFailure && hasFallback) {
+      emitAIStatus(
+        { phase: "fallback", provider: primaryProvider, fallback: fallbackProvider },
+        onStatus
+      );
       console.warn(
         `[TB-AI] Primary (${primaryProvider}) temporarily unavailable. Falling back to ${fallbackProvider}...`
       );
       try {
-        return await callAIsByProvider(
+        const translated = await callAIsByProvider(
           fallbackProvider,
           fallbackModel,
           settings,
           commentText,
           commentUrl,
-          promptFn
+          promptFn,
+          onStatus
         );
+        emitAIStatus(
+          { phase: "success", provider: fallbackProvider, model: fallbackModel },
+          onStatus
+        );
+        return translated;
       } catch (fallbackError) {
+        emitAIStatus({ phase: "error", error: fallbackError.message }, onStatus);
         throw new Error(
           `${TB.MESSAGES.TOAST.RATE_LIMIT_FAILED} Primary: ${error.message} | Fallback: ${fallbackError.message}`
         );
       }
     }
+    emitAIStatus({ phase: "error", error: error.message }, onStatus);
     throw error;
   }
 }
@@ -220,7 +249,7 @@ function getRandomGeminiModel(models) {
   return models[idx].trim();
 }
 
-async function callAIsByProvider(provider, model, settings, text, url, promptFn) {
+async function callAIsByProvider(provider, model, settings, text, url, promptFn, onStatus) {
   // Fallback for legacy "gem" provider
   if (provider === "gem") {
     console.warn("[TB-AI] Legacy provider 'gem' detected, falling back to 'gemini'");
@@ -305,6 +334,16 @@ async function callAIsByProvider(provider, model, settings, text, url, promptFn)
         lastError = error;
         const cooldownMs = getGeminiCooldownDuration(error);
         geminiCooldownUntilByCombination.set(combinationId, Date.now() + cooldownMs);
+        emitAIStatus(
+          {
+            phase: "retry",
+            provider: "Gemini",
+            model: currentModel,
+            attempt: i + 2,
+            seconds: Math.ceil(cooldownMs / 1000),
+          },
+          onStatus
+        );
         console.warn(
           `[TB-AI] Gemini ${currentModel} (${maskApiKey(
             currentKey
@@ -323,16 +362,16 @@ async function callAIsByProvider(provider, model, settings, text, url, promptFn)
     // If all combinations were exhausted, throw the last captured error.
     throw lastError || new Error("All Gemini model/key combinations failed.");
   } else if (provider === TB.PROVIDERS.CEREBRAS) {
-    return await callProviderWithFailover(provider, model, settings, text, url, promptFn);
+    return await callProviderWithFailover(provider, model, settings, text, url, promptFn, onStatus);
   } else if (provider === TB.PROVIDERS.GROQ) {
-    return await callProviderWithFailover(provider, model, settings, text, url, promptFn);
+    return await callProviderWithFailover(provider, model, settings, text, url, promptFn, onStatus);
   } else if (provider === TB.PROVIDERS.OPENROUTER) {
-    return await callProviderWithFailover(provider, model, settings, text, url, promptFn);
+    return await callProviderWithFailover(provider, model, settings, text, url, promptFn, onStatus);
   }
   throw new Error(`Unknown provider: ${provider}`);
 }
 
-async function callProviderWithFailover(provider, model, settings, text, url, promptFn) {
+async function callProviderWithFailover(provider, model, settings, text, url, promptFn, onStatus) {
   const models = getProviderModelsForCall(settings, provider, model);
   const apiKeys = getProviderApiKeysForCall(settings, provider);
   const combinations = [];
@@ -375,6 +414,16 @@ async function callProviderWithFailover(provider, model, settings, text, url, pr
       lastError = error;
       const cooldownMs = getGeminiCooldownDuration(error);
       providerCooldownUntilByCombination.set(combinationId, Date.now() + cooldownMs);
+      emitAIStatus(
+        {
+          phase: "retry",
+          provider,
+          model: currentModel,
+          attempt: i + 2,
+          seconds: Math.ceil(cooldownMs / 1000),
+        },
+        onStatus
+      );
       console.warn(
         `[TB-AI] ${provider} ${currentModel} (${maskApiKey(
           currentKey

@@ -107,6 +107,44 @@ function normalizeBacklogOrigin(domainOrUrl) {
   }
 }
 
+function getTrustedBacklogApiOrigin(domain) {
+  const raw = String(domain || "").trim();
+  const url = new URL(raw.includes("://") ? raw : `https://${raw}`);
+  if (
+    url.protocol !== "https:" ||
+    !/^[a-z0-9-]+\.backlog\.(?:com|jp)$/i.test(url.hostname) ||
+    url.username ||
+    url.password ||
+    url.port ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash
+  ) {
+    throw new Error("Enter a secure Backlog workspace URL (https://*.backlog.com or .jp).");
+  }
+  return url.origin;
+}
+
+async function recordSyncActivity(entry) {
+  try {
+    const { syncActivity = [] } = await chrome.storage.local.get("syncActivity");
+    const detail = String(entry.detail || "")
+      .replace(/([?&](?:apiKey|key|token)=)[^&\s]+/gi, "$1[REDACTED]")
+      .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED]")
+      .slice(0, 300);
+    await chrome.storage.local.set({
+      syncActivity: [
+        { timestamp: new Date().toISOString(), ...entry, detail },
+        ...syncActivity,
+      ].slice(0, 50),
+    });
+    return true;
+  } catch (error) {
+    console.warn("[TB-Sync] Could not save activity:", error);
+    return false;
+  }
+}
+
 /**
  * Builds Redmine upload endpoint with required filename query param.
  * Without filename, Redmine may reject the upload when extension filters are enabled.

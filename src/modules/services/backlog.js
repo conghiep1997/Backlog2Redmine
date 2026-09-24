@@ -9,7 +9,7 @@ async function getBacklogUsers(projectKeyOrIssueKey = null) {
     throw new Error(TB.MESSAGES.SETTINGS.BACKLOG_API_KEY_REQUIRED);
   }
 
-  const domain = settings.backlogDomain || TB.BACKLOG_DOMAIN;
+  const domain = getTrustedBacklogApiOrigin(settings.backlogDomain || TB.BACKLOG_DOMAIN);
 
   // Extract project key from issue key if provided (e.g., CTRIAL-123 → CTRIAL)
   let projectKey = null;
@@ -34,7 +34,7 @@ async function getBacklogUsers(projectKeyOrIssueKey = null) {
   console.log(`[BacklogService] Domain: ${domain}, Project: ${projectKey}`);
 
   try {
-    const response = await fetch(url.toString());
+    const response = await fetch(url.toString(), { redirect: "error" });
 
     console.log(`[BacklogService] Response status: ${response.status}`);
 
@@ -64,11 +64,11 @@ async function getBacklogIssueInfo(issueKey) {
     throw new Error(TB.MESSAGES.SETTINGS.BACKLOG_API_KEY_REQUIRED);
   }
 
-  const domain = settings.backlogDomain || TB.BACKLOG_DOMAIN;
+  const domain = getTrustedBacklogApiOrigin(settings.backlogDomain || TB.BACKLOG_DOMAIN);
   const url = new URL(`api/v2/issues/${issueKey}`, domain);
   url.searchParams.set("apiKey", settings.backlogApiKey);
 
-  const response = await fetch(url.toString());
+  const response = await fetch(url.toString(), { redirect: "error" });
 
   if (!response.ok) {
     const errorMsg = await readErrorMessage(response);
@@ -94,7 +94,7 @@ async function handleSendToBacklog({ backlogIssueKey, content, notifiedUserId, a
     throw new Error(TB.MESSAGES.SETTINGS.BACKLOG_API_KEY_REQUIRED);
   }
 
-  const domain = settings.backlogDomain || TB.BACKLOG_DOMAIN;
+  const domain = getTrustedBacklogApiOrigin(settings.backlogDomain || TB.BACKLOG_DOMAIN);
   const url = new URL(`api/v2/issues/${backlogIssueKey}/comments`, domain);
   url.searchParams.set("apiKey", settings.backlogApiKey);
 
@@ -108,6 +108,7 @@ async function handleSendToBacklog({ backlogIssueKey, content, notifiedUserId, a
 
   const response = await fetch(url.toString(), {
     method: "POST",
+    redirect: "error",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
     },
@@ -155,6 +156,7 @@ async function uploadAttachmentsToBacklog(domain, apiKey, issueKey, commentId, a
 
       const uploadResponse = await fetch(uploadUrl.toString(), {
         method: "POST",
+        redirect: "error",
         body: formData,
       });
 
@@ -207,14 +209,15 @@ async function downloadBacklogFile(domain, attachmentId, filename = "", issueKey
   // Try API first if we have a key and issueKey
   if (settings.backlogApiKey && issueKey) {
     try {
-      const normalizedBase = backlogBase.endsWith("/") ? backlogBase : `${backlogBase}/`;
+      const origin = getTrustedBacklogApiOrigin(backlogBase);
+      const normalizedBase = `${origin}/`;
       const apiUrl = new URL(
         `api/v2/issues/${issueKey}/attachments/${attachmentId}`,
         normalizedBase
       );
       apiUrl.searchParams.set("apiKey", settings.backlogApiKey);
 
-      const apiRes = await fetch(apiUrl.toString());
+      const apiRes = await fetch(apiUrl.toString(), { redirect: "error" });
       if (apiRes.ok) {
         const contentType = apiRes.headers.get("content-type") || "";
         const blob = await apiRes.blob();

@@ -6,8 +6,35 @@
 /* global escapeHtml, renderMarkdownHtml, renderRedmineNotePreview */
 
 let modalElements = null;
+let modalPreviousFocus = null;
 let customFieldsMetadata = [];
 let redmineSettings = null;
+
+globalThis.TB_RENDER_AI_STATUS = (status, fallbackElement) => {
+  if (!status) return;
+  const template = globalThis.TB_GET_MESSAGE(`options_ai_status_${status.phase}`);
+  const values = {
+    provider: status.provider || "AI",
+    fallback: status.fallback || "AI",
+    model: status.model || "",
+    seconds: String(status.seconds || ""),
+    attempt: String(status.attempt || ""),
+    error: status.error || "",
+  };
+  const message = template.replace(
+    /\$(provider|fallback|model|seconds|attempt|error)\$/g,
+    (_, name) => values[name]
+  );
+  const modalLoading = document.getElementById("tb-modal-loading");
+  const modalStatus = document.getElementById("tb-modal-loading-text");
+  if (modalLoading?.getClientRects().length && modalStatus) modalStatus.textContent = message;
+  else if (fallbackElement?.isConnected) fallbackElement.textContent = message;
+};
+
+chrome.runtime.onMessage.addListener((message) => {
+  if (message?.type !== "TB_AI_STATUS") return;
+  globalThis.TB_RENDER_AI_STATUS(message.status, globalThis.TB_ACTIVE_AI_STATUS_TARGET);
+});
 
 const DEFAULT_MANUAL_FIELDS = {
   Severity: 46,
@@ -217,16 +244,17 @@ function ensureModalShell() {
       <!-- Loading Overlay -->
       <div id="tb-modal-loading" class="tb-modal-loading" style="display: none;">
         <div class="tb-spinner"></div>
-        <div id="tb-modal-loading-text" class="tb-loading-text">${TB.MESSAGES.PROCESSING}</div>
+        <div id="tb-modal-loading-text" class="tb-loading-text" role="status" aria-live="polite">${TB.MESSAGES.PROCESSING}</div>
       </div>
       <!-- Confirm Modal -->
-      <div id="tb-confirm-modal" class="tb-modal-content">
+      <div id="tb-confirm-modal" class="tb-modal-content" role="dialog" aria-modal="true" aria-labelledby="tb-modal-title">
         <div class="tb-modal-header">
           <h2 id="tb-modal-title" class="tb-modal-title">${TB.MESSAGES.MODAL.TITLE}</h2>
           <button id="tb-modal-close" class="tb-modal-close" aria-label="${TB.MESSAGES.MODAL.CLOSE_ARIA}">&times;</button>
         </div>
         <div class="tb-modal-body">
           <p id="tb-modal-subtitle" class="tb-modal-subtitle" hidden></p>
+          <p class="tb-preview-notice" style="margin:0 0 12px;color:#64748b;font-size:12px">${globalThis.TB_GET_MESSAGE("options_preview_notice")}</p>
           <div id="tb-standard-fields">
             <div class="tb-field-group">
               <label for="tb-redmine-issue-id">${TB.MESSAGES.MODAL.ISSUE_ID_LABEL}</label>
@@ -300,13 +328,15 @@ function ensureModalShell() {
              </div>
            </div>
         </div>
+        <div id="tb-dry-run-result" role="status" aria-live="polite" hidden style="margin:0 18px 12px;padding:12px;border:1px solid #bfdbfe;border-radius:8px;background:#eff6ff;color:#1e3a5f;font-size:13px"></div>
         <div class="tb-modal-footer">
           <button id="tb-modal-cancel" class="tb-btn tb-btn-secondary">${TB.MESSAGES.MODAL.CANCEL}</button>
+          <button id="tb-dry-run" type="button" class="tb-btn tb-btn-secondary">${globalThis.TB_GET_MESSAGE("modal_dry_run_button")}</button>
           <button id="tb-modal-confirm" class="tb-btn tb-btn-primary">${TB.MESSAGES.MODAL.CONFIRM}</button>
         </div>
       </div>
       <!-- Success Modal -->
-      <div id="tb-success-modal" class="tb-modal-content" hidden>
+      <div id="tb-success-modal" class="tb-modal-content" role="dialog" aria-modal="true" aria-labelledby="tb-success-title" hidden>
         <div class="tb-modal-header">
           <h2 id="tb-success-title" class="tb-modal-title">${TB.MESSAGES.MODAL.SUCCESS_TITLE}</h2>
         </div>
@@ -338,6 +368,8 @@ function ensureModalShell() {
     closeButton: overlay.querySelector("#tb-modal-close"),
     cancelButton: overlay.querySelector("#tb-modal-cancel"),
     confirmButton: overlay.querySelector("#tb-modal-confirm"),
+    dryRunButton: overlay.querySelector("#tb-dry-run"),
+    dryRunResult: overlay.querySelector("#tb-dry-run-result"),
     batchInfoEl: overlay.querySelector("#tb-batch-info"),
     batchOptionEl: overlay.querySelector("#tb-batch-option"),
     batchOptionCheckbox: overlay.querySelector("#tb-batch-checkbox"),
@@ -371,6 +403,11 @@ function ensureModalShell() {
     loadingOverlay: overlay.querySelector("#tb-modal-loading"),
     loadingText: overlay.querySelector("#tb-modal-loading-text"),
   };
+  const clearDryRun = () => {
+    modalElements.dryRunResult.hidden = true;
+  };
+  modalElements.confirmModal.addEventListener("input", clearDryRun);
+  modalElements.confirmModal.addEventListener("change", clearDryRun);
 }
 
 function setModalLoading(isLoading, customText = null) {
@@ -389,9 +426,39 @@ function closeModal() {
     overlay.style.display = "none";
     document.body.classList.remove("tb-modal-open");
   }
+  if (modalPreviousFocus?.isConnected) modalPreviousFocus.focus();
+  modalPreviousFocus = null;
+}
+
+function showDryRunResult({ action, target, count, skipped = 0, warning = "" }) {
+  const panel = modalElements.dryRunResult;
+  const lines = [
+    globalThis.TB_GET_MESSAGE("modal_dry_run_no_changes"),
+    globalThis
+      .TB_GET_MESSAGE("modal_dry_run_summary")
+      .replace("$action$", action)
+      .replace("$target$", target || "—")
+      .replace("$count$", String(count)),
+  ];
+  if (skipped) {
+    lines.push(
+      globalThis.TB_GET_MESSAGE("modal_dry_run_skipped").replace("$count$", String(skipped))
+    );
+  }
+  if (warning) lines.push(warning);
+  panel.replaceChildren(
+    ...lines.map((line) => {
+      const paragraph = document.createElement("p");
+      paragraph.style.margin = "0 0 4px";
+      paragraph.textContent = line;
+      return paragraph;
+    })
+  );
+  panel.hidden = false;
 }
 
 function openConfirmModal(options) {
+  modalPreviousFocus = document.activeElement;
   const {
     redmineIssueId = "",
     issueTitle = "",
@@ -420,6 +487,8 @@ function openConfirmModal(options) {
     closeButton,
     cancelButton,
     confirmButton,
+    dryRunButton,
+    dryRunResult,
     batchOptionEl,
     batchOptionCheckbox,
     batchOptionText,
@@ -438,6 +507,7 @@ function openConfirmModal(options) {
     previewLabel,
     batchHintEl,
   } = modalElements;
+  dryRunResult.hidden = true;
   if (backlogFields) backlogFields.hidden = true;
   const previewHtmlEl = overlay.querySelector("#tb-redmine-preview-html");
   const previewToggleBtn = overlay.querySelector("#tb-preview-toggle");
@@ -726,7 +796,12 @@ function openConfirmModal(options) {
         } catch (err) {
           console.error("[TB-Modal] Batch translation failed:", err);
           const errorMsg = err.error || err.message || TB.MESSAGES.TOAST.TRANSLATION_FAILED;
-          showToast(`Loi dich hang loat: ${errorMsg}`, "error");
+          showToast(
+            globalThis
+              .TB_GET_MESSAGE("options_batch_translation_error")
+              .replace("$error$", errorMsg),
+            "error"
+          );
           batchOptionCheckbox.checked = false;
           currentMode = false;
           pendingBatchNotes = null;
@@ -792,6 +867,41 @@ function openConfirmModal(options) {
     if (e.target === overlay) safeClose();
   };
 
+  dryRunButton.onclick = () => {
+    if (isMigration) {
+      const plannedComments = batchOptionCheckbox.checked ? memoizedBatchNotes || [] : [];
+      const nonempty = plannedComments.filter((note) => String(note || "").trim());
+      const project = projectSelect.selectedOptions[0]?.textContent?.trim() || "";
+      const warning = confirmButton.disabled
+        ? globalThis.TB_GET_MESSAGE("modal_dry_run_missing_fields")
+        : !batchOptionCheckbox.checked && commentsCount > 0
+          ? globalThis
+              .TB_GET_MESSAGE("modal_dry_run_comments_excluded")
+              .replace("$count$", String(commentsCount))
+          : "";
+      showDryRunResult({
+        action: globalThis.TB_GET_MESSAGE("modal_dry_run_create_issue"),
+        target: project,
+        count: 1 + nonempty.length,
+        skipped: plannedComments.length - nonempty.length,
+        warning,
+      });
+      return;
+    }
+    updateCurrentNotesFromTextarea();
+    const notes = currentNotesList.filter((note) => String(note || "").trim());
+    showDryRunResult({
+      action: globalThis.TB_GET_MESSAGE("modal_dry_run_send_comments"),
+      target: issueIdInput.value.trim(),
+      count: notes.length,
+      skipped: currentNotesList.length - notes.length,
+      warning:
+        !issueIdInput.value.trim() || !notes.length
+          ? globalThis.TB_GET_MESSAGE("modal_dry_run_missing_fields")
+          : "",
+    });
+  };
+
   confirmButton.onclick = async () => {
     setModalLoading(true);
     confirmButton.disabled = true;
@@ -843,7 +953,14 @@ function openConfirmModal(options) {
           return;
         }
         updateCurrentNotesFromTextarea();
-        await onConfirm({ redmineIssueId: id, notesList: currentNotesList });
+        const notesList = currentNotesList.filter((note) => String(note || "").trim());
+        if (!notesList.length) {
+          showToast(TB.MESSAGES.TOAST.EMPTY_COMMENT, "error");
+          confirmButton.disabled = false;
+          setModalLoading(false);
+          return;
+        }
+        await onConfirm({ redmineIssueId: id, notesList });
       }
       // openSuccessModal (from onConfirm) owns overlay visibility — do not closeModal here.
       setModalLoading(false);
@@ -856,10 +973,11 @@ function openConfirmModal(options) {
   };
 
   updateModalState();
-  modalElements.confirmModal.style.display = "block";
+  modalElements.confirmModal.style.display = "flex";
   modalElements.successModal.style.display = "none";
   overlay.style.display = "flex";
   document.body.classList.add("tb-modal-open");
+  closeButton.focus();
 }
 
 function parseNotePreviewText(value) {
@@ -883,6 +1001,7 @@ function openBacklogModal({
   onCancel,
   onConfirm,
 }) {
+  modalPreviousFocus = document.activeElement;
   ensureModalShell();
   const {
     overlay,
@@ -894,9 +1013,12 @@ function openBacklogModal({
     issueTitleLabel,
     previewTextarea,
     confirmButton,
+    dryRunButton,
+    dryRunResult,
     backlogSuggestionsEl,
     previewLabel,
   } = modalElements;
+  dryRunResult.hidden = true;
   const previewHtmlEl = overlay.querySelector("#tb-redmine-preview-html");
   const previewToggleBtn = overlay.querySelector("#tb-preview-toggle");
 
@@ -1026,8 +1148,12 @@ function openBacklogModal({
 
   function showUserSuggestions(query) {
     if (backlogUsers.length === 0) {
-      backlogSuggestionsEl.innerHTML =
-        '<div class="tb-suggestion-item" style="color: #999;">No users loaded</div>';
+      backlogSuggestionsEl.replaceChildren();
+      const hint = document.createElement("div");
+      hint.className = "tb-suggestion-item";
+      hint.style.color = "#999";
+      hint.textContent = globalThis.TB_GET_MESSAGE("modal_no_users_loaded");
+      backlogSuggestionsEl.appendChild(hint);
       return;
     }
 
@@ -1045,8 +1171,12 @@ function openBacklogModal({
       : backlogUsers.filter((user) => user && user.name && (user.userId || user.id)).slice(0, 10);
 
     if (matchedUsers.length === 0) {
-      backlogSuggestionsEl.innerHTML =
-        '<div class="tb-suggestion-item" style="color: #999;">No user found</div>';
+      backlogSuggestionsEl.replaceChildren();
+      const hint = document.createElement("div");
+      hint.className = "tb-suggestion-item";
+      hint.style.color = "#999";
+      hint.textContent = globalThis.TB_GET_MESSAGE("modal_no_user_found");
+      backlogSuggestionsEl.appendChild(hint);
       return;
     }
 
@@ -1211,10 +1341,28 @@ function openBacklogModal({
     }
   };
 
-  modalElements.confirmModal.style.display = "block";
+  dryRunButton.onclick = () => {
+    const content = previewTextarea.value.trim();
+    showDryRunResult({
+      action: globalThis.TB_GET_MESSAGE("modal_dry_run_send_comments"),
+      target: issueIdInput.value.trim(),
+      count: content ? 1 : 0,
+      warning:
+        !issueIdInput.value.trim() || !content
+          ? globalThis.TB_GET_MESSAGE("modal_dry_run_missing_fields")
+          : attachments.length
+            ? globalThis
+                .TB_GET_MESSAGE("modal_dry_run_attachments")
+                .replace("$count$", String(attachments.length))
+            : "",
+    });
+  };
+
+  modalElements.confirmModal.style.display = "flex";
   modalElements.successModal.style.display = "none";
   overlay.style.display = "flex";
   document.body.classList.add("tb-modal-open");
+  modalElements.closeButton.focus();
 }
 
 async function openSuccessModal({
@@ -1294,10 +1442,11 @@ async function openSuccessModal({
     onClose?.();
   };
   modalElements.confirmModal.style.display = "none";
-  modalElements.successModal.style.display = "block";
+  modalElements.successModal.style.display = "flex";
   overlay.style.display = "flex";
   setModalLoading(false);
   document.body.classList.add("tb-modal-open");
+  successCloseButton.focus();
 }
 
 async function fetchRedmineMetadataForModal(backlogIssueType, backlogMilestone) {

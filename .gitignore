@@ -3,6 +3,8 @@ node_modules/
 .DS_Store
 Thumbs.db
 dist/
+playwright-report/
+test-results/
 .env
 .env.*
 !.env.example

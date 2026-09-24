@@ -3,7 +3,8 @@
  * Aggregates modular constants and provides i18n support.
  */
 (function (global) {
-  // Vietnamese messages (primary UI language; chrome.i18n is fallback only)
+  // Vietnamese messages remain the legacy content-script fallback. Popup, Options,
+  // and Redmine report UI use the locale preference with English as the default.
   const viMessages = {
     button_title: "Dịch bình luận và gửi sang Redmine",
     button_text: "Redmine",
@@ -110,9 +111,25 @@
     backlog_post_failed: "Gửi bình luận lên Backlog thất bại.",
   };
 
+  let localeMessages = null;
+  const toMessageKey = (value) => value.toLowerCase();
+
   const getMsg = (key, substitution) => {
     try {
-      // Priority 1: Use hardcoded Vietnamese (Temporary hide multi-language)
+      const localized = localeMessages?.[key]?.message;
+      if (localized) {
+        let message = localized;
+        if (substitution !== null && substitution !== undefined && substitution !== "") {
+          const value = String(substitution);
+          message = message
+            .replace(/\$count\$/g, value)
+            .replace(/\$error\$/g, value)
+            .replace(/\$provider\$/g, value)
+            .replace(/\$1\$/g, value);
+        }
+        return message;
+      }
+
       if (Object.prototype.hasOwnProperty.call(viMessages, key)) {
         let viMsg = viMessages[key];
         if (substitution !== null && substitution !== undefined && substitution !== "") {
@@ -126,7 +143,7 @@
         return viMsg;
       }
 
-      // Fallback: Try chrome.i18n
+      // Fall back to the manifest's default English catalog.
       const msg = chrome.i18n?.getMessage(key, substitution);
       if (msg && msg !== key) {
         return msg;
@@ -138,6 +155,27 @@
       return viMessages[key] || key;
     }
   };
+
+  const createMessagesProxy = (source, prefix = "") =>
+    new Proxy(source, {
+      get(target, property, receiver) {
+        if (typeof property !== "string") return Reflect.get(target, property, receiver);
+        const value = Reflect.get(target, property, receiver);
+        const key = `${prefix}${toMessageKey(property)}`;
+        if (value && typeof value === "object") {
+          return createMessagesProxy(value, `${key}_`);
+        }
+        if (typeof value === "function") {
+          return (...args) => getMsg(key, args[0]);
+        }
+        return getMsg(key);
+      },
+    });
+
+  global.TB_SET_LOCALE_MESSAGES = (messages) => {
+    localeMessages = messages;
+  };
+  global.TB_GET_MESSAGE = getMsg;
 
   global.TB_CONSTANTS = Object.freeze({
     DEBUG_PREFIX: "[TB-Redmine]",
@@ -173,7 +211,7 @@
 
     ICONS: global.TB_ICONS || {},
 
-    MESSAGES: {
+    MESSAGES: createMessagesProxy({
       BUTTON_TITLE: getMsg("button_title"),
       BUTTON_ARIA: getMsg("button_title"),
       BUTTON_TEXT: getMsg("button_text"),
@@ -291,7 +329,7 @@
         LOOKUP_FAILED: getMsg("backlog_lookup_failed"),
         POST_FAILED: getMsg("backlog_post_failed"),
       },
-    },
+    }),
     PROMPTS: global.TB_PROMPTS || {},
   });
 

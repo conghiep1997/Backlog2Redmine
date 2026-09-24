@@ -37,6 +37,7 @@
     "SEND_TO_BACKLOG",
     "SEND_TO_REDMINE",
     "TEST_MODEL_WITH_KEY",
+    "TEST_BACKLOG_CONNECTION",
     "TRANSLATE_COMMENT_FULL",
     "TRANSLATE_TEXT_SIMPLE",
   ]);
@@ -44,6 +45,7 @@
     FETCH_REDMINE_PROJECTS_WITH_KEY: ["domain", "apiKey"],
     REDMINE_AUTHORIZED_FETCH: ["path"],
     TEST_MODEL_WITH_KEY: ["provider", "modelId", "apiKey"],
+    TEST_BACKLOG_CONNECTION: ["domain", "apiKey"],
   });
 
   function assertMessage(message) {

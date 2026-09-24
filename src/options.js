@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   let cachedProjects = null;
+  let cachedProjectsFingerprint = "";
   let cacheTimestamp = 0;
   const CACHE_DURATION = 5 * 60 * 1000;
   const DEFAULT_MANUAL_FIELDS = {
@@ -259,13 +260,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (logsDescription?.tagName === "P") {
       logsDescription.textContent = om("options_logs_description", logsDescription.textContent);
     }
-    const supportNote = document.querySelector(".note");
+    const supportNote = document.getElementById("supportNote");
     if (supportNote) supportNote.textContent = om("options_support_note", supportNote.textContent);
     const disclaimer = document.querySelector(".disclaimer");
     if (disclaimer) disclaimer.textContent = om("options_disclaimer", disclaimer.textContent);
   }
 
   localizeOptionsDetails();
+
+  chrome.storage.local.get("syncActivity").then(({ syncActivity = [] }) => {
+    renderSyncActivity(syncActivity);
+  });
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "local" && changes.syncActivity) {
+      renderSyncActivity(changes.syncActivity.newValue || []);
+    }
+  });
 
   function sendBackgroundRequest(message) {
     return new Promise((resolve, reject) => {
@@ -384,6 +394,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   );
   redmineApiKeyInput.addEventListener("blur", handleRedmineKeyBlur);
   document.getElementById("syncProjectsBtn")?.addEventListener("click", handleSyncProjects);
+  document
+    .getElementById("testBacklogConnectionBtn")
+    ?.addEventListener("click", handleBacklogConnectionTest);
+  document.getElementById("testPrimaryAiBtn")?.addEventListener("click", handlePrimaryAiTest);
+  document.getElementById("clearSyncActivityBtn")?.addEventListener("click", async () => {
+    await chrome.storage.local.remove("syncActivity");
+    document.getElementById("syncActivityList").replaceChildren();
+  });
+  document.querySelectorAll("#onboardingCard a[href^='#']").forEach((link) => {
+    link.addEventListener("click", () => {
+      const section = document.querySelector(link.getAttribute("href"));
+      if (section instanceof HTMLDetailsElement) section.open = true;
+    });
+  });
+  updateOnboardingStatuses();
 
   document.getElementById("geminiApiKeys")?.addEventListener("keydown", handleGeminiKeyInput);
   fallbackGeminiApiKeysInput?.addEventListener("keydown", handleFallbackGeminiKeyInput);
@@ -417,7 +442,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       if (file.size > 5 * 1024 * 1024) {
         fileInput.value = "";
-        setBugReportStatus("Ảnh vượt quá giới hạn 5 MB.", true);
+        setBugReportStatus(om("options_screenshot_too_large"), true);
         return;
       }
       if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -478,12 +503,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function openGithubIssue() {
     const report = await buildBugReport();
-    const url = `https://github.com/conghiep1997/b2r/issues/new?title=${encodeURIComponent(report.title)}&body=${encodeURIComponent(formatBugReport(report) + "\n\nĐính kèm ảnh đã tải xuống nếu có.")}`;
+    const url = `https://github.com/conghiep1997/b2r/issues/new?title=${encodeURIComponent(report.title)}&body=${encodeURIComponent(formatBugReport(report) + "\n\n" + om("options_attach_screenshot_note"))}`;
     chrome.tabs.create({ url });
   }
 
   function formatBugReport(report) {
-    return `## Mô tả\n${report.description || "Chưa cung cấp"}\n\n## Các bước tái hiện\n${report.steps || "Chưa cung cấp"}\n\n## URL\n${report.pageUrl || "Không cung cấp"}\n\n## Môi trường\n- Extension: ${report.environment.extensionVersion}\n- Browser: ${report.environment.browser}\n- Language: ${report.environment.language}\n- Viewport: ${report.environment.viewport}\n- Time: ${report.environment.timestamp}\n\n## Logs gần nhất\n\`\`\`json\n${JSON.stringify(report.logs, null, 2)}\n\`\`\``;
+    return `## ${om("options_bug_description_label")}\n${report.description || om("options_not_provided")}\n\n## ${om("options_bug_steps")}\n${report.steps || om("options_not_provided")}\n\n## URL\n${report.pageUrl || om("options_not_provided")}\n\n## ${om("options_environment")}\n- Extension: ${report.environment.extensionVersion}\n- Browser: ${report.environment.browser}\n- Language: ${report.environment.language}\n- Viewport: ${report.environment.viewport}\n- Time: ${report.environment.timestamp}\n\n## ${om("options_recent_logs")}\n\`\`\`json\n${JSON.stringify(report.logs, null, 2)}\n\`\`\``;
   }
 
   function downloadBlob(blob, filename) {
@@ -554,7 +579,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const data = await TB_VERSION.fetchLatest();
       const latestVersion = data.version_number;
       if (!TB_VERSION.isValid(latestVersion)) {
-        throw new Error("Server trả về phiên bản không hợp lệ");
+        throw new Error(om("options_invalid_server_version"));
       }
 
       const isNewer = TB_VERSION.compare(currentVersion, latestVersion) < 0;
@@ -610,6 +635,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         domainChange.currentDomain
       );
       setStatus(TB.MESSAGES.SETTINGS.OPTIONS_SAVE_SUCCESS);
+      updateOnboardingStatuses();
       setTimeout(loadOptions, 200);
     } catch (error) {
       console.error("[OPTIONS] Save failed:", error);
@@ -739,7 +765,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const originPattern = TB_REDMINE_DOMAIN.toMatchPattern(normalizedDomain);
       const granted = await chrome.permissions.request({ origins: [originPattern] });
       if (!granted) {
-        throw new Error("Cần cấp quyền truy cập Redmine domain để sử dụng extension.");
+        throw new Error(om("options_redmine_permission_required"));
       }
     }
 
@@ -989,11 +1015,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function fetchProjects(apiKey, selectedId = "", selectedReportId = "") {
-    if (!apiKey) return;
+    if (!apiKey) return false;
+    const redmineDomain =
+      document.getElementById("redmineDomain").value.trim() || TB.REDMINE_DOMAIN;
+    const fingerprint = await verificationFingerprint([
+      TB_REDMINE_DOMAIN.normalize(redmineDomain),
+      apiKey,
+    ]);
     const now = Date.now();
-    if (cachedProjects && now - cacheTimestamp < CACHE_DURATION) {
+    if (
+      cachedProjects &&
+      cachedProjectsFingerprint === fingerprint &&
+      now - cacheTimestamp < CACHE_DURATION
+    ) {
       renderProjectOptions(cachedProjects, selectedId, selectedReportId);
-      return;
+      await chrome.storage.local.set({ redmineConnectionVerified: fingerprint });
+      updateOnboardingStatuses();
+      return true;
     }
     const syncBtn = document.getElementById("syncProjectsBtn");
     const defaultProjectSelect = document.getElementById("defaultProjectId");
@@ -1005,25 +1043,218 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       defaultProjectSelect.innerHTML = `<option value="">${om("options_loading", "Đang tải...")}</option>`;
       reportProjectSelect.innerHTML = `<option value="">${om("options_loading", "Đang tải...")}</option>`;
-      const redmineDomain =
-        document.getElementById("redmineDomain").value.trim() || TB.REDMINE_DOMAIN;
       const projects = await sendBackgroundRequest({
         type: "FETCH_REDMINE_PROJECTS_WITH_KEY",
         domain: redmineDomain,
         apiKey,
       });
       cachedProjects = projects;
+      cachedProjectsFingerprint = fingerprint;
       cacheTimestamp = now;
       renderProjectOptions(projects, selectedId, selectedReportId);
+      await chrome.storage.local.set({ redmineConnectionVerified: fingerprint });
+      updateOnboardingStatuses();
+      return true;
     } catch (_e) {
       defaultProjectSelect.innerHTML = `<option value="">${om("options_load_error", "Lỗi tải (Kiểm tra Key)")}</option>`;
       reportProjectSelect.innerHTML = `<option value="">${om("options_load_error", "Lỗi tải (Kiểm tra Key)")}</option>`;
+      await chrome.storage.local.remove("redmineConnectionVerified");
+      updateOnboardingStatuses();
+      return false;
     } finally {
       if (syncBtn) {
         syncBtn.disabled = false;
         syncBtn.textContent = om("options_sync_projects", "🔄 Đồng bộ Project");
       }
     }
+  }
+
+  async function handleBacklogConnectionTest() {
+    const button = document.getElementById("testBacklogConnectionBtn");
+    const inputKey = backlogApiKeyInput.value.trim();
+    button.disabled = true;
+    try {
+      const stored = await chrome.storage.local.get(["backlogApiKey", "backlogDomain"]);
+      const apiKey =
+        inputKey && inputKey !== "**********"
+          ? inputKey
+          : await decryptData(stored.backlogApiKey || "");
+      if (!apiKey) throw new Error(om("options_backlog_api_key", "Backlog API key is required."));
+      const domain = document.getElementById("backlogDomain").value.trim() || TB.BACKLOG_DOMAIN;
+      const result = await sendBackgroundRequest({
+        type: "TEST_BACKLOG_CONNECTION",
+        domain,
+        apiKey,
+      });
+      await chrome.storage.local.set({
+        backlogConnectionVerified: await verificationFingerprint([domain, apiKey]),
+      });
+      document.getElementById("onboardingStatus").textContent = om(
+        "options_test_backlog_success",
+        "Backlog connection successful."
+      );
+      if (result.userName) {
+        document.getElementById("onboardingStatus").textContent += ` (${result.userName})`;
+      }
+    } catch (error) {
+      await chrome.storage.local.remove("backlogConnectionVerified");
+      document.getElementById("onboardingStatus").textContent = om(
+        "options_test_backlog_failed",
+        "Backlog connection failed: $error$"
+      ).replace("$error$", error.message);
+    } finally {
+      button.disabled = false;
+      updateOnboardingStatuses();
+    }
+  }
+
+  async function handlePrimaryAiTest() {
+    const button = document.getElementById("testPrimaryAiBtn");
+    const provider = primaryProviderSelect.value;
+    const models = getSelectedModelsForProvider("primary", provider);
+    const apiKey =
+      provider === "gemini" ? getFirstGeminiKey() : getProviderKeys("primary", provider)[0];
+    button.disabled = true;
+    try {
+      if (!apiKey) throw new Error(om("options_keys_help", "Add an API key first."));
+      const result = await sendBackgroundRequest({
+        type: "TEST_MODEL_WITH_KEY",
+        provider,
+        modelId: models[0] || getDefaultModel(provider),
+        apiKey,
+      });
+      if (!result.ok) throw new Error(result.message || "Model test failed.");
+      await chrome.storage.local.set({
+        aiConnectionVerified: await verificationFingerprint([
+          provider,
+          models[0] || getDefaultModel(provider),
+          apiKey,
+        ]),
+      });
+      document.getElementById("onboardingStatus").textContent = result.message;
+    } catch (error) {
+      await chrome.storage.local.remove("aiConnectionVerified");
+      document.getElementById("onboardingStatus").textContent = error.message;
+    } finally {
+      button.disabled = false;
+      updateOnboardingStatuses();
+    }
+  }
+
+  async function verificationFingerprint(parts) {
+    const bytes = new TextEncoder().encode(JSON.stringify(parts));
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join(
+      ""
+    );
+  }
+
+  async function updateOnboardingStatuses() {
+    const items = await chrome.storage.local.get([
+      "redmineApiKey",
+      "redmineDomain",
+      "defaultProjectId",
+      "redmineConnectionVerified",
+      "backlogApiKey",
+      "backlogDomain",
+      "backlogConnectionVerified",
+      "primaryProvider",
+      "primaryModel",
+      "geminiApiKey",
+      "groqApiKey",
+      "cerebrasApiKey",
+      "openrouterApiKey",
+      "aiConnectionVerified",
+    ]);
+    const redmineKey = await decryptData(items.redmineApiKey || "");
+    const backlogKey = await decryptData(items.backlogApiKey || "");
+    const provider = items.primaryProvider || TB.DEFAULT_PRIMARY_PROVIDER;
+    const model = items.primaryModel || getDefaultModel(provider);
+    const aiKey = await decryptData(items[`${provider}ApiKey`] || "");
+    const redmineFingerprint = redmineKey
+      ? await verificationFingerprint([
+          TB_REDMINE_DOMAIN.normalize(items.redmineDomain || TB.REDMINE_DOMAIN),
+          redmineKey,
+        ])
+      : "";
+    const backlogFingerprint = backlogKey
+      ? await verificationFingerprint([items.backlogDomain || TB.BACKLOG_DOMAIN, backlogKey])
+      : "";
+    const aiFingerprint = aiKey ? await verificationFingerprint([provider, model, aiKey]) : "";
+    const states = {
+      onboardingRedmineStatus: Boolean(
+        items.defaultProjectId &&
+        redmineFingerprint &&
+        items.redmineConnectionVerified === redmineFingerprint
+      ),
+      onboardingBacklogStatus: Boolean(
+        backlogFingerprint && items.backlogConnectionVerified === backlogFingerprint
+      ),
+      onboardingAiStatus: Boolean(aiFingerprint && items.aiConnectionVerified === aiFingerprint),
+    };
+    Object.entries(states).forEach(([id, complete]) => {
+      const element = document.getElementById(id);
+      element.textContent = complete
+        ? `✓ ${om("options_onboarding_status_done", "Complete")}`
+        : om("options_onboarding_status_pending", "Not checked");
+      element.classList.toggle("status-success", complete);
+    });
+    const allComplete = Object.values(states).every(Boolean);
+    if (allComplete) {
+      document.getElementById("onboardingStatus").textContent = om(
+        "options_onboarding_done",
+        "Setup complete."
+      );
+    }
+  }
+
+  function renderSyncActivity(entries) {
+    const target = document.getElementById("syncActivityList");
+    const emptyState = document.getElementById("syncActivityEmpty");
+    if (!target || !emptyState) return;
+    const rows = Array.isArray(entries) ? entries.slice(0, 10) : [];
+    target.replaceChildren();
+    emptyState.hidden = rows.length > 0;
+    rows.forEach((entry) => {
+      const row = document.createElement("li");
+      const operationKey =
+        {
+          migration: "options_sync_activity_migrate",
+          "reverse-sync": "options_sync_activity_reverse",
+          translate: "options_sync_activity_translate",
+        }[entry.operation] || "options_sync_activity_translate";
+      const operation = om(operationKey, "Comment sync");
+      const template = om(
+        entry.partial
+          ? "options_sync_history_partial"
+          : entry.ok
+            ? "options_sync_history_success"
+            : "options_sync_history_failed",
+        "$operation$ completed for $issue$ ($count$ item(s))."
+      );
+      row.textContent = template
+        .replace("$operation$", operation)
+        .replace("$issue$", entry.issue || "")
+        .replace("$count$", String(entry.count || 0));
+      if (entry.detail) {
+        const detail = document.createElement("small");
+        detail.textContent = ` — ${entry.detail}`;
+        row.append(detail);
+      }
+      if (entry.url) {
+        const link = document.createElement("a");
+        link.href = entry.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = entry.issue || entry.url;
+        row.append(" ", link);
+      }
+      const timestamp = document.createElement("time");
+      timestamp.dateTime = entry.timestamp;
+      timestamp.textContent = new Date(entry.timestamp).toLocaleString();
+      row.append(" — ", timestamp);
+      target.appendChild(row);
+    });
   }
 
   function renderProjectOptions(projects, selectedId, selectedReportId) {
@@ -1203,7 +1434,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function handleTestProviderModel(scope, provider, modelId, modelLabel, btn) {
     const keys = getProviderKeys(scope, provider);
-    if (keys.length === 0) return setStatus(`Nhập ${capitalize(provider)} key trước`, true);
+    if (keys.length === 0) return setStatus(om("options_enter_provider_key"), true);
 
     const apiKey = keys[0];
     const icon = btn.querySelector(".test-icon");
@@ -1211,7 +1442,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     icon.textContent = "⏳";
     icon.style.display = "inline-block";
     icon.style.animation = "spin 1s linear infinite";
-    setStatus(`Đang test ${provider}: ${modelLabel}...`);
+    setStatus(`${om("options_testing_model")}: ${provider} / ${modelLabel}...`);
 
     try {
       const result = await sendBackgroundRequest({
@@ -1223,7 +1454,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (result.ok) {
         icon.textContent = "✅";
         icon.style.animation = "";
-        setStatus(`✅ Model ${modelLabel} (${provider}) hoạt động tốt`);
+        setStatus(`✅ ${om("options_model_ok")}: ${modelLabel} (${provider})`);
       } else {
         throw new Error(result.message || "Model test failed.");
       }
@@ -1360,11 +1591,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function handleTestSingleModel(modelId, modelLabel, btn) {
     const apiKey = getFirstGeminiKey();
-    if (!apiKey) return setStatus("Nhập Gemini key trước", true);
+    if (!apiKey) return setStatus(om("options_enter_gemini_key"), true);
     const icon = btn.querySelector(".test-icon");
     icon.textContent = "⏳";
     icon.style.animation = "spin 1s linear infinite";
-    setStatus(`Đang test: ${modelLabel}...`);
+    setStatus(`${om("options_testing_model")}: ${modelLabel}...`);
     try {
       const result = await sendBackgroundRequest({
         type: "TEST_MODEL_WITH_KEY",
@@ -1375,16 +1606,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (result.ok) {
         icon.textContent = "✅";
         icon.style.animation = "";
-        setStatus(`✅ Model ${modelLabel} hoạt động tốt`);
+        setStatus(`✅ ${om("options_model_ok")}: ${modelLabel}`);
       } else {
         icon.textContent = "❌";
         icon.style.animation = "";
-        setStatus(`❌ ${result.message || "Lỗi không xác định"}`, true);
+        setStatus(`❌ ${result.message || om("options_unknown_error")}`, true);
       }
     } catch (e) {
       icon.textContent = "❌";
       icon.style.animation = "";
-      setStatus(`❌ Lỗi kiểm tra model: ${e.message}`, true);
+      setStatus(`❌ ${om("options_model_test_failed")}: ${e.message}`, true);
     }
   }
 
@@ -1520,7 +1751,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("reportProjectId").value
       );
     } else {
-      alert("Vui lòng lưu Redmine API Key trước.");
+      alert(om("options_save_redmine_key_first"));
     }
   }
 });

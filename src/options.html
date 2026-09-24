@@ -170,6 +170,18 @@
         color: var(--text);
       }
 
+      :root[data-theme="dark"] .bug-report-card h3 {
+        color: var(--warning-text) !important;
+      }
+
+      :root[data-theme="dark"] .update-card h3 {
+        color: #7dd3fc !important;
+      }
+
+      :root[data-theme="dark"] .update-card #updateStatus p {
+        color: var(--muted) !important;
+      }
+
       :root[data-theme="dark"] input,
       :root[data-theme="dark"] textarea,
       :root[data-theme="dark"] select {
@@ -242,6 +254,16 @@
         font: inherit;
       }
 
+      .field select,
+      .field textarea {
+        box-sizing: border-box;
+        max-width: 100%;
+      }
+
+      .field textarea {
+        width: 100%;
+      }
+
       .field input:focus {
         outline: none;
         border-color: var(--primary);
@@ -267,6 +289,7 @@
       .actions {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 12px;
         margin-top: 20px;
       }
@@ -325,6 +348,11 @@
         font-size: 14px;
       }
 
+      .status:empty,
+      #onboardingStatus:empty {
+        display: none;
+      }
+
       .status-success {
         background: var(--success-bg);
         border-color: var(--success-border);
@@ -350,6 +378,47 @@
         background: #f8fafc;
         color: #475569;
         line-height: 1.6;
+      }
+
+      #onboardingCard,
+      #onboardingTitle {
+        margin-top: 0;
+      }
+
+      .onboarding-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      @media (max-width: 620px) {
+        .wrap {
+          padding: 20px 12px 32px;
+        }
+
+        .card {
+          padding: 16px;
+        }
+
+        .hero > label,
+        .hero > select {
+          display: block;
+        }
+
+        .hero > label {
+          margin-top: 10px;
+        }
+
+        .hero > select {
+          width: min(100%, 220px);
+          margin-bottom: 4px !important;
+        }
+
+        .actions button,
+        .onboarding-actions button {
+          max-width: 100%;
+        }
       }
 
       .disclaimer {
@@ -477,14 +546,12 @@
     <div class="wrap">
       <div class="hero">
         <h1 data-i18n="options_title">Translate Backlog & Redmine</h1>
-        <label for="languagePreference" data-i18n="options_language_label"
-          >Language / Ngôn ngữ</label
-        >
+        <label for="languagePreference" data-i18n="options_language_label">Language</label>
         <select id="languagePreference" style="max-width: 220px; margin: 8px 0 12px">
-          <option value="vi">Tiếng Việt</option>
-          <option value="en">English</option>
+          <option value="vi" data-i18n="options_language_vi">Vietnamese</option>
+          <option value="en" data-i18n="options_language_en">English</option>
         </select>
-        <label for="themePreference" data-i18n="options_theme_label">Theme / Giao diện</label>
+        <label for="themePreference" data-i18n="options_theme_label">Theme</label>
         <select id="themePreference" style="max-width: 220px; margin: 8px 0 12px">
           <option value="system" data-i18n="options_theme_system">Theo hệ thống</option>
           <option value="light" data-i18n="options_theme_light">Sáng</option>
@@ -497,9 +564,47 @@
       </div>
 
       <div class="card">
+        <section id="onboardingCard" class="note" aria-labelledby="onboardingTitle">
+          <h2 id="onboardingTitle" data-i18n="options_onboarding_title">Get started</h2>
+          <p data-i18n="options_onboarding_intro"></p>
+          <ol>
+            <li>
+              <a href="#redmineSettings" data-i18n="options_onboarding_redmine"></a>
+              <span id="onboardingRedmineStatus" aria-live="polite"></span>
+            </li>
+            <li>
+              <a href="#backlogSettings" data-i18n="options_onboarding_backlog"></a>
+              <span id="onboardingBacklogStatus" aria-live="polite"></span>
+            </li>
+            <li>
+              <a href="#primaryAiSettings" data-i18n="options_onboarding_ai"></a>
+              <span id="onboardingAiStatus" aria-live="polite"></span>
+            </li>
+          </ol>
+          <div class="onboarding-actions">
+            <button
+              id="testBacklogConnectionBtn"
+              type="button"
+              class="secondary"
+              data-i18n="options_test_backlog"
+            >
+              Test Backlog connection
+            </button>
+            <button
+              id="testPrimaryAiBtn"
+              type="button"
+              class="secondary"
+              data-i18n="options_test_ai"
+            >
+              Test selected AI model
+            </button>
+          </div>
+          <p id="onboardingStatus" role="status" aria-live="polite"></p>
+        </section>
         <form id="optionsForm" class="grid">
           <!-- Nhóm cấu hình Redmine -->
           <details
+            id="redmineSettings"
             open
             style="
               padding: 16px;
@@ -644,6 +749,7 @@
 
           <!-- Nhóm cấu hình Backlog -->
           <details
+            id="backlogSettings"
             style="
               padding: 16px;
               background: #fef3c7;
@@ -679,6 +785,7 @@
 
           <!-- Primary AI Configuration -->
           <details
+            id="primaryAiSettings"
             open
             style="
               padding: 16px;
@@ -986,8 +1093,25 @@
           </div>
         </form>
 
+        <section class="note" aria-labelledby="syncHistoryTitle">
+          <h2 id="syncHistoryTitle" data-i18n="options_sync_history_title">Recent sync activity</h2>
+          <ol id="syncActivityList" aria-live="polite"></ol>
+          <p id="syncActivityEmpty" data-i18n="options_sync_history_empty">No sync activity yet.</p>
+          <button
+            id="clearSyncActivityBtn"
+            type="button"
+            class="secondary"
+            data-i18n="options_sync_history_clear"
+          >
+            Clear activity
+          </button>
+        </section>
+
         <!-- Bug Report Section -->
-        <section class="card" style="margin-top: 24px; background: #fff7ed; border-color: #fb923c">
+        <section
+          class="card bug-report-card"
+          style="margin-top: 24px; background: #fff7ed; border-color: #fb923c"
+        >
           <h3
             style="margin: 0 0 8px; font-size: 16px; color: #9a3412"
             data-i18n="options_bug_title"
@@ -1069,7 +1193,10 @@
         </div>
 
         <!-- Update Check Section -->
-        <div class="card" style="margin-top: 24px; background: #f0f9ff; border-color: #0ea5e9">
+        <div
+          class="card update-card"
+          style="margin-top: 24px; background: #f0f9ff; border-color: #0ea5e9"
+        >
           <h3 style="margin: 0 0 12px; font-size: 16px; color: #0369a1">🔔 Cập nhật Extension</h3>
           <div id="updateStatus" style="margin-bottom: 12px">
             <p style="margin: 0; color: #64748b">Đang kiểm tra phiên bản...</p>
@@ -1082,7 +1209,7 @@
           </div>
         </div>
 
-        <div class="note">
+        <div id="supportNote" class="note">
           Hỗ trợ đồng bộ 2 chiều: <strong>Backlog → Redmine</strong> (Dịch Nhật/Anh sang Việt) và
           <strong>Redmine → Backlog</strong> (Lọc lấy nội dung tiếng Nhật).
         </div>

@@ -15,28 +15,38 @@ const REDMINE_ICON =
 let commentObserver = null;
 let pathCheckInterval = null;
 
-// Initialization with error handling
-try {
-  injectStyles();
-  scanAndInjectButtons();
-  observeCommentActions();
+initializeBacklogContent();
 
-  // Robust handling for SPA navigation with cleanup
-  let lastPath = window.location.pathname;
-  pathCheckInterval = setInterval(() => {
-    if (window.location.pathname !== lastPath) {
-      lastPath = window.location.pathname;
-      scanAndInjectButtons();
-    }
-  }, 1000);
+async function initializeBacklogContent() {
+  try {
+    const { languagePreference } = await chrome.storage.local.get("languagePreference");
+    const language = languagePreference || "en";
+    const response = await fetch(chrome.runtime.getURL(`_locales/${language}/messages.json`));
+    if (response.ok) globalThis.TB_SET_LOCALE_MESSAGES(await response.json());
+  } catch (error) {
+    console.warn("[TB-Content] Locale catalog unavailable; using English fallback:", error);
+  }
 
-  // Cleanup on page unload
-  window.addEventListener("beforeunload", () => {
-    if (pathCheckInterval) clearInterval(pathCheckInterval);
-    if (commentObserver) commentObserver.disconnect();
-  });
-} catch (err) {
-  console.error("[TB-Content] Initialization failed:", err);
+  try {
+    injectStyles();
+    scanAndInjectButtons();
+    observeCommentActions();
+
+    let lastPath = window.location.pathname;
+    pathCheckInterval = setInterval(() => {
+      if (window.location.pathname !== lastPath) {
+        lastPath = window.location.pathname;
+        scanAndInjectButtons();
+      }
+    }, 1000);
+
+    window.addEventListener("beforeunload", () => {
+      if (pathCheckInterval) clearInterval(pathCheckInterval);
+      if (commentObserver) commentObserver.disconnect();
+    });
+  } catch (err) {
+    console.error("[TB-Content] Initialization failed:", err);
+  }
 }
 
 function isIssuePage() {
@@ -236,6 +246,8 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
       commentUrl: getCommentUrl(commentItem),
     });
 
+    const completedNotes = [];
+    let lastSendResult = null;
     openConfirmModal({
       redmineIssueId: result.data.redmineIssueId,
       issueTitle: result.data.issueTitle,
@@ -245,18 +257,48 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
       backlogIssueType,
       onCancel: () => setButtonLoading(button, false),
       onConfirm: async ({ redmineIssueId, notesList }) => {
-        let lastRes = null;
-        for (const notes of notesList) {
-          const sendRes = await sendRuntimeMessageWithResponse({
-            type: "SEND_TO_REDMINE",
-            redmineIssueId,
-            notes,
-            backlogIssueKey: issueKey,
+        try {
+          for (const [index, notes] of notesList.entries()) {
+            if (completedNotes[index] === notes) continue;
+            const sendRes = await sendRuntimeMessageWithResponse({
+              type: "SEND_TO_REDMINE",
+              redmineIssueId,
+              notes,
+              backlogIssueKey: issueKey,
+            });
+            completedNotes[index] = notes;
+            lastSendResult = sendRes.data;
+          }
+        } catch (error) {
+          const sentCount = completedNotes.filter(Boolean).length;
+          await recordSyncActivity({
+            operation: "translate",
+            issue: issueKey,
+            count: sentCount,
+            partial: sentCount > 0,
+            ok: false,
+            detail: error?.error || error?.message || "Unknown error",
+            url: lastSendResult?.redmineUrl || window.location.href,
           });
-          lastRes = sendRes.data;
+          if (sentCount > 0) {
+            throw new Error(
+              globalThis
+                .TB_GET_MESSAGE("options_sync_retry_remaining")
+                .replace("$sent$", String(sentCount))
+                .replace("$total$", String(notesList.length))
+            );
+          }
+          throw error;
         }
+        await recordSyncActivity({
+          operation: "translate",
+          issue: issueKey,
+          count: notesList.length,
+          ok: true,
+          url: lastSendResult.redmineUrl,
+        });
         await openSuccessModal({
-          redmineUrl: lastRes.redmineUrl,
+          redmineUrl: lastSendResult.redmineUrl,
           commentCount: notesList.length,
           onClose: () => setButtonLoading(button, false),
         });
@@ -265,6 +307,14 @@ async function handleTranslateAndOpenModal(actionsEl, button) {
     });
     setButtonLoading(button, false);
   } catch (err) {
+    await recordSyncActivity({
+      operation: "translate",
+      issue: issueKey,
+      count: 1,
+      ok: false,
+      detail: err?.error || err?.message || "Unknown error",
+      url: window.location.href,
+    });
     setButtonLoading(button, false);
     if (err.isSettingsError) {
       showSettingsErrorLink(err.error);
@@ -400,13 +450,36 @@ async function handleIssueMigration(button) {
           ...issueData,
           backlogIssueKey: issueKey,
         };
-        const result = await sendRuntimeMessageWithResponse({
-          type: "CREATE_REDMINE_ISSUE",
-          issueData: issueDataToSend,
-          comments: translatedComments, // Translated comments/notes migrated with the issue
-        });
+        let result;
+        try {
+          result = await sendRuntimeMessageWithResponse({
+            type: "CREATE_REDMINE_ISSUE",
+            issueData: issueDataToSend,
+            comments: translatedComments, // Translated comments/notes migrated with the issue
+          });
+        } catch (error) {
+          await recordSyncActivity({
+            operation: "migration",
+            issue: issueKey,
+            count: 0,
+            ok: false,
+            detail: error?.error || error?.message || "Unknown error",
+            url: window.location.href,
+          });
+          throw error;
+        }
         const failedCommentCount = result.data?.failedCommentCount || 0;
         const failedComments = result.data?.failedComments || [];
+        await recordSyncActivity({
+          operation: "migration",
+          issue: issueKey,
+          count: (result.data?.migratedCommentCount || 0) + 1,
+          ok: failedCommentCount === 0,
+          detail: failedComments[0]?.message
+            ? `${failedCommentCount} of ${translatedComments?.length || 0} comments failed: ${failedComments[0].message}`
+            : "",
+          url: result.data.redmineUrl,
+        });
         if (failedCommentCount > 0) {
           const totalComments = translatedComments?.length || 0;
           const failedIndexes = failedComments
@@ -414,14 +487,15 @@ async function handleIssueMigration(button) {
             .filter(Boolean)
             .join(", ");
           const firstError = failedComments[0]?.message
-            ? ` Lý do: ${String(failedComments[0].message).slice(0, 120)}`
+            ? String(failedComments[0].message).slice(0, 120)
             : "";
-          showToast(
-            `Đã tạo issue nhưng ${failedCommentCount}/${totalComments} comment migrate thất bại${
-              failedIndexes ? ` (${failedIndexes})` : ""
-            }.${firstError}`,
-            "error"
-          );
+          const message = globalThis
+            .TB_GET_MESSAGE("options_migration_partial_failure")
+            .replace("$failed$", String(failedCommentCount))
+            .replace("$total$", String(totalComments))
+            .replace("$indexes$", failedIndexes ? ` (${failedIndexes})` : "")
+            .replace("$reason$", firstError ? ` ${firstError}` : "");
+          showToast(message, "error");
         }
         await openSuccessModal({
           redmineUrl: result.data.redmineUrl,
@@ -434,6 +508,14 @@ async function handleIssueMigration(button) {
     });
     setButtonLoading(button, false);
   } catch (err) {
+    await recordSyncActivity({
+      operation: "migration",
+      issue: issueKey,
+      count: comments.length,
+      ok: false,
+      detail: err?.error || err?.message || "Unknown error",
+      url: window.location.href,
+    });
     setButtonLoading(button, false);
     if (err.isSettingsError) {
       showSettingsErrorLink(err.error);
@@ -705,7 +787,11 @@ function setButtonLoading(btn, isLoading) {
 
   if (isLoading) {
     btn.innerHTML = `<span class="tb-loading">${TB.MESSAGES.PROCESSING}</span>`;
+    globalThis.TB_ACTIVE_AI_STATUS_TARGET = btn.querySelector(".tb-loading");
   } else {
+    if (globalThis.TB_ACTIVE_AI_STATUS_TARGET?.parentElement === btn) {
+      globalThis.TB_ACTIVE_AI_STATUS_TARGET = null;
+    }
     btn.innerHTML = btn.dataset.originalHtml;
     // Reset visual styles to non-hover state (Modern Button fix)
     const innerWrap = btn.querySelector("div");

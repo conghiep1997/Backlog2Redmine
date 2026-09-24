@@ -71,12 +71,24 @@ function injectStyles() {
     .tb-modal-container {
       width: 100%;
       max-width: 950px;
+      max-height: calc(100vh - 40px);
+      max-height: calc(100dvh - 40px);
+      display: flex;
+      flex-direction: column;
       background: #fcfcfd;
       border-radius: 20px;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
       border: 1px solid rgba(255, 255, 255, 0.1);
       overflow: hidden;
       animation: tb-modal-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .tb-modal-content {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .tb-modal-body {
+      flex: 1 1 auto;
     }
 
     @keyframes tb-modal-in {
@@ -122,7 +134,7 @@ function injectStyles() {
     }
 
     /* Modal Body */
-    .tb-modal-body { padding: 8px 18px; max-height: 82vh; overflow-y: auto; }
+    .tb-modal-body { min-height: 0; padding: 8px 18px; overflow-y: auto; }
     .tb-modal-subtitle { font-size: 12px; color: #64748b; margin-top: -6px; margin-bottom: 8px; }
     .tb-modal-subtitle[hidden] { display: none !important; }
 
@@ -574,6 +586,25 @@ function injectStyles() {
       color: #1e293b;
     }
     @media (max-width: 760px) {
+      .tb-modal-overlay {
+        padding: 10px;
+      }
+      .tb-modal-container {
+        max-height: calc(100vh - 20px);
+        max-height: calc(100dvh - 20px);
+      }
+      .tb-field-row {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .tb-modal-header,
+      .tb-modal-footer {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+      .tb-modal-footer,
+      .tb-monthly-log-footer {
+        flex-wrap: wrap;
+      }
       .tb-monthly-log-overlay {
         padding: 10px;
       }

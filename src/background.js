@@ -213,6 +213,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       assertOptionsSender(sender);
       return testModelAvailability(provider, modelId, createProviderTestSettings(provider, apiKey));
     },
+    TEST_BACKLOG_CONNECTION: async ({ domain, apiKey }) => {
+      assertOptionsSender(sender);
+      const origin = getTrustedBacklogApiOrigin(domain);
+      const endpoint = new URL("api/v2/users/myself", `${origin}/`);
+      endpoint.searchParams.set("apiKey", apiKey);
+      const response = await timeoutFetch(
+        endpoint.toString(),
+        { method: "GET", redirect: "error" },
+        15000
+      );
+      if (!response.ok) {
+        const errorText = await readErrorMessage(response);
+        throw new Error(
+          sanitizeErrorMessage(errorText || `HTTP ${response.status}`, response.status)
+        );
+      }
+      const user = await safeReadJson(response);
+      return { userName: user?.name || "" };
+    },
     LOOKUP_AND_TRANSLATE_COMMENT: async (msg) => {
       const settings = await getSettings();
       assertTrustedBacklogSender(sender, settings.backlogDomain);
@@ -224,7 +243,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         msg.issueSummary,
         msg.backlogIssueType || ""
       );
-      const translated = await translateText(msg.commentText, settings, msg.commentUrl);
+      const translated = await translateText(
+        msg.commentText,
+        settings,
+        msg.commentUrl,
+        TB.PROMPTS.USER,
+        createAIStatusReporter(sender)
+      );
       const finalPreview = msg.userInfo ? `${msg.userInfo}\n${translated}` : translated;
       return {
         redmineIssueId: redmineIssue?.id || "",
@@ -292,7 +317,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           msg.commentText,
           settings,
           null,
-          TB.PROMPTS.EXTRACT_JAPANESE
+          TB.PROMPTS.EXTRACT_JAPANESE,
+          createAIStatusReporter(sender)
         ),
       };
     },
@@ -301,7 +327,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       assertTrustedBacklogSender(sender, settings.backlogDomain);
       assertSettings(settings, ["ai"]);
       return {
-        translatedText: await translateText(msg.text, settings, null, TB.PROMPTS.SIMPLE_TRANSLATE),
+        translatedText: await translateText(
+          msg.text,
+          settings,
+          null,
+          TB.PROMPTS.SIMPLE_TRANSLATE,
+          createAIStatusReporter(sender)
+        ),
       };
     },
     TRANSLATE_COMMENT_FULL: async (msg) => {
@@ -313,7 +345,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           msg.commentText,
           settings,
           msg.commentUrl || null,
-          TB.PROMPTS.USER
+          TB.PROMPTS.USER,
+          createAIStatusReporter(sender)
         ),
       };
     },
@@ -706,6 +739,15 @@ function assertOptionsSender(sender) {
   if (sender?.url !== chrome.runtime.getURL("src/options.html")) {
     throw new Error("This operation is only available from the options page.");
   }
+}
+
+function createAIStatusReporter(sender) {
+  const tabId = sender?.tab?.id;
+  if (!Number.isInteger(tabId)) return () => {};
+  const options = Number.isInteger(sender.frameId) ? { frameId: sender.frameId } : undefined;
+  return (status) => {
+    chrome.tabs.sendMessage(tabId, { type: "TB_AI_STATUS", status }, options).catch(() => {});
+  };
 }
 
 async function handleRedmineAuthorizedFetch(settings, msg) {

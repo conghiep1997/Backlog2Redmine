@@ -179,6 +179,9 @@
   "modal_backlog_empty_key": {
     "message": "Please enter Backlog Issue Key."
   },
+  "modal_backlog_success_title": { "message": "Complete!" },
+  "modal_backlog_success_subtitle": { "message": "Comment sent to Backlog successfully." },
+  "modal_backlog_success_view_button": { "message": "View in Backlog" },
   "modal_batch_title_multiple": {
     "message": "✅ Sent $count$ notes successfully!",
     "placeholders": {
@@ -356,10 +359,88 @@
   "report_logging_now": { "message": "reports, logging time..." },
   "report_starting_logging": { "message": "Starting time logging..." },
   "report_complete": { "message": "Complete" },
+  "report_deleted_count": { "message": "Deleted $count$ spent-time entries." },
+  "report_missing_tracker": { "message": "The Report tracker was not found. Check Redmine settings." },
+  "report_found_issues": { "message": "Found $count$ report issues. Starting time logging..." },
+  "report_updated_spent_time": { "message": "Updated $hours$ hours of spent time from report tasks." },
+  "report_day_full": { "message": "Skipped: $hours$ hours have already been logged for this day." },
+  "report_logged_tasks": { "message": "Logged $logged$ tasks; skipped $skipped$ duplicates." },
+  "report_no_tasks": { "message": "No tasks were logged." },
+  "report_partial_error": {
+    "message": "Partial result: logged $logged$, skipped $skipped$, failed $failed$. $error$"
+  },
+  "report_error_detail": { "message": "Error: $error$" },
+  "report_complete_timesheet": { "message": "Done. Copy the data below into your timesheet:" },
+  "report_copied_tasks": { "message": "Copied the daily task list." },
+  "report_fatal_error": { "message": "A serious error occurred: $error$" },
   "report_error": { "message": "Error" },
   "report_error_short": { "message": "Error" },
   "options_title": { "message": "Backlog & Redmine Settings" },
   "options_language_label": { "message": "Language" },
+  "options_onboarding_title": { "message": "Get started" },
+  "options_onboarding_intro": {
+    "message": "Complete these steps once to connect Backlog, Redmine, and your translation provider."
+  },
+  "options_onboarding_redmine": { "message": "Add your Redmine API key and load projects" },
+  "options_onboarding_backlog": { "message": "Add and verify your Backlog API key" },
+  "options_onboarding_ai": { "message": "Choose a translation provider and test a model" },
+  "options_test_backlog": { "message": "Test Backlog connection" },
+  "options_test_ai": { "message": "Test selected AI model" },
+  "options_screenshot_too_large": { "message": "The image exceeds the 5 MB limit." },
+  "options_attach_screenshot_note": { "message": "Attach the downloaded screenshot if available." },
+  "options_not_provided": { "message": "Not provided" },
+  "options_environment": { "message": "Environment" },
+  "options_recent_logs": { "message": "Recent logs" },
+  "options_invalid_server_version": { "message": "The server returned an invalid version." },
+  "options_redmine_permission_required": { "message": "Grant access to the Redmine domain to use the extension." },
+  "options_model_test_failed": { "message": "Model test failed" },
+  "options_save_redmine_key_first": { "message": "Save the Redmine API key first." },
+  "modal_no_users_loaded": { "message": "No users loaded" },
+  "modal_no_user_found": { "message": "No user found" },
+  "options_test_backlog_success": { "message": "Backlog connection successful." },
+  "options_test_backlog_failed": { "message": "Backlog connection failed: $error$" },
+  "options_onboarding_done": { "message": "Setup complete. You can change these settings at any time." },
+  "options_onboarding_status_pending": { "message": "Not checked" },
+  "options_onboarding_status_done": { "message": "Complete" },
+  "options_ai_status_start": { "message": "Translating with $provider$ ($model$)…" },
+  "options_ai_status_retry": {
+    "message": "$provider$ is busy or rate limited. This model cools down for $seconds$s; trying another now (attempt $attempt$)."
+  },
+  "options_ai_status_fallback": { "message": "$provider$ failed temporarily. Switching to $fallback$." },
+  "options_ai_status_success": { "message": "Translation complete with $provider$ ($model$)." },
+  "options_ai_status_error": { "message": "Translation failed: $error$" },
+  "options_sync_history_title": { "message": "Recent sync activity" },
+  "options_sync_history_empty": { "message": "No sync activity yet." },
+  "options_sync_history_success": { "message": "$operation$ completed for $issue$ ($count$ item(s))." },
+  "options_sync_history_partial": { "message": "$operation$ partially completed for $issue$ ($count$ sent)." },
+  "options_sync_history_failed": { "message": "$operation$ failed for $issue$." },
+  "options_sync_retry_remaining": {
+    "message": "$sent$ of $total$ comments were sent. Retry to send only the remaining comments."
+  },
+  "options_sync_history_clear": { "message": "Clear activity" },
+  "options_preview_notice": {
+    "message": "Review the translated content below before confirming. Nothing is sent until you choose the primary action."
+  },
+  "modal_dry_run_button": { "message": "Dry run" },
+  "modal_dry_run_no_changes": { "message": "Preview only — no API changes were made." },
+  "modal_dry_run_summary": { "message": "$action$ → $target$: $count$ item(s) planned." },
+  "modal_dry_run_send_comments": { "message": "Send comment(s)" },
+  "modal_dry_run_create_issue": { "message": "Create issue and comments" },
+  "modal_dry_run_skipped": { "message": "$count$ empty item(s) would be skipped." },
+  "modal_dry_run_comments_excluded": {
+    "message": "$count$ existing comment(s) are excluded by the current checkbox selection."
+  },
+  "modal_dry_run_missing_fields": { "message": "Required target or content is missing; sending would be blocked." },
+  "modal_dry_run_attachments": { "message": "$count$ attachment(s) would be included." },
+  "options_sync_activity_translate": { "message": "Comment sync" },
+  "options_sync_activity_migrate": { "message": "Issue migration" },
+  "options_sync_activity_reverse": { "message": "Redmine to Backlog sync" },
+  "options_batch_translation_error": { "message": "Batch translation failed: $error$" },
+  "options_migration_partial_failure": {
+    "message": "Issue created, but $failed$ of $total$ comments failed$indexes$$reason$."
+  },
+  "options_language_vi": { "message": "Vietnamese" },
+  "options_language_en": { "message": "English" },
   "options_theme_label": { "message": "Theme" },
   "options_theme_system": { "message": "System" },
   "options_theme_light": { "message": "Light" },

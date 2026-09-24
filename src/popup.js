@@ -36,7 +36,7 @@ const t = (key, substitutions) =>
 
 async function loadMessages() {
   const { languagePreference } = storedSettings;
-  const language = languagePreference || "vi";
+  const language = languagePreference || "en";
   try {
     const response = await fetch(`../_locales/${language}/messages.json`);
     if (response.ok) messages = await response.json();
@@ -64,7 +64,7 @@ function localizePopup() {
   document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => {
     element.setAttribute("aria-label", t(element.dataset.i18nAriaLabel));
   });
-  document.documentElement.lang = storedSettings.languagePreference || "vi";
+  document.documentElement.lang = storedSettings.languagePreference || "en";
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -94,7 +94,8 @@ async function renderStatus() {
     PROVIDER_LABELS[items.primaryProvider] || items.primaryProvider || t("popup_not_selected");
   const forwardReady = redmineReady && backlogReady;
   setState("forwardStatus", forwardReady, forwardReady ? t("popup_active") : t("popup_not_ready"));
-  setState("reverseStatus", false, t("popup_not_ready"));
+  const reverseReady = backlogReady && Boolean(items.primaryProvider);
+  setState("reverseStatus", reverseReady, reverseReady ? t("popup_active") : t("popup_not_ready"));
   setState("providerStatus", Boolean(items.primaryProvider), provider);
   const configured = forwardReady && Boolean(items.primaryProvider);
   document.getElementById("statusBadge").textContent = configured
@@ -172,35 +173,86 @@ function openTab(url) {
 function setupDonate() {
   const modal = document.getElementById("donateModal");
   const tabs = document.getElementById("donateTabs");
+  const closeButton = document.getElementById("closeDonate");
+  const content = document.getElementById("donateContent");
+  let previousFocus;
+  content.setAttribute("role", "tabpanel");
   DONATION_METHODS.forEach((method, index) => {
     const tab = document.createElement("button");
     tab.className = "donate-tab";
     tab.type = "button";
+    tab.id = `donate-tab-${method.id}`;
+    tab.dataset.methodId = method.id;
     tab.textContent = t(method.labelKey);
     tab.setAttribute("role", "tab");
+    tab.setAttribute("aria-controls", "donateContent");
+    tab.tabIndex = index === 0 ? 0 : -1;
     tab.addEventListener("click", () => selectDonation(method.id));
     tabs.appendChild(tab);
-    if (index === 0) tab.classList.add("active");
   });
   document.getElementById("donateButton").addEventListener("click", () => {
+    previousFocus = document.activeElement;
     modal.hidden = false;
     selectDonation(DONATION_METHODS[0].id);
+    closeButton.focus();
   });
-  document.getElementById("closeDonate").addEventListener("click", () => {
+  const closeModal = () => {
     modal.hidden = true;
-  });
+    previousFocus?.focus();
+  };
+  closeButton.addEventListener("click", closeModal);
   modal.addEventListener("click", (event) => {
-    if (event.target === modal) modal.hidden = true;
+    if (event.target === modal) closeModal();
+  });
+  modal.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeModal();
+    } else if (
+      ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key) &&
+      event.target.closest("[role=tab]")
+    ) {
+      event.preventDefault();
+      const currentIndex = DONATION_METHODS.findIndex(
+        (method) => method.id === event.target.dataset.methodId
+      );
+      const nextIndex =
+        event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? DONATION_METHODS.length - 1
+            : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + DONATION_METHODS.length) %
+              DONATION_METHODS.length;
+      const nextTab = tabs.children[nextIndex];
+      selectDonation(nextTab.dataset.methodId);
+      nextTab.focus();
+    } else if (event.key === "Tab") {
+      const focusable = [...modal.querySelectorAll("button, a[href]")].filter(
+        (element) => element.tabIndex >= 0
+      );
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
   });
 }
 
 function selectDonation(id) {
   const method = DONATION_METHODS.find((item) => item.id === id);
   if (!method) return;
-  document
-    .querySelectorAll(".donate-tab")
-    .forEach((tab) => tab.classList.toggle("active", tab.textContent === t(method.labelKey)));
+  document.querySelectorAll(".donate-tab").forEach((tab) => {
+    const active = tab.dataset.methodId === id;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", String(active));
+    tab.tabIndex = active ? 0 : -1;
+  });
   const content = document.getElementById("donateContent");
+  content.setAttribute("aria-labelledby", `donate-tab-${id}`);
   content.replaceChildren();
   const title = document.createElement("h3");
   title.textContent = t(method.titleKey);

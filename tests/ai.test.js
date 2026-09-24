@@ -62,3 +62,59 @@ test("normalizeTranslationOutput decodes HTML-escaped angle brackets outside cod
     "keep `&lt;code&gt;` literal"
   );
 });
+
+test("Gemini retry reports status through the current request callback", async () => {
+  const context = vm.createContext({
+    console: { log() {}, warn() {}, error() {} },
+    TB: { PROVIDERS: { GEMINI: "gemini" }, GEMINI_MODELS: [] },
+  });
+  vm.runInContext(source, context);
+  vm.runInContext(
+    `let demoCalls = 0;
+    callGeminiAPI = async () => {
+      if (demoCalls++ === 0) throw new Error("429 rate limit");
+      return "translated";
+    };
+    this.runDemoRetry = (onStatus) => callAIsByProvider(
+      "gemini", "demo-model",
+      { geminiModels: ["demo-model"], geminiApiKeys: ["first", "second"] },
+      "source", null, () => "prompt", onStatus
+    );`,
+    context
+  );
+  const phases = [];
+  const result = await context.runDemoRetry((status) => phases.push(status.phase));
+  assert.equal(result, "translated");
+  assert.deepEqual(phases, ["retry"]);
+});
+
+test("AI status reporter targets only the requesting tab and frame", async () => {
+  const background = fs.readFileSync(path.join(__dirname, "..", "src", "background.js"), "utf8");
+  const start = background.indexOf("function createAIStatusReporter(sender)");
+  const end = background.indexOf("async function handleRedmineAuthorizedFetch", start);
+  assert.ok(start >= 0 && end > start);
+  const sent = [];
+  const context = vm.createContext({
+    chrome: {
+      tabs: {
+        sendMessage(tabId, message, options) {
+          sent.push({ tabId, message, options });
+          return Promise.resolve();
+        },
+      },
+    },
+  });
+  vm.runInContext(
+    `${background.slice(start, end)}\nthis.createReporter = createAIStatusReporter;`,
+    context
+  );
+  context.createReporter({ tab: { id: 12 }, frameId: 0 })({ phase: "retry" });
+  context.createReporter({ tab: { id: 25 }, frameId: 3 })({ phase: "success" });
+  assert.deepEqual(
+    sent.map((item) => [item.tabId, item.options.frameId, item.message.status.phase]),
+    [
+      [12, 0, "retry"],
+      [25, 3, "success"],
+    ]
+  );
+});

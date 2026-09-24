@@ -20,6 +20,7 @@ function loadHelpers() {
   vm.runInContext(
     `${source}
 this.normalizeBacklogOrigin = normalizeBacklogOrigin;
+this.getTrustedBacklogApiOrigin = getTrustedBacklogApiOrigin;
 this.buildRedmineUploadUrl = buildRedmineUploadUrl;
 this.buildRedmineUrl = buildRedmineUrl;`,
     context
@@ -36,6 +37,22 @@ test("normalizeBacklogOrigin accepts hostname and full URL", () => {
     "https://space.backlog.jp"
   );
   assert.equal(normalizeBacklogOrigin(""), "");
+});
+
+test("Backlog connection checks require a secure workspace origin", () => {
+  const { getTrustedBacklogApiOrigin } = loadHelpers();
+  assert.equal(getTrustedBacklogApiOrigin("https://team.backlog.com/"), "https://team.backlog.com");
+  assert.equal(getTrustedBacklogApiOrigin("team.backlog.com"), "https://team.backlog.com");
+  assert.equal(getTrustedBacklogApiOrigin("https://team.backlog.jp"), "https://team.backlog.jp");
+  for (const domain of [
+    "http://team.backlog.com",
+    "https://backlog.com",
+    "https://team.backlog.com.evil.test",
+    "https://team.backlog.com/path",
+    "https://user:pass@team.backlog.com",
+  ]) {
+    assert.throws(() => getTrustedBacklogApiOrigin(domain));
+  }
 });
 
 test("buildRedmineUploadUrl includes encoded filename query param", () => {

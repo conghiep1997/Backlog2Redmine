@@ -10,8 +10,10 @@ globalThis.__B2R_REDMINE_LOADED__ = true;
 const BUTTON_CLASS = "tb-backlog-btn";
 const BACKLOG_ICON = TB?.ICONS?.BACKLOG;
 let reportMessages = null;
-const reportMessage = (key, substitutions) =>
-  reportMessages?.[key]?.message || chrome.i18n.getMessage(key, substitutions) || key;
+const reportMessage = (key, values = {}) => {
+  const template = reportMessages?.[key]?.message || chrome.i18n.getMessage(key) || key;
+  return template.replace(/\$([a-z0-9_]+)\$/gi, (token, name) => String(values[name] ?? token));
+};
 
 let journalObserver = null;
 
@@ -23,9 +25,12 @@ initializeRedmineContent();
 async function initializeRedmineContent() {
   try {
     const { languagePreference } = await chrome.storage.local.get("languagePreference");
-    const language = languagePreference || "vi";
+    const language = languagePreference || "en";
     const response = await fetch(chrome.runtime.getURL(`_locales/${language}/messages.json`));
-    if (response.ok) reportMessages = await response.json();
+    if (response.ok) {
+      reportMessages = await response.json();
+      globalThis.TB_SET_LOCALE_MESSAGES(reportMessages);
+    }
   } catch (_error) {
     // Chrome's built-in locale remains the fallback.
   }
@@ -128,10 +133,7 @@ async function logTimeForMonth() {
         stats.logged.textContent = "0";
         stats.skipped.textContent = String(deletedCount);
         statusText.textContent = reportMessage("report_deleted");
-        updateProgress(
-          `Đã xóa ${deletedCount} spent time entr${deletedCount === 1 ? "y" : "ies"}.`,
-          "success"
-        );
+        updateProgress(reportMessage("report_deleted_count", { count: deletedCount }), "success");
       } catch (error) {
         statusText.textContent = reportMessage("report_delete_failed");
         updateProgress(`${reportMessage("report_delete_error")}: ${error.message}`, "error");
@@ -185,9 +187,7 @@ async function logTimeForMonth() {
         const trackers = await getTrackers(redmineDomain, redmineApiKey);
         const reportTracker = trackers.find((t) => t.name.toLowerCase() === "report");
         if (!reportTracker) {
-          throw new Error(
-            'Không thể tìm thấy Tracker "Report". Vui lòng kiểm tra cấu hình Redmine.'
-          );
+          throw new Error(reportMessage("report_missing_tracker"));
         }
 
         const issues = await findMonthlyReportIssues(redmineDomain, redmineApiKey, {
@@ -208,9 +208,7 @@ async function logTimeForMonth() {
 
         setStat("reports", issues.length);
         statusText.textContent = `${reportMessage("report_found")} ${issues.length} ${reportMessage("report_logging_now")}`;
-        updateProgress(
-          `${reportMessage("report_found")} ${issues.length} issue(s). ${reportMessage("report_starting_logging")}`
-        );
+        updateProgress(reportMessage("report_found_issues", { count: issues.length }));
 
         const resultsForSheet = [];
         let loggedCount = 0;
@@ -244,22 +242,27 @@ async function logTimeForMonth() {
               renderResultRow(resultsForSheet[resultsForSheet.length - 1]);
               if (logResult.dayUpserted) {
                 updateProgress(
-                  `Đã cập nhật spent time từ ${logResult.existingDailyHours}h theo task trong report.`,
+                  reportMessage("report_updated_spent_time", {
+                    hours: logResult.existingDailyHours,
+                  }),
                   "success"
                 );
               } else if (logResult.dayAlreadyFull) {
                 updateProgress(
-                  `Bỏ qua: ngày này đã spent time ${logResult.existingDailyHours}h.`,
+                  reportMessage("report_day_full", { hours: logResult.existingDailyHours }),
                   "skip"
                 );
               } else {
                 updateProgress(
-                  `Thành công: ${logResult.loggedTaskIds.length} task(s), bỏ qua trùng: ${logResult.skippedTaskIds.length} task(s)`,
+                  reportMessage("report_logged_tasks", {
+                    logged: logResult.loggedTaskIds.length,
+                    skipped: logResult.skippedTaskIds.length,
+                  }),
                   "success"
                 );
               }
             } else {
-              updateProgress("Không có task nào được log.", "skip");
+              updateProgress(reportMessage("report_no_tasks"), "skip");
             }
           } catch (error) {
             const partialResult = error.logResult;
@@ -278,19 +281,27 @@ async function logTimeForMonth() {
               setStat("failed", failedCount);
               renderResultRow(resultsForSheet[resultsForSheet.length - 1]);
               updateProgress(
-                `Lỗi một phần: đã log ${partialResult.loggedTaskIds.length}, bỏ qua trùng ${partialResult.skippedTaskIds.length}, lỗi ${partialResult.failedTasks.length}. ${error.message}`,
+                reportMessage("report_partial_error", {
+                  logged: partialResult.loggedTaskIds.length,
+                  skipped: partialResult.skippedTaskIds.length,
+                  failed: partialResult.failedTasks.length,
+                  error: error.message,
+                }),
                 "error"
               );
             } else {
               failedCount += 1;
               setStat("failed", failedCount);
-              updateProgress(`Lỗi: ${error.message}`, "error");
+              updateProgress(
+                reportMessage("report_error_detail", { error: error.message }),
+                "error"
+              );
             }
           }
         }
 
         statusText.textContent = reportMessage("report_complete");
-        updateProgress("Hoàn tất! Dưới đây là dữ liệu để copy vào Timesheet:");
+        updateProgress(reportMessage("report_complete_timesheet"));
 
         copyButton.disabled = resultsForSheet.length === 0;
         copyButton.onclick = () => {
@@ -298,11 +309,11 @@ async function logTimeForMonth() {
           navigator.clipboard
             .writeText(copyText)
             .then(() => {
-              alert("Đã copy danh sách task theo ngày!");
+              alert(reportMessage("report_copied_tasks"));
             })
             .catch(() => {
               copyTextWithSelectionFallback(copyText);
-              alert("Đã copy danh sách task theo ngày!");
+              alert(reportMessage("report_copied_tasks"));
             });
         };
 
@@ -310,7 +321,7 @@ async function logTimeForMonth() {
         closeButton.disabled = false;
       } catch (error) {
         statusText.textContent = reportMessage("report_error");
-        updateProgress(`Đã xảy ra lỗi nghiêm trọng: ${error.message}`);
+        updateProgress(reportMessage("report_fatal_error", { error: error.message }));
         startButton.textContent = reportMessage("report_error_short");
         closeButton.disabled = false;
       }
@@ -664,12 +675,32 @@ async function handleExtractAndOpenModal(actionsEl, button) {
         notifiedUserId,
         attachments: confirmedAttachments,
       }) => {
-        const sendResult = await sendRuntimeMessage({
-          type: "SEND_TO_BACKLOG",
-          backlogIssueKey: confirmedKey,
-          content,
-          notifiedUserId,
-          attachments: confirmedAttachments,
+        let sendResult;
+        try {
+          sendResult = await sendRuntimeMessage({
+            type: "SEND_TO_BACKLOG",
+            backlogIssueKey: confirmedKey,
+            content,
+            notifiedUserId,
+            attachments: confirmedAttachments,
+          });
+        } catch (error) {
+          await recordSyncActivity({
+            operation: "reverse-sync",
+            issue: confirmedKey,
+            count: 0,
+            ok: false,
+            detail: error?.message || "Unknown error",
+            url: window.location.href,
+          });
+          throw error;
+        }
+        await recordSyncActivity({
+          operation: "reverse-sync",
+          issue: confirmedKey,
+          count: 1,
+          ok: true,
+          url: sendResult.data.backlogUrl,
         });
         await openSuccessModal({
           redmineUrl: sendResult.data.backlogUrl,
@@ -680,6 +711,14 @@ async function handleExtractAndOpenModal(actionsEl, button) {
     });
     setButtonLoading(button, false);
   } catch (err) {
+    await recordSyncActivity({
+      operation: "reverse-sync",
+      issue: backlogIssueKey || "",
+      count: 0,
+      ok: false,
+      detail: err?.message || "Unknown error",
+      url: window.location.href,
+    });
     setButtonLoading(button, false);
     showToast(err.message, "error");
   }
@@ -748,4 +787,5 @@ function setButtonLoading(btn, isLoading) {
   btn.innerHTML = isLoading
     ? `<span class="tb-loading">${TB.MESSAGES.PROCESSING}</span>`
     : btn.dataset.originalHtml;
+  globalThis.TB_ACTIVE_AI_STATUS_TARGET = isLoading ? btn.querySelector(".tb-loading") : null;
 }

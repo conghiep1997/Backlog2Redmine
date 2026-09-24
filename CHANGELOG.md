@@ -1,5 +1,11 @@
 # Changelog - Backlog2Redmine
 
+## [1.8.17] - 2026-09-24
+- **✨ Added**:
+- **🔧 Fixed**:
+- **📝 Docs**:
+
+
 ## [1.8.16] - 2026-09-21
 
 ### Added

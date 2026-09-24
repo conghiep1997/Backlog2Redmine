@@ -32,6 +32,8 @@
     "buildRedmineUrl": "readonly",
     "buildRedmineUploadUrl": "readonly",
     "normalizeBacklogOrigin": "readonly",
+    "getTrustedBacklogApiOrigin": "readonly",
+    "recordSyncActivity": "readonly",
     "safeReadJson": "readonly",
     "readErrorMessage": "readonly",
     "timeoutFetch": "readonly",
